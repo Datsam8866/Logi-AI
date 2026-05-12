@@ -14,7 +14,7 @@ def compute_status(year: int, window: int = 2) -> pd.DataFrame:
     df = monthly_load(year)
     results = []
     for eng, grp in df.groupby("engineer"):
-        grp = grp.set_index("month").reindex(range(1, 13), fill_value=0.0).reset_index()
+        grp = grp.set_index("month")[["total_load"]].reindex(range(1, 13), fill_value=0.0).reset_index()
         grp.columns = ["month", "total_load"]
         grp["engineer"] = eng
         grp["rolling_avg"] = grp["total_load"].rolling(window, min_periods=1).mean()
