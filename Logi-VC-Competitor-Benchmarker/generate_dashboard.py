@@ -1,8 +1,5 @@
 # -*- coding: utf-8-sig -*-
-"""
-Generate reports/dashboard.html from vc_benchmark.db.
-Re-run whenever new competitors are added.
-"""
+"""Generate reports/dashboard.html from vc_benchmark.db."""
 import sqlite3, json, os, html as _html
 from datetime import datetime
 from urllib.parse import urlparse
@@ -15,6 +12,33 @@ SPEC_KEYS = [
     'mounting_options','environmental_specs','teardown_thermal','teardown_thermal_design',
     'teardown_key_ics','teardown_build_quality',
 ]
+
+DRAWER_SPEC_FIELDS = [
+    ('dimensions',             '尺寸'),
+    ('weight',                 '重量'),
+    ('camera_system',          'Camera System'),
+    ('audio_system',           'Audio System'),
+    ('microphone_presence',    'Microphone'),
+    ('video_inputs',           'Video Inputs'),
+    ('video_outputs',          'Video Outputs'),
+    ('supported_applications', 'Supported Apps'),
+    ('wireless_sharing',       'Wireless'),
+    ('supported_os',           'Supported OS'),
+    ('environmental_specs',    'Environmental'),
+    ('power_supply',           'Power Supply'),
+    ('power_consumption',      'Power Consumption'),
+    ('mounting_options',       'Mounting'),
+    ('special_features',       'Special Features'),
+]
+
+DRAWER_TEARDOWN_FIELDS = [
+    ('teardown_pcb',            'PCB / SoC'),
+    ('teardown_thermal',        'Thermal Solution'),
+    ('teardown_thermal_design', 'Thermal Design'),
+    ('teardown_key_ics',        'Key ICs'),
+    ('teardown_build_quality',  'Build Quality'),
+]
+
 MATRIX_FIELDS = [
     ('camera_system',          'Camera System'),
     ('audio_system',           'Audio System'),
@@ -30,52 +54,59 @@ MATRIX_FIELDS = [
     ('teardown_thermal',       'Thermal (Teardown)'),
     ('teardown_build_quality', 'Build Quality'),
 ]
-CAT_CLS = {
-    'Compute':         ('bg-purple-900', 'text-purple-300'),
-    'Security Camera': ('bg-blue-900',   'text-blue-300'),
-    'IR Camera':       ('bg-orange-900', 'text-orange-300'),
-    'VC Device':       ('bg-green-900',  'text-green-300'),
+
+CAT_COLORS = {
+    'PTZ Camera':      {'bg': '#eef2ff', 'text': '#3730a3', 'border': '#c7d2fe'},
+    'Room Bar':        {'bg': '#eff6ff', 'text': '#1d4ed8', 'border': '#bfdbfe'},
+    'Table Camera':    {'bg': '#f0fdfa', 'text': '#0f766e', 'border': '#99f6e4'},
+    'Mic':             {'bg': '#f5f3ff', 'text': '#6d28d9', 'border': '#ddd6fe'},
+    'Speaker':         {'bg': '#fffbeb', 'text': '#b45309', 'border': '#fde68a'},
+    'AIO Board':       {'bg': '#fff7ed', 'text': '#c2410c', 'border': '#fed7aa'},
+    'AIO System':      {'bg': '#fff1f2', 'text': '#be123c', 'border': '#fecdd3'},
+    'Accessory':       {'bg': '#fafaf9', 'text': '#57534e', 'border': '#d6d3d1'},
 }
+DEFAULT_CAT_COLOR = {'bg': '#f1f5f9', 'text': '#334155', 'border': '#cbd5e1'}
+
+_NA_VALS = {'', 'N/A', 'null', '—', '-', 'N/A (no public teardown found)'}
+
 
 def e(s):
     return _html.escape(str(s or ''), quote=True)
+
 
 def is_url(value):
     parsed = urlparse(str(value or '').strip())
     return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
 
+
 def split_sources(value):
-    return [part.strip() for part in str(value or '').split('|') if part.strip()]
+    return [p.strip() for p in str(value or '').split('|') if p.strip()]
+
 
 def source_link_label(url):
-    host = urlparse(str(url or '')).netloc.lower()
-    return 'FCC↗' if 'fccid.io' in host else 'Teardown↗'
+    return 'FCC↗' if 'fccid.io' in urlparse(str(url or '')).netloc.lower() else 'Teardown↗'
 
-def cat_badge(cat):
-    bg, fg = CAT_CLS.get(cat, ('bg-gray-700', 'text-gray-300'))
-    return f'<span class="tag {bg} {fg}">{e(cat)}</span>'
+
+def cat_pill(cat):
+    c = CAT_COLORS.get(cat, DEFAULT_CAT_COLOR)
+    st = (f'background:{c["bg"]};color:{c["text"]};border:1px solid {c["border"]};'
+          'display:inline-block;padding:2px 10px;border-radius:9999px;'
+          'font-size:0.7rem;font-weight:700;letter-spacing:0.04em;white-space:nowrap')
+    return f'<span style="{st}">{e(cat)}</span>'
+
+
+def soc_status(d):
+    v = str(d.get('teardown_pcb') or '').strip()
+    if v and v not in _NA_VALS and len(v) > 3:
+        return '<span style="color:#16a34a;font-weight:600;font-size:0.75rem">✓ 有資料</span>'
+    return '<span style="color:#a8a29e;font-size:0.75rem">—</span>'
+
 
 def completeness(d):
     filled = sum(1 for k in SPEC_KEYS
                  if d.get(k) and str(d[k]).strip() not in ('', 'N/A', 'null') and len(str(d[k])) > 1)
     return round(filled / len(SPEC_KEYS) * 100)
 
-def bar(pct, width='w-24'):
-    color = '#22c55e' if pct >= 80 else '#f59e0b' if pct >= 50 else '#ef4444'
-    return (f'<div class="flex items-center gap-2">'
-            f'<div class="bar-bg {width}"><div class="bar-fill" style="width:{pct}%;background:{color}"></div></div>'
-            f'<span class="text-xs text-gray-500">{pct}%</span></div>')
-
-def cell(val):
-    v = str(val or '').strip()
-    if not v or v in ('N/A', 'null'):
-        return '<span class="text-gray-600 text-xs">N/A</span>'
-    if v == 'No':
-        return '<span class="text-red-400 font-bold">✗</span>'
-    if v.lower() == 'yes' or v.lower().startswith('yes ') or v.lower().startswith('yes -'):
-        rest = v[v.index(' ')+1:] if ' ' in v else ''
-        return f'<span class="text-green-400 font-bold">✓</span>' + (f' <span class="cell-text text-gray-300">{e(rest)}</span>' if rest else '')
-    return f'<span class="cell-text text-gray-300">{e(v)}</span>'
 
 def load_devices():
     conn = sqlite3.connect(os.path.join(BASE, 'vc_benchmark.db'))
@@ -93,249 +124,153 @@ def load_devices():
     conn.close()
     return devices
 
-# ── Tab sections ──────────────────────────────────────────────────────────────
 
-def kpi_card(label, value, sub, color, small=False):
-    size = 'text-2xl' if small else 'text-4xl'
-    return (f'<div class="bg-gray-800 rounded-xl p-5 border border-gray-700">'
-            f'<div class="text-gray-500 text-xs uppercase tracking-widest mb-2">{label}</div>'
-            f'<div class="{size} font-bold {color}">{value}</div>'
-            f'<div class="text-gray-600 text-xs mt-1">{sub}</div>'
-            f'</div>')
+def _val(v):
+    sv = str(v or '').strip()
+    if not sv or sv in _NA_VALS:
+        return '<span class="muted">N/A</span>'
+    return e(sv)
 
-def build_overview(devices):
+
+def _kv_row(label, val_html):
+    return (f'<tr><td class="kv-label">{label}</td>'
+            f'<td class="kv-val">{val_html}</td></tr>')
+
+
+def build_drawer_panel(d):
+    pct = completeness(d)
+    bar_color = '#16a34a' if pct >= 80 else '#d97706' if pct >= 50 else '#dc2626'
+
+    link_parts = []
+    if is_url(d.get('datasheet_url')):
+        link_parts.append(
+            f'<a href="{e(d["datasheet_url"])}" target="_blank" class="dl-link indigo-link">Datasheet↗</a>')
+    td_urls = [s for s in split_sources(d.get('teardown_source')) if is_url(s)]
+    if td_urls:
+        link_parts.append(
+            f'<a href="{e(td_urls[0])}" target="_blank" class="dl-link amber-link">{source_link_label(td_urls[0])}</a>')
+    links_html = ' '.join(link_parts) if link_parts else '<span class="muted">連結不可用</span>'
+
+    spec_rows = ''.join(_kv_row(label, _val(d.get(key))) for key, label in DRAWER_SPEC_FIELDS)
+    dc = d.get('dynamic_columns') or {}
+    for k, v in dc.items():
+        spec_rows += _kv_row(e(str(k)), e(str(v)))
+
+    td_rows = ''.join(_kv_row(label, _val(d.get(key))) for key, label in DRAWER_TEARDOWN_FIELDS)
+    src_parts = []
+    for source in split_sources(d.get('teardown_source')):
+        if is_url(source):
+            src_parts.append(f'<a href="{e(source)}" target="_blank" class="amber-link-sm">{source_link_label(source)}</a>')
+        elif source and not source.upper().startswith('N/A'):
+            src_parts.append(f'<span class="muted">{e(source)}</span>')
+    if src_parts:
+        td_rows += _kv_row('Source', ' '.join(src_parts))
+
+    notes_html = ''
+    if d.get('notes'):
+        notes_html = (
+            '<div class="drawer-section">'
+            '<div class="section-hd">備註</div>'
+            f'<div class="notes-box">{e(d["notes"])}</div>'
+            '</div>'
+        )
+
+    return (
+        f'<div class="drawer-panel" data-id="{d["id"]}">'
+        '<div class="drawer-hd">'
+        '<div class="drawer-title-col">'
+        f'<div class="drawer-name">{e(d["product_name"])}</div>'
+        '<div class="drawer-meta">'
+        f'{cat_pill(d["category"])}'
+        f'<span class="date-chip">{e(d.get("date_added") or "")}</span>'
+        '</div></div>'
+        '<button onclick="closeDrawer()" class="close-btn" title="Close">✕</button>'
+        '</div>'
+        '<div class="drawer-links-row">'
+        f'<div>{links_html}</div>'
+        '<div class="comp-row">'
+        '<span class="muted">完整度</span>'
+        '<div class="mini-bar">'
+        f'<div class="mini-bar-fill" style="width:{pct}%;background:{bar_color}"></div>'
+        '</div>'
+        f'<span class="muted">{pct}%</span>'
+        '</div></div>'
+        '<details class="drawer-details" open>'
+        '<summary class="drawer-summary"><span class="arrow">▸</span> 規格詳情</summary>'
+        f'<div class="kv-section"><table class="kv-table">{spec_rows}</table></div>'
+        '</details>'
+        '<details class="drawer-details" open>'
+        '<summary class="drawer-summary"><span class="arrow">▸</span> 拆解資訊</summary>'
+        f'<div class="kv-section"><table class="kv-table">{td_rows}</table></div>'
+        '</details>'
+        f'{notes_html}'
+        '</div>'
+    )
+
+
+def build_html(devices):
+    now = datetime.now().strftime('%Y-%m-%d %H:%M')
     cats = list(dict.fromkeys(d['category'] for d in devices if d['category']))
     count = len(devices)
     cat_count = len(cats)
-    td_count = sum(1 for d in devices if d.get('teardown_source') and any(is_url(src) for src in split_sources(d.get('teardown_source'))))
-    dates = [d['date_added'] for d in devices if d.get('date_added')]
-    latest = max(dates) if dates else 'N/A'
+    td_count = sum(
+        1 for d in devices
+        if d.get('teardown_pcb') and str(d['teardown_pcb']).strip() not in _NA_VALS
+        and len(str(d['teardown_pcb'])) > 3
+    )
 
-    # KPI
-    html = '<section class="grid grid-cols-4 gap-4 mb-8">'
-    html += kpi_card('競品總數', count, '已建檔產品', 'text-blue-400')
-    html += kpi_card('涵蓋 Category', cat_count, '個產品類別', 'text-purple-400')
-    html += kpi_card('有拆解資料', f'{td_count}/{count}', '產品有熱設計拆解', 'text-green-400')
-    html += kpi_card('最新新增', latest, '最近 benchmark 日期', 'text-amber-400', small=True)
-    html += '</section>'
+    kpi_html = (
+        f'<div class="kpi-chip"><span class="kpi-val">{count}</span>'
+        f'<span class="kpi-label">競品總數</span></div>'
+        f'<div class="kpi-chip"><span class="kpi-val">{cat_count}</span>'
+        f'<span class="kpi-label">產品類別</span></div>'
+        f'<div class="kpi-chip"><span class="kpi-val">{td_count}</span>'
+        f'<span class="kpi-label">有 SoC 資料</span></div>'
+    )
 
-    # Roster header
-    html += '<section class="mb-8">'
-    html += ('<div class="flex items-center justify-between mb-4">'
-             '<h2 class="text-gray-500 text-xs font-semibold uppercase tracking-widest">競品名錄</h2>'
-             '<button onclick="exportMarkdown()" '
-             'class="text-xs bg-gray-700 hover:bg-gray-600 text-gray-300 px-3 py-1.5 rounded-lg transition-colors">'
-             '↓ 匯出 Markdown</button>'
-             '</div>')
-
-    # Category summary cards
-    html += '<div class="grid grid-cols-3 gap-4 mb-6">'
+    pill_html = ('<button class="cat-pill-btn pill-active" data-cat="all"'
+                 ' onclick="setCategory(this.dataset.cat)">All</button>')
     for cat in cats:
-        devs = [d for d in devices if d['category'] == cat]
-        bg, fg = CAT_CLS.get(cat, ('bg-gray-700', 'text-gray-300'))
-        html += f'<div class="bg-gray-800 rounded-xl border border-gray-700 p-4">'
-        html += f'<div class="flex items-center justify-between mb-3">{cat_badge(cat)}<span class="text-2xl font-bold text-white">{len(devs)}</span></div>'
-        html += '<ul class="space-y-3">'
-        for d in devs:
-            pct = completeness(d)
-            html += f'<li><div class="flex items-center justify-between mb-1"><span class="text-sm text-gray-200 font-medium leading-tight">{e(d["product_name"])}</span></div>'
-            html += bar(pct) + '</li>'
-        html += '</ul></div>'
-    html += '</div>'
+        pill_html += (f'<button class="cat-pill-btn" data-cat="{e(cat)}"'
+                      f' onclick="setCategory(this.dataset.cat)">{e(cat)}</button>')
 
-    # Full product table
-    html += '<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto">'
-    html += '<table class="w-full text-sm">'
-    html += ('<thead><tr style="background:#1f2937" class="border-b border-gray-700">'
-             '<th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold">產品名稱</th>'
-             '<th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold">Category</th>'
-             '<th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold">Power</th>'
-             '<th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold">資料完整度</th>'
-             '<th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold">新增日期</th>'
-             '<th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold">連結</th>'
-             '</tr></thead><tbody>')
-    for d in devices:
-        pct = completeness(d)
-        links = ''
-        if is_url(d.get('datasheet_url')):
-            links += f'<a href="{e(d["datasheet_url"])}" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 underline mr-2">Datasheet↗</a>'
-        teardown_urls = [src for src in split_sources(d.get('teardown_source')) if is_url(src)]
-        if teardown_urls:
-            links += f'<a href="{e(teardown_urls[0])}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">{source_link_label(teardown_urls[0])}</a>'
-        html += (f'<tr class="border-b border-gray-700/50">'
-                 f'<td class="px-4 py-3 text-gray-200 text-xs font-medium">{e(d["product_name"])}</td>'
-                 f'<td class="px-4 py-3">{cat_badge(d["category"])}</td>'
-                 f'<td class="px-4 py-3 text-gray-400 text-xs">{e(d.get("power_consumption") or "N/A")}</td>'
-                 f'<td class="px-4 py-3">{bar(pct)}</td>'
-                 f'<td class="px-4 py-3 text-gray-500 text-xs">{e(d.get("date_added") or "")}</td>'
-                 f'<td class="px-4 py-3">{links}</td>'
-                 f'</tr>')
-    html += '</tbody></table></div>'
-    html += '</section>'
-    return html
-
-
-def build_category_tab(cat, devs):
-    html = ''
-
-    # Product cards
-    html += f'<section class="mb-8">'
-    html += f'<h2 class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-4">產品總覽 — {e(cat)}</h2>'
-    cols = min(len(devs), 3)
-    html += f'<div class="grid grid-cols-{cols} gap-4">'
-    for d in devs:
-        pct = completeness(d)
-        links = ''
-        if is_url(d.get('datasheet_url')):
-            links += f'<a href="{e(d["datasheet_url"])}" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 underline">Datasheet↗</a>'
-        teardown_urls = [src for src in split_sources(d.get('teardown_source')) if is_url(src)]
-        if teardown_urls:
-            links += f' <a href="{e(teardown_urls[0])}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">{source_link_label(teardown_urls[0])}</a>'
-
-        rows = ''
-        for key, label in [('camera_system','Camera'), ('audio_system','Audio'),
-                            ('power_consumption','Power'), ('dimensions','Size'),
-                            ('teardown_thermal','Thermal')]:
-            v = d.get(key, '')
-            if v and v != 'N/A':
-                color = 'text-amber-500' if key == 'teardown_thermal' else 'text-gray-500'
-                rows += (f'<div class="cell-text">'
-                         f'<span class="{color}">{label}: </span>'
-                         f'<span class="text-gray-300">{e(str(v)[:90])}</span>'
-                         f'</div>')
-
-        html += (f'<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">'
-                 f'<div class="px-4 py-3 border-b border-gray-700 flex items-center justify-between">'
-                 f'{cat_badge(d["category"])}{bar(pct, "w-16")}'
-                 f'</div>'
-                 f'<div class="px-4 py-4">'
-                 f'<h3 class="font-semibold text-white text-sm mb-3 leading-snug">{e(d["product_name"])}</h3>'
-                 f'<div class="space-y-1.5">{rows}</div>'
-                 f'<div class="mt-3 flex gap-3">{links}</div>'
-                 f'</div></div>')
-    html += '</div></section>'
-
-    # Feature matrix (only show if >1 device in this category)
-    if len(devs) > 1:
-        html += '<section class="mb-8">'
-        html += '<h2 class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-3">功能比較矩陣</h2>'
-        html += '<div class="bg-gray-800 rounded-xl border border-gray-700 overflow-x-auto"><table class="w-full text-sm border-collapse">'
-        html += '<thead><tr style="background:#1f2937"><th class="text-left px-4 py-3 text-gray-400 text-xs font-semibold w-36 border-b border-gray-700">Feature</th>'
-        for d in devs:
-            html += (f'<th class="text-left px-4 py-3 text-xs font-medium min-w-52 border-b border-gray-700">'
-                     f'{cat_badge(d["category"])}<br><span class="text-gray-200">{e(d["product_name"])}</span></th>')
-        html += '</tr></thead><tbody>'
-        for key, label in MATRIX_FIELDS:
-            html += f'<tr><td class="px-4 py-2.5 text-gray-500 text-xs font-medium whitespace-nowrap align-top border-b border-gray-700/40">{label}</td>'
-            for d in devs:
-                html += f'<td class="px-4 py-2.5 align-top border-b border-gray-700/40 max-w-xs">{cell(d.get(key))}</td>'
-            html += '</tr>'
-        html += '</tbody></table></div></section>'
-
-    # Teardown
-    html += '<section class="mb-8">'
-    html += '<h2 class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-3">拆解 / 熱設計分析</h2>'
-    html += '<div class="space-y-4">'
-    for d in devs:
-        td_sections = [
-            ('text-amber-400', 'Thermal Design',  d.get('teardown_thermal_design')),
-            ('text-blue-400',  'Key ICs',          d.get('teardown_key_ics')),
-            ('text-purple-400','PCB Overview',     d.get('teardown_pcb')),
-            ('text-green-400', 'Build Quality',    d.get('teardown_build_quality')),
-        ]
-        td_html = ''
-        for color, title, content in td_sections:
-            td_html += (f'<div><h4 class="{color} text-xs font-bold uppercase tracking-widest mb-2">{title}</h4>'
-                        f'<p class="text-gray-300 text-sm leading-relaxed mono">{e(content or "No data")}</p></div>')
-
-        note_html = ''
-        if d.get('notes'):
-            note_html = (f'<div class="mt-4 bg-gray-700/40 rounded-lg p-3 text-xs text-gray-400 leading-relaxed">'
-                         f'<span class="text-gray-500 font-semibold">Note: </span>{e(d["notes"])}</div>')
-
-        src_html = ''
-        if d.get('teardown_source'):
-            for source in split_sources(d.get('teardown_source')):
-                if is_url(source):
-                    src_html += f'<a href="{e(source)}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">Teardown Source↗</a> '
-                elif not source.upper().startswith('N/A'):
-                    src_html += f'<span class="text-xs text-gray-500">{e(source)}</span> '
-
-        html += (f'<div class="bg-gray-800 rounded-xl border border-gray-700 p-5">'
-                 f'<div class="flex items-center gap-3 mb-5">{cat_badge(d["category"])}'
-                 f'<span class="font-semibold text-white text-sm">{e(d["product_name"])}</span></div>'
-                 f'<div class="grid grid-cols-2 gap-6">{td_html}</div>'
-                 f'{note_html}'
-                 f'{"<div class=mt-4>" + src_html + "</div>" if src_html else ""}'
-                 f'</div>')
-    html += '</div></section>'
-
-    # Dynamic specs (using <details>)
-    html += '<section class="mb-8">'
-    html += '<h2 class="text-gray-500 text-xs font-semibold uppercase tracking-widest mb-3">產品特規（Dynamic Columns）</h2>'
-    html += '<div class="space-y-3">'
-    for d in devs:
-        dc = d.get('dynamic_columns') or {}
-        if not dc:
-            continue
-        entries = list(dc.items())
-        kv_rows = ''.join(
-            f'<div class="kv-row px-5 py-2.5 flex gap-6">'
-            f'<div class="text-gray-500 text-xs w-52 shrink-0 pt-0.5">{e(k)}</div>'
-            f'<div class="text-gray-200 text-sm mono">{e(str(v))}</div>'
-            f'</div>'
-            for k, v in entries
-        )
-        html += (f'<details class="bg-gray-800 rounded-xl border border-gray-700 overflow-hidden">'
-                 f'<summary class="px-5 py-3 flex items-center gap-3 cursor-pointer hover:bg-gray-700/40 transition-colors list-none">'
-                 f'{cat_badge(d["category"])}'
-                 f'<span class="text-sm font-medium text-gray-200">{e(d["product_name"])}</span>'
-                 f'<span class="text-gray-600 text-xs">{len(entries)} specs</span>'
-                 f'<span class="ml-auto text-gray-500">▸</span>'
-                 f'</summary>'
-                 f'<div class="border-t border-gray-700 divide-y divide-gray-700/50">{kv_rows}</div>'
-                 f'</details>')
-    html += '</div></section>'
-    return html
-
-
-# ── Main builder ─────────────────────────────────────────────────────────────
-
-def build_html(devices):
-    cats = list(dict.fromkeys(d['category'] for d in devices if d['category']))
-    now  = datetime.now().strftime('%Y-%m-%d %H:%M')
-
-    # Build tab labels and IDs
-    tab_ids    = ['overview'] + [f'cat{i}' for i in range(len(cats))]
-    tab_labels = ['Overview'] + cats
-
-    # Tab bar HTML
-    tab_bar = ''
-    for i, (tid, label) in enumerate(zip(tab_ids, tab_labels)):
-        active = ' active' if i == 0 else ''
-        tab_bar += (f'<button id="tab-{tid}" class="main-tab{active}" '
-                    f'onclick="showTab(\'{tid}\')">{_html.escape(label)}</button>')
-
-    # Panel HTML
-    panels = ''
-    for i, (tid, label) in enumerate(zip(tab_ids, tab_labels)):
-        style = '' if i == 0 else ' style="display:none"'
-        if tid == 'overview':
-            content = build_overview(devices)
+    table_rows = ''
+    for i, d in enumerate(devices, 1):
+        power = str(d.get('power_consumption') or '').strip()
+        if not power or power == 'N/A':
+            power_html = '<span class="muted">—</span>'
         else:
-            cat = cats[i - 1]
-            cat_devs = [d for d in devices if d['category'] == cat]
-            content = build_category_tab(cat, cat_devs)
-        panels += f'<div id="panel-{tid}" class="tab-panel"{style}>{content}</div>'
+            trunc = power[:45] + '…' if len(power) > 45 else power
+            power_html = e(trunc)
+        link_html = ''
+        if is_url(d.get('datasheet_url')):
+            link_html = (f'<a href="{e(d["datasheet_url"])}" target="_blank"'
+                         f' class="tbl-link" onclick="event.stopPropagation()">↗</a>')
+        row_cls = 'tbl-row tbl-alt' if i % 2 == 0 else 'tbl-row'
+        table_rows += (
+            f'<tr class="{row_cls}" data-id="{d["id"]}" data-cat="{e(d["category"])}"'
+            f' data-name="{e(d["product_name"])}" onclick="openDrawer({d["id"]})">'
+            f'<td class="tc tc-num">{i}</td>'
+            f'<td class="tc tc-name">{e(d["product_name"])}</td>'
+            f'<td class="tc">{cat_pill(d["category"])}</td>'
+            f'<td class="tc tc-muted">{power_html}</td>'
+            f'<td class="tc">{soc_status(d)}</td>'
+            f'<td class="tc tc-date">{e(d.get("date_added") or "")}</td>'
+            f'<td class="tc tc-link">{link_html}</td>'
+            f'</tr>'
+        )
 
-    # Embed data for markdown export
-    # Replace </script> so the inline script tag isn't closed prematurely
+    drawer_panels = ''.join(build_drawer_panel(d) for d in devices)
+
     data_json = json.dumps(
         [{k: (list(d['dynamic_columns'].items()) if k == 'dynamic_columns' else v)
           for k, v in d.items()} for d in devices],
         ensure_ascii=False
     ).replace('</', '<\\/')
-    matrix_json = json.dumps([{'key': k, 'label': l} for k, l in MATRIX_FIELDS], ensure_ascii=False).replace('</', '<\\/')
+    matrix_json = json.dumps(
+        [{'key': k, 'label': l} for k, l in MATRIX_FIELDS],
+        ensure_ascii=False
+    ).replace('</', '<\\/')
 
     return f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -343,77 +278,236 @@ def build_html(devices):
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VC Competitor Benchmarker</title>
-<script src="https://cdn.tailwindcss.com"></script>
 <style>
-  body  {{ font-family:'Segoe UI',system-ui,sans-serif; background:#111827; color:#f9fafb; }}
-  .mono {{ font-family:Consolas,'Courier New',monospace; }}
-  .tag  {{ display:inline-block; padding:2px 10px; border-radius:9999px;
-           font-size:0.7rem; font-weight:700; letter-spacing:0.04em; }}
-  .cell-text {{ font-size:0.72rem; line-height:1.5; }}
-  .bar-bg   {{ background:#1f2937; border-radius:9999px; height:6px; overflow:hidden; }}
-  .bar-fill {{ height:6px; border-radius:9999px; }}
-  .kv-row:nth-child(odd) {{ background:rgba(255,255,255,0.03); }}
-  details summary::-webkit-details-marker {{ display:none; }}
-  details[open] summary span.ml-auto {{ transform:rotate(90deg); }}
-
-  .main-tab {{
-    padding:10px 20px; font-size:0.85rem; font-weight:500; color:#6b7280;
-    border-bottom:2px solid transparent; border-top:none; border-left:none; border-right:none;
-    background:none; cursor:pointer; white-space:nowrap;
-    transition:color .15s, border-color .15s;
-  }}
-  .main-tab:hover {{ color:#d1d5db; }}
-  .main-tab.active {{ color:#fff; border-bottom-color:#60a5fa; }}
-
-  body {{ background:#f8fafc; color:#111827; }}
-  .bg-gray-800 {{ background:#ffffff !important; }}
-  .bg-gray-700, .bg-gray-700\\/40 {{ background:#f1f5f9 !important; }}
-  .bg-gray-900 {{ background:#f8fafc !important; }}
-  .border-gray-700, .border-gray-700\\/40, .border-gray-700\\/50 {{ border-color:#e2e8f0 !important; }}
-  .text-white, .text-gray-200, .text-gray-300 {{ color:#111827 !important; }}
-  .text-gray-400, .text-gray-500, .text-gray-600 {{ color:#64748b !important; }}
-  .bar-bg {{ background:#e2e8f0; }}
-  .kv-row:nth-child(odd) {{ background:#f8fafc; }}
-  .main-tab:hover {{ color:#111827; background:#f8fafc; }}
-  .main-tab.active {{ color:#2563eb; border-bottom-color:#2563eb; background:#eff6ff; }}
-  .tag {{ border:1px solid rgba(148,163,184,0.35); }}
+*,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c1917;line-height:1.5}}
+#site-header{{
+  position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e7e5e4;
+  padding:12px 24px;display:flex;align-items:center;gap:16px;
+}}
+.header-brand .title{{font-size:1rem;font-weight:700;color:#1c1917}}
+.header-brand .sub{{font-size:0.72rem;color:#a8a29e;margin-top:1px}}
+#search-box{{
+  flex:1;max-width:300px;border:1px solid #e7e5e4;border-radius:8px;
+  padding:7px 12px;font-size:0.85rem;color:#1c1917;background:#fafaf9;outline:none;
+}}
+#search-box:focus{{border-color:#4f46e5;background:#fff}}
+.header-right{{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}}
+#gen-time{{font-size:0.72rem;color:#a8a29e}}
+#update-btn{{
+  display:flex;align-items:center;gap:6px;background:#4f46e5;color:#fff;
+  border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;
+  cursor:pointer;transition:background .15s;
+}}
+#update-btn:hover{{background:#4338ca}}
+#update-btn:disabled{{opacity:.5;cursor:default}}
+#filter-bar{{
+  position:sticky;top:61px;z-index:20;background:#fff;border-bottom:1px solid #e7e5e4;
+  padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+}}
+.kpi-chip{{
+  display:flex;align-items:center;gap:6px;background:#fafaf9;
+  border:1px solid #e7e5e4;border-radius:8px;padding:4px 12px;flex-shrink:0;
+}}
+.kpi-val{{font-size:0.95rem;font-weight:700;color:#1c1917}}
+.kpi-label{{font-size:0.7rem;color:#a8a29e}}
+.filter-sep{{width:1px;height:20px;background:#e7e5e4;flex-shrink:0}}
+.cat-pill-btn{{
+  background:#fafaf9;color:#78716c;border:1px solid #e7e5e4;border-radius:9999px;
+  padding:4px 12px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;
+  transition:all .1s;
+}}
+.cat-pill-btn:hover{{background:#f5f5f4;color:#1c1917}}
+.cat-pill-btn.pill-active{{background:#4f46e5;color:#fff;border-color:#4f46e5}}
+#row-count{{font-size:0.72rem;color:#a8a29e;margin-left:auto;white-space:nowrap}}
+main{{padding:0 24px 80px}}
+#main-table{{width:100%;border-collapse:collapse;min-width:700px}}
+#main-table thead th{{
+  background:#fff;border-bottom:2px solid #e7e5e4;
+  padding:10px 12px;font-size:0.72rem;font-weight:600;color:#78716c;
+  text-align:left;white-space:nowrap;
+}}
+.tbl-row{{cursor:pointer;transition:background .1s}}
+.tbl-row:hover{{background:#eff6ff !important}}
+.tbl-alt{{background:#f5f5f4}}
+.tc{{
+  padding:10px 12px;font-size:0.82rem;color:#1c1917;
+  border-bottom:1px solid #e7e5e4;vertical-align:middle;
+}}
+.tc-num{{color:#a8a29e;font-size:0.75rem;width:40px}}
+.tc-name{{font-weight:600;max-width:240px}}
+.tc-muted{{color:#78716c;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
+.tc-date{{color:#a8a29e;font-size:0.75rem;white-space:nowrap}}
+.tc-link{{width:36px;text-align:center}}
+.tbl-link{{color:#4f46e5;text-decoration:none;font-size:0.9rem}}
+.tbl-link:hover{{color:#4338ca}}
+.muted{{color:#a8a29e;font-size:0.75rem}}
+#drawer{{
+  position:fixed;right:0;top:0;height:100%;
+  width:44vw;min-width:420px;max-width:680px;
+  background:#fff;border-left:1px solid #e7e5e4;
+  box-shadow:-8px 0 32px rgba(0,0,0,.08);
+  transform:translateX(100%);
+  transition:transform .25s cubic-bezier(.4,0,.2,1);
+  z-index:50;overflow-y:auto;
+}}
+#drawer.open{{transform:translateX(0)}}
+#drawer-overlay{{
+  display:none;position:fixed;inset:0;background:rgba(28,25,23,.15);z-index:40;
+}}
+.drawer-hd{{
+  display:flex;align-items:flex-start;justify-content:space-between;gap:12px;
+  padding:20px 24px 16px;border-bottom:1px solid #e7e5e4;
+  position:sticky;top:0;background:#fff;z-index:5;
+}}
+.drawer-title-col{{min-width:0}}
+.drawer-name{{font-size:1.05rem;font-weight:700;color:#1c1917;line-height:1.3;margin-bottom:6px}}
+.drawer-meta{{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
+.date-chip{{color:#a8a29e;font-size:0.72rem}}
+.close-btn{{
+  background:none;border:1px solid #e7e5e4;cursor:pointer;
+  font-size:1rem;color:#78716c;padding:4px 10px;border-radius:6px;flex-shrink:0;
+  transition:background .1s;
+}}
+.close-btn:hover{{background:#f5f5f4}}
+.drawer-links-row{{
+  display:flex;align-items:center;justify-content:space-between;gap:12px;flex-wrap:wrap;
+  padding:12px 24px;border-bottom:1px solid #e7e5e4;
+}}
+.comp-row{{display:flex;align-items:center;gap:6px}}
+.mini-bar{{background:#e7e5e4;border-radius:9999px;height:5px;width:72px;overflow:hidden}}
+.mini-bar-fill{{height:5px;border-radius:9999px}}
+.dl-link{{text-decoration:none;font-size:0.78rem;font-weight:600;border-radius:6px;padding:4px 10px}}
+.indigo-link{{background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe}}
+.indigo-link:hover{{background:#e0e7ff}}
+.amber-link{{background:#fffbeb;color:#b45309;border:1px solid #fde68a}}
+.amber-link:hover{{background:#fef3c7}}
+.amber-link-sm{{color:#b45309;font-size:0.75rem}}
+.drawer-details{{border-bottom:1px solid #e7e5e4}}
+.drawer-summary{{
+  display:flex;align-items:center;gap:6px;padding:12px 24px;cursor:pointer;
+  font-size:0.8rem;font-weight:600;color:#4f46e5;list-style:none;
+}}
+.drawer-summary::-webkit-details-marker{{display:none}}
+.drawer-summary .arrow{{transition:transform .2s}}
+details[open] .drawer-summary .arrow{{transform:rotate(90deg)}}
+.kv-section{{padding:4px 24px 14px}}
+.kv-table{{width:100%;border-collapse:collapse}}
+.kv-label{{color:#78716c;font-size:0.72rem;padding:5px 14px 5px 0;white-space:nowrap;vertical-align:top;width:140px}}
+.kv-val{{font-size:0.8rem;color:#1c1917;padding:5px 0;vertical-align:top}}
+.drawer-section{{padding:14px 24px}}
+.section-hd{{font-size:0.8rem;font-weight:600;color:#4f46e5;margin-bottom:8px}}
+.notes-box{{
+  background:#fafaf9;border:1px solid #e7e5e4;border-radius:8px;
+  padding:10px 14px;font-size:0.78rem;color:#78716c;line-height:1.6;
+}}
+#drawer-panels{{display:none}}
 </style>
 </head>
-<body class="min-h-screen">
+<body>
 
-<div class="sticky top-0 z-10">
-<header class="bg-gray-800 border-b border-gray-700 px-8 py-4 flex items-center justify-between">
-  <div>
-    <h1 class="text-lg font-bold text-white tracking-tight">VC Competitor Benchmarker</h1>
-    <p class="text-gray-400 text-xs mt-0.5">Logitech 競品分析儀表板</p>
+<header id="site-header">
+  <div class="header-brand">
+    <div class="title">VC Competitor Benchmarker</div>
+    <div class="sub">Logitech 競品分析儀表板</div>
   </div>
-  <div class="flex items-center gap-3">
-    <span class="text-gray-600 text-xs" id="gen-time">Generated {now}</span>
-    <button id="update-btn" onclick="updateDashboard()"
-      class="flex items-center gap-1.5 text-xs bg-blue-700 hover:bg-blue-600 disabled:opacity-50
-             text-white px-3 py-1.5 rounded-lg transition-colors font-medium">
+  <input id="search-box" type="text" placeholder="搜尋產品名稱…" oninput="applyFilters()">
+  <div class="header-right">
+    <span id="gen-time">Generated {now}</span>
+    <button id="update-btn" onclick="updateDashboard()">
       <span id="update-icon">&#x21BB;</span> 更新資料
     </button>
   </div>
 </header>
-<nav class="bg-gray-800 border-b border-gray-700 px-8 flex gap-1 overflow-x-auto">
-  {tab_bar}
-</nav>
+
+<div id="filter-bar">
+  {kpi_html}
+  <div class="filter-sep"></div>
+  {pill_html}
+  <span id="row-count">顯示 {count} / {count} 筆</span>
 </div>
 
-<main class="px-8 py-7 max-w-7xl mx-auto">
-  {panels}
+<main>
+  <table id="main-table">
+    <thead>
+      <tr>
+        <th class="tc-num">#</th>
+        <th style="min-width:200px">產品名稱</th>
+        <th>Category</th>
+        <th style="min-width:130px">Power 功耗</th>
+        <th>SoC 狀態</th>
+        <th>新增日期</th>
+        <th></th>
+      </tr>
+    </thead>
+    <tbody id="table-body">
+      {table_rows}
+    </tbody>
+  </table>
 </main>
 
+<aside id="drawer">
+  <div id="drawer-inner"></div>
+</aside>
+
+<div id="drawer-overlay" onclick="closeDrawer()"></div>
+
+<div id="drawer-panels">
+  {drawer_panels}
+</div>
+
 <script>
-function showTab(id) {{
-  document.querySelectorAll('.tab-panel').forEach(function(p) {{ p.style.display = 'none'; }});
-  document.querySelectorAll('.main-tab').forEach(function(t) {{ t.classList.remove('active'); }});
-  document.getElementById('panel-' + id).style.display = '';
-  document.getElementById('tab-' + id).classList.add('active');
+var activeCategory = 'all';
+
+function openDrawer(id) {{
+  var panel = document.querySelector('#drawer-panels .drawer-panel[data-id="' + id + '"]');
+  if (!panel) {{ return; }}
+  document.getElementById('drawer-inner').innerHTML = panel.innerHTML;
+  document.getElementById('drawer').classList.add('open');
+  document.getElementById('drawer-overlay').style.display = 'block';
+  document.body.style.overflow = 'hidden';
 }}
 
-// ── Markdown export ──────────────────────────────────────────────────────────
+function closeDrawer() {{
+  document.getElementById('drawer').classList.remove('open');
+  document.getElementById('drawer-overlay').style.display = 'none';
+  document.body.style.overflow = '';
+}}
+
+document.addEventListener('keydown', function(ev) {{
+  if (ev.key === 'Escape') {{ closeDrawer(); }}
+}});
+
+function setCategory(cat) {{
+  activeCategory = cat;
+  document.querySelectorAll('.cat-pill-btn').forEach(function(btn) {{
+    if (btn.dataset.cat === cat) {{
+      btn.classList.add('pill-active');
+    }} else {{
+      btn.classList.remove('pill-active');
+    }}
+  }});
+  applyFilters();
+}}
+
+function applyFilters() {{
+  var search = (document.getElementById('search-box').value || '').toLowerCase();
+  var rows = document.querySelectorAll('#table-body tr');
+  var shown = 0;
+  rows.forEach(function(row) {{
+    var matchCat = activeCategory === 'all' || row.dataset.cat === activeCategory;
+    var matchSearch = !search || row.dataset.name.toLowerCase().indexOf(search) !== -1;
+    if (matchCat && matchSearch) {{
+      row.style.display = '';
+      shown++;
+    }} else {{
+      row.style.display = 'none';
+    }}
+  }});
+  document.getElementById('row-count').textContent =
+    '顯示 ' + shown + ' / ' + rows.length + ' 筆';
+}}
+
 var DEVICES = {data_json};
 var MATRIX_FIELDS = {matrix_json};
 
@@ -423,47 +517,35 @@ function completeness(d) {{
     'mounting_options','environmental_specs','teardown_thermal','teardown_thermal_design',
     'teardown_key_ics','teardown_build_quality'];
   var filled = keys.filter(function(k) {{
-    var v = d[k]; return v && String(v).trim() && String(v) !== 'N/A' && String(v).length > 1;
+    var v = d[k];
+    return v && String(v).trim() && String(v) !== 'N/A' && String(v).length > 1;
   }}).length;
   return Math.round(filled / keys.length * 100);
 }}
 
 function exportMarkdown() {{
-  var lines = ['# VC Competitor Benchmarker — 競品名錄', ''];
-  lines.push('| 產品名稱 | Category | Power | 資料完整度 | 新增日期 |');
+  var lines = ['# VC Competitor Benchmarker', ''];
+  lines.push('| 產品名稱 | Category | Power | 完整度 | 新增日期 |');
   lines.push('|---|---|---|---|---|');
   DEVICES.forEach(function(d) {{
     lines.push('| ' + d.product_name + ' | ' + d.category + ' | ' +
-      (d.power_consumption||'N/A') + ' | ' + completeness(d) + '% | ' + (d.date_added||'') + ' |');
+      (d.power_consumption || 'N/A') + ' | ' + completeness(d) + '% | ' + (d.date_added || '') + ' |');
   }});
-  lines.push('', '## 功能比較矩陣', '');
-  var header = '| Feature |' + DEVICES.map(function(d) {{ return ' ' + d.product_name + ' |'; }}).join('');
-  var sep    = '|---|'       + DEVICES.map(function()  {{ return '---|'; }}).join('');
-  lines.push(header, sep);
-  MATRIX_FIELDS.forEach(function(f) {{
-    var row = '| ' + f.label + ' |';
-    DEVICES.forEach(function(d) {{
-      row += ' ' + String(d[f.key]||'N/A').replace(/\\n/g,' ').substring(0,60) + ' |';
-    }});
-    lines.push(row);
-  }});
-  var blob = new Blob([lines.join('\\n')], {{type:'text/markdown;charset=utf-8'}});
+  var blob = new Blob([lines.join('\\n')], {{type: 'text/markdown;charset=utf-8'}});
   var a = document.createElement('a');
   a.href = URL.createObjectURL(blob);
-  a.download = 'vc_benchmark_' + new Date().toISOString().slice(0,10) + '.md';
+  a.download = 'vc_benchmark_' + new Date().toISOString().slice(0, 10) + '.md';
   a.click();
 }}
 
-// ── Update from SQLite ───────────────────────────────────────────────────────
 function updateDashboard() {{
-  var btn  = document.getElementById('update-btn');
+  var btn = document.getElementById('update-btn');
   var icon = document.getElementById('update-icon');
   btn.disabled = true;
   icon.textContent = '⏳';
-
   fetch('/api/refresh')
     .then(function(r) {{
-      if (!r.ok) throw new Error('HTTP ' + r.status);
+      if (!r.ok) {{ throw new Error('HTTP ' + r.status); }}
       return r.json();
     }})
     .then(function(data) {{
