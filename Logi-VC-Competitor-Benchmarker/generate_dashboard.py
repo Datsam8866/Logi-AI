@@ -316,12 +316,13 @@ def build_html(devices):
         panels += f'<div id="panel-{tid}" class="tab-panel"{style}>{content}</div>'
 
     # Embed data for markdown export
+    # Replace </script> so the inline script tag isn't closed prematurely
     data_json = json.dumps(
         [{k: (list(d['dynamic_columns'].items()) if k == 'dynamic_columns' else v)
           for k, v in d.items()} for d in devices],
         ensure_ascii=False
-    )
-    matrix_json = json.dumps([{'key': k, 'label': l} for k, l in MATRIX_FIELDS], ensure_ascii=False)
+    ).replace('</', '<\\/')
+    matrix_json = json.dumps([{'key': k, 'label': l} for k, l in MATRIX_FIELDS], ensure_ascii=False).replace('</', '<\\/')
 
     return f"""<!DOCTYPE html>
 <html lang="zh-TW">
@@ -354,7 +355,8 @@ def build_html(devices):
 </head>
 <body class="min-h-screen">
 
-<header class="bg-gray-800 border-b border-gray-700 px-8 py-4 flex items-center justify-between sticky top-0 z-10">
+<div class="sticky top-0 z-10">
+<header class="bg-gray-800 border-b border-gray-700 px-8 py-4 flex items-center justify-between">
   <div>
     <h1 class="text-lg font-bold text-white tracking-tight">VC Competitor Benchmarker</h1>
     <p class="text-gray-400 text-xs mt-0.5">Logitech 競品分析儀表板</p>
@@ -368,10 +370,10 @@ def build_html(devices):
     </button>
   </div>
 </header>
-
 <nav class="bg-gray-800 border-b border-gray-700 px-8 flex gap-1 overflow-x-auto">
   {tab_bar}
 </nav>
+</div>
 
 <main class="px-8 py-7 max-w-7xl mx-auto">
   {panels}

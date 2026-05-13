@@ -4,25 +4,29 @@
 
 ## 最新進度
 
+**2026-05-13**
+- 批次新增 12 筆 VC 競品 benchmark（資料庫共 17 筆）：
+  - AIO System：Cisco Room Kit Pro、Cisco Room Kit EQ
+  - Room Bar：Cisco Room Bar Pro、Neat Bar Gen2、Jabra PanaCast 50 VBS、Neat Bar Pro、Poly Studio X72、Poly Studio X52、Yealink MeetingBar A30/A40/A10
+  - PTZ Camera：Huddly L1
+- 生成 12 個 `.md` 報告，存於 `reports/`
+- 修正 Dashboard tab 切換 Bug：nav 與 header 改為共用 sticky 容器，tab 列現在永遠釘頂
+- 補充 JSON 安全性修正（`</` 跳脫，防止資料破壞 script 標籤）
+- 新增 `insert_batch_2026_05_13.py` 批次寫入腳本
+
 **2026-05-12**
-- 初始化專案，完成首批 3 筆競品 benchmark：Mac Pro Trashcan、Nest Cam IQ、FLIR One Pro
-- 新增 AVer VB370A、AVer VB350（Room Bar 類）benchmark，資料庫共 5 筆
-- 建立互動式 HTML dashboard（`reports/dashboard.html`）：
-  - KPI 卡片、Category tabs（Overview + 各類別一個 tab）
-  - 功能比較矩陣、拆解分析面板、Dynamic Columns 手風琴
-  - Markdown 匯出按鈕
-  - 更新資料鍵（呼叫本機伺服器 `/api/refresh` 重讀 SQLite）
-- 建立本機伺服器 `serve_dashboard.py`（`http://localhost:8765/`）
-- 修正 tab 切換 Bug：根本原因為 Python import cache，修改程式後須重啟伺服器才能生效
+- 初始化專案，完成首批 5 筆競品 benchmark（Mac Pro Trashcan、Nest Cam IQ、FLIR One Pro、AVer VB370A、AVer VB350）
+- 建立互動式 HTML dashboard + 本機伺服器（port 8765）
 
 **已知注意事項**
 - 修改 `generate_dashboard.py` 後，需重啟 `serve_dashboard.py`（不能只用「更新資料」鍵）
 
 ## Next Action
 
-- [ ] 新增更多 VC 競品（Jabra PanaCast、Poly Studio、Yealink UVC84 等）
+- [ ] 補足 Neat/Cisco 的 SoC 型號（Neat 完全未公開；Cisco 確認 NVIDIA 但不揭露型號）
+- [ ] 尋找 12 筆新品的公開 teardown 資料（目前全部 N/A）
+- [ ] 考慮加入 Logitech 自家基準欄位（Rally Bar、MeetingOwl 等作為比較基準線）
 - [ ] 補足 Nest Cam IQ SoC 型號（TechInsights 付費資料）
-- [ ] 考慮在 dashboard 加 Logitech 自家基準欄位（作為比較基準線）
 
 ## 資料夾結構
 
