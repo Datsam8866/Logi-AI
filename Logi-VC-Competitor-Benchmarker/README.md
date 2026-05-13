@@ -4,6 +4,19 @@
 
 ## 最新進度
 
+**2026-05-13（第四批）**
+- 批次新增 9 筆 PTZ Camera / Table Camera 競品 benchmark（資料庫共 44 筆）：
+  - PTZ Camera：AVer CAM520 Pro3、BenQ DVY23、BZBGear BG-ADAMO-4K、Poly Studio E70、Poly Studio E60、Legrand Vaddio RoboShot 12E HDBT、Yealink UVC86、Prisual TEM-4K30N PRO
+  - Table Camera：Nuroum V403（含 5x 光學、motorized PTZ、built-in 雙麥，使用者指定分類）
+- Prisual TEM-4K30N PRO：4K@60fps、30x 光學、Official NDI 6 & HX3 認證、Ambarella SoC（Amazon 聲稱，未 teardown 確認）
+- Poly Studio E70 注意：無 motorized PTZ，僅 DirectorAI 電子幀取，分類為 PTZ Camera 係使用者指定
+- 生成 9 個 `.md` 報告，存於 `reports/`；重新生成 dashboard.html（現共 44 筆）
+
+**2026-05-13（第三批）**
+- 批次新增 11 筆 Mic / Accessory 競品 benchmark（資料庫共 35 筆）：
+  - Mic：Cisco Table Microphone Pro、Lenovo Google Meet Series One Mic Pod、Poly Studio A2、Sennheiser TeamConnect Ceiling Medium、Shure MXA901、Shure MXA310AL、Legrand Vaddio TableMIC、Legrand Vaddio CeilingMIC、Yealink CM20、Yealink VCM36-W
+  - Accessory：Jabra PanaCast Meet Anywhere（搭配包，含 PanaCast 50 + Speak2 75）
+
 **2026-05-13（第二批）**
 - 批次新增 7 筆 Table Camera 競品 benchmark（資料庫共 24 筆）：
   - IPEVO TOTEM 360、Kandao Meeting Pro、Neat Center SE
@@ -33,8 +46,9 @@
 ## Next Action
 
 - [ ] 補足 Neat/Cisco 的 SoC 型號（Neat 完全未公開；Cisco 確認 NVIDIA 但不揭露型號）
-- [ ] 尋找 Table Camera 7 筆新品的公開 teardown 資料（目前全部 N/A，僅 Meeting Owl 4+ 有 FCC 內部照）
-- [ ] 尋找 Room Bar 12 筆新品的公開 teardown 資料（目前全部 N/A）
+- [ ] 確認 Prisual TEM-4K30N PRO 的 Ambarella SoC 型號（目前僅 Amazon 聲稱，非 teardown 確認）
+- [ ] 尋找 PTZ Camera 9 筆新品的公開 teardown 資料（目前全部 N/A）
+- [ ] 尋找 Table Camera、Room Bar 現有各批新品的公開 teardown 資料
 - [ ] 考慮加入 Logitech 自家基準欄位（Rally Bar、Rally Bar Mini 等作為比較基準線）
 - [ ] 補足 Neat Center SE / Poly E360 的詳細尺寸與重量（目前未找到官方數值）
 - [ ] 補足 Nest Cam IQ SoC 型號（TechInsights 付費資料）
@@ -47,7 +61,7 @@ Logi-VC-Competitor-Benchmarker/
 │   └── skills/
 │       └── vc-device-benchmarker/   # Benchmark workflow skill
 ├── reports/                          # .md benchmark 報告 + dashboard.html
-├── vc_benchmark.db                   # SQLite 資料庫（24 筆）
+├── vc_benchmark.db                   # SQLite 資料庫（44 筆）
 ├── generate_dashboard.py             # 生成 dashboard HTML
 ├── serve_dashboard.py                # 本機 HTTP 伺服器（port 8765）
 ├── CLAUDE.md

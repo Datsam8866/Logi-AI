@@ -1,5 +1,5 @@
 ﻿# IPEVO TOTEM 360 — VC Device Benchmark Report
-**Category**: Table Camera
+**Category**: Speaker
 **Date Researched**: 2026-05-13
 **Data Sources**: https://us.ipevo.com/pages/totem-360-specs
 
