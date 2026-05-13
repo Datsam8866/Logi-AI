@@ -4,6 +4,24 @@
 
 ## 最新進度
 
+**2026-05-13（Dashboard 改版 v4）**
+- All 視圖：3 欄 grid，每個 category 一個色塊（header 套對應顏色）；點 header → category 視圖；產品列純顯示（名稱 + SoC ✓/—）
+- Category 視圖：每列顯示 SoC 型號 + Power 功耗；點列 → 右側 Drawer 滑入顯示完整規格
+- 右上角新增 ☾/☀ dark/light mode 切換，偏好存 localStorage
+- SoC 狀態改為 ✓/—，不再顯示「有資料」文字；KPI 只保留競品總數、產品類別
+- 搜尋框過濾當前視圖產品列；通過 check_dashboard.py 測試
+
+**2026-05-13（第六批）**
+- 批次新增 2 筆 AIO Board 競品 benchmark（資料庫共 50 筆）：
+  - Cisco Board Pro 55 G2（55" 4K, 雙 48MP AI 相機, 14 mic 陣列, WiFi 6/6E, 40kg）
+  - Cisco Board Pro 75 G2（75" 4K, 同核心平台, 72kg）
+  - 兩款支援 Webex Rooms 或 Teams Rooms on Android（可切換）；SoC 未公開
+
+**2026-05-13（第五批）**
+- 批次新增 4 筆 Accessory / AIO Board 競品 benchmark（資料庫共 48 筆）：
+  - Accessory：Neat Pad SE（8" 排程觸控面板，PoE+，環境感測器），Yealink WPP30（4K@30fps 無線投影 Pod，WiFi 6，60g）
+  - AIO Board：Neat Board（65" 4K, 12MP, 5+3 mic, Neat OS）、Neat Board Pro（65" 4K, 雙 50MP, 10 mic, Neat Active Marker）
+
 **2026-05-13（第四批）**
 - 批次新增 9 筆 PTZ Camera / Table Camera 競品 benchmark（資料庫共 44 筆）：
   - PTZ Camera：AVer CAM520 Pro3、BenQ DVY23、BZBGear BG-ADAMO-4K、Poly Studio E70、Poly Studio E60、Legrand Vaddio RoboShot 12E HDBT、Yealink UVC86、Prisual TEM-4K30N PRO
@@ -61,7 +79,7 @@ Logi-VC-Competitor-Benchmarker/
 │   └── skills/
 │       └── vc-device-benchmarker/   # Benchmark workflow skill
 ├── reports/                          # .md benchmark 報告 + dashboard.html
-├── vc_benchmark.db                   # SQLite 資料庫（44 筆）
+├── vc_benchmark.db                   # SQLite 資料庫（50 筆）
 ├── generate_dashboard.py             # 生成 dashboard HTML
 ├── serve_dashboard.py                # 本機 HTTP 伺服器（port 8765）
 ├── CLAUDE.md
