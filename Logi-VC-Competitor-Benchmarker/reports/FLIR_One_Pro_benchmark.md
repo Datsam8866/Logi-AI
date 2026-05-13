@@ -5,7 +5,6 @@
 **Data Sources**:
 - [FLIR One Pro Product Page](https://www.flir.com/products/flir-one-pro/)
 - [Hackaday Repair/Teardown](https://hackaday.io/project/177952-flir-one-pro-repair/details)
-- [EEVblog Forum Teardown Thread](https://www.eevblog.com/forum/thermal-imaging/flir-one-thermal-imaging-camera-teardown-and-hacks/)
 
 ---
 
@@ -55,7 +54,7 @@
 | Thermal Design Observations | Lepton 3.5 shutter wrapped in copper foil; MAX31725 temperature sensor on flex cable taped to shutter for calibration reference. Known ~5°C thermal gradient across shutter surface; thermal coupling to sensor only through thin copper foil — identified as calibration accuracy limitation. |
 | Key ICs | FLIR Lepton 3.5 (thermal core); MAX31725 temperature sensor; TI BQ24295 battery management (confirmed in earlier gen; likely similar in Pro); Sonix SN9C270 camera interface (earlier gen reference — Pro exact BOM not fully public) |
 | Build Quality | Main vulnerability: USB-C host connector is fragile, fails on drop despite 1.5m drop-resistance rating. Phillips screws + metal plate hold PCB in body. Lepton 3.5 module extractable after peeling copper foil + removing SLA bracket. Rigid-flex PCB design. |
-| Source | [Hackaday Teardown/Repair](https://hackaday.io/project/177952-flir-one-pro-repair/details) \| [EEVblog Forum](https://www.eevblog.com/forum/thermal-imaging/flir-one-thermal-imaging-camera-teardown-and-hacks/) |
+| Source | [Hackaday Teardown/Repair](https://hackaday.io/project/177952-flir-one-pro-repair/details) |
 
 ---
 

@@ -46,12 +46,12 @@
 
 | Field | Details |
 |---|---|
-| PCB / SoC | Qualcomm Snapdragon 865 confirmed via Poly product documentation; FCC ID M72-STX72R — internal photos may be available at fcc.report |
+| PCB / SoC | Qualcomm Snapdragon 865 confirmed via Poly product documentation; [FCC ID M72-STX72R](https://fccid.io/M72-STX72R) — internal photos may be available |
 | Thermal Solution | N/A — no detailed public teardown; FCC filing M72-STX72R may include internal photos |
 | Thermal Design Observations | 840 mm bar with Snapdragon 865 (10 nm) + dual 4K ISP — active cooling (fan) likely required; no specific teardown data |
 | Key ICs | Qualcomm Snapdragon 865; dual 4K 20 MP image sensors (brand unconfirmed); Poly audio DSP |
 | Build Quality | N/A — no public teardown; premium bar for large rooms |
-| Source | FCC ID M72-STX72R (internal photos may exist); no iFixit/YouTube teardown found (as of 2026-05-13) |
+| Source | [FCC ID M72-STX72R](https://fccid.io/M72-STX72R) — internal photos may exist; no iFixit/YouTube teardown found (as of 2026-05-13) |
 
 ---
 

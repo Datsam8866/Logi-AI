@@ -5,6 +5,10 @@
 ## 最新進度
 
 **2026-05-13**
+- 修正 Dashboard tab 無法切換：修掉 inline JavaScript alert 字串換行造成的語法錯誤，並新增 `tests/check_dashboard.py` 防止回歸
+- 修正「更新資料」會覆蓋回舊版 dashboard 的問題：server refresh 現在會重新載入最新版 generator，並改用 threaded server 避免單一連線卡住
+- Dashboard 改為 light 背景與淺色卡片，保留既有資訊架構
+- 修正 teardown 連結呈現：`N/A` 不再產生可點擊連結；Huddly L1、Poly Studio X72 改為 FCC ID 頁；FLIR One Pro 保留可開的 Hackaday teardown/repair 來源
 - 批次新增 12 筆 VC 競品 benchmark（資料庫共 17 筆）：
   - AIO System：Cisco Room Kit Pro、Cisco Room Kit EQ
   - Room Bar：Cisco Room Bar Pro、Neat Bar Gen2、Jabra PanaCast 50 VBS、Neat Bar Pro、Poly Studio X72、Poly Studio X52、Yealink MeetingBar A30/A40/A10
@@ -19,7 +23,7 @@
 - 建立互動式 HTML dashboard + 本機伺服器（port 8765）
 
 **已知注意事項**
-- 修改 `generate_dashboard.py` 後，需重啟 `serve_dashboard.py`（不能只用「更新資料」鍵）
+- 若修改 `serve_dashboard.py` 本身，仍需重啟本機 server；單純修改 `generate_dashboard.py` 後可用「更新資料」重新產生 dashboard
 
 ## Next Action
 
@@ -36,7 +40,7 @@ Logi-VC-Competitor-Benchmarker/
 │   └── skills/
 │       └── vc-device-benchmarker/   # Benchmark workflow skill
 ├── reports/                          # .md benchmark 報告 + dashboard.html
-├── vc_benchmark.db                   # SQLite 資料庫（5 筆）
+├── vc_benchmark.db                   # SQLite 資料庫（17 筆）
 ├── generate_dashboard.py             # 生成 dashboard HTML
 ├── serve_dashboard.py                # 本機 HTTP 伺服器（port 8765）
 ├── CLAUDE.md

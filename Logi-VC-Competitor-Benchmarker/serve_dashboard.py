@@ -9,7 +9,7 @@ Endpoints:
     GET /              → serves reports/dashboard.html
     GET /api/refresh   → re-reads SQLite, regenerates HTML, returns JSON
 """
-import http.server, json, os, sys, threading, webbrowser
+import http.server, importlib, json, os, sys, threading, webbrowser
 from urllib.parse import urlparse
 
 BASE = os.path.dirname(os.path.abspath(__file__))
@@ -17,12 +17,13 @@ DASHBOARD = os.path.join(BASE, 'reports', 'dashboard.html')
 PORT = 8765
 
 sys.path.insert(0, BASE)
-from generate_dashboard import load_devices, build_html
 
 
 def regenerate():
-    devices = load_devices()
-    html = build_html(devices)
+    generate_dashboard = importlib.import_module('generate_dashboard')
+    generate_dashboard = importlib.reload(generate_dashboard)
+    devices = generate_dashboard.load_devices()
+    html = generate_dashboard.build_html(devices)
     os.makedirs(os.path.dirname(DASHBOARD), exist_ok=True)
     with open(DASHBOARD, 'w', encoding='utf-8-sig') as f:
         f.write(html)
@@ -67,6 +68,10 @@ class Handler(http.server.BaseHTTPRequestHandler):
         print(f'  [{self.log_date_time_string()}] {fmt % args}')
 
 
+class Server(http.server.ThreadingHTTPServer):
+    daemon_threads = True
+
+
 def main():
     print('=== VC Competitor Benchmarker ===')
     print('Generating dashboard from SQLite...')
@@ -78,7 +83,7 @@ def main():
     print('Press Ctrl+C to stop.\n')
 
     threading.Timer(0.8, lambda: webbrowser.open(url)).start()
-    http.server.HTTPServer(('localhost', PORT), Handler).serve_forever()
+    Server(('localhost', PORT), Handler).serve_forever()
 
 
 if __name__ == '__main__':

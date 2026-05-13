@@ -45,12 +45,12 @@
 
 | Field | Details |
 |---|---|
-| PCB / SoC | Huddly proprietary VPU (Vision Processing Unit) with neural compute engine — FCC ID 2ALRZ002 internal photos exist but component labels not publicly detailed |
+| PCB / SoC | Huddly proprietary VPU (Vision Processing Unit) with neural compute engine — [FCC ID 2ALRZ002](https://fccid.io/2ALRZ002) internal photos exist but component labels not publicly detailed |
 | Thermal Solution | N/A — no detailed public teardown; aluminum body likely serves as passive heatsink |
 | Thermal Design Observations | Aluminum body construction — passive thermal dissipation through housing; no fan expected at 14 W TDP |
 | Key ICs | Huddly VPU (neural compute; vendor unconfirmed); 1" CMOS sensor (brand unconfirmed); PoE controller IC |
-| Build Quality | Aluminum body; compact 122×82×53 mm; FCC internal photos accessible via fccid.io/2ALRZ002 |
-| Source | FCC ID filing 2ALRZ002 — internal photos available at fccid.io; no iFixit/YouTube teardown found (as of 2026-05-13) |
+| Build Quality | Aluminum body; compact 122×82×53 mm; FCC internal photos accessible via FCC ID filing |
+| Source | [FCC ID 2ALRZ002](https://fccid.io/2ALRZ002) — internal photos available; no iFixit/YouTube teardown found (as of 2026-05-13) |
 
 ---
 

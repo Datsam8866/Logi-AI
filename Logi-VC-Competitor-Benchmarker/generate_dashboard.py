@@ -5,6 +5,7 @@ Re-run whenever new competitors are added.
 """
 import sqlite3, json, os, html as _html
 from datetime import datetime
+from urllib.parse import urlparse
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 
@@ -38,6 +39,17 @@ CAT_CLS = {
 
 def e(s):
     return _html.escape(str(s or ''), quote=True)
+
+def is_url(value):
+    parsed = urlparse(str(value or '').strip())
+    return parsed.scheme in ('http', 'https') and bool(parsed.netloc)
+
+def split_sources(value):
+    return [part.strip() for part in str(value or '').split('|') if part.strip()]
+
+def source_link_label(url):
+    host = urlparse(str(url or '')).netloc.lower()
+    return 'FCC↗' if 'fccid.io' in host else 'Teardown↗'
 
 def cat_badge(cat):
     bg, fg = CAT_CLS.get(cat, ('bg-gray-700', 'text-gray-300'))
@@ -95,7 +107,7 @@ def build_overview(devices):
     cats = list(dict.fromkeys(d['category'] for d in devices if d['category']))
     count = len(devices)
     cat_count = len(cats)
-    td_count = sum(1 for d in devices if d.get('teardown_thermal'))
+    td_count = sum(1 for d in devices if d.get('teardown_source') and any(is_url(src) for src in split_sources(d.get('teardown_source'))))
     dates = [d['date_added'] for d in devices if d.get('date_added')]
     latest = max(dates) if dates else 'N/A'
 
@@ -145,11 +157,11 @@ def build_overview(devices):
     for d in devices:
         pct = completeness(d)
         links = ''
-        if d.get('datasheet_url'):
+        if is_url(d.get('datasheet_url')):
             links += f'<a href="{e(d["datasheet_url"])}" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 underline mr-2">Datasheet↗</a>'
-        if d.get('teardown_source'):
-            url = d['teardown_source'].split('|')[0].strip()
-            links += f'<a href="{e(url)}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">Teardown↗</a>'
+        teardown_urls = [src for src in split_sources(d.get('teardown_source')) if is_url(src)]
+        if teardown_urls:
+            links += f'<a href="{e(teardown_urls[0])}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">{source_link_label(teardown_urls[0])}</a>'
         html += (f'<tr class="border-b border-gray-700/50">'
                  f'<td class="px-4 py-3 text-gray-200 text-xs font-medium">{e(d["product_name"])}</td>'
                  f'<td class="px-4 py-3">{cat_badge(d["category"])}</td>'
@@ -174,11 +186,11 @@ def build_category_tab(cat, devs):
     for d in devs:
         pct = completeness(d)
         links = ''
-        if d.get('datasheet_url'):
+        if is_url(d.get('datasheet_url')):
             links += f'<a href="{e(d["datasheet_url"])}" target="_blank" class="text-xs text-blue-400 hover:text-blue-300 underline">Datasheet↗</a>'
-        if d.get('teardown_source'):
-            url = d['teardown_source'].split('|')[0].strip()
-            links += f' <a href="{e(url)}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">Teardown↗</a>'
+        teardown_urls = [src for src in split_sources(d.get('teardown_source')) if is_url(src)]
+        if teardown_urls:
+            links += f' <a href="{e(teardown_urls[0])}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">{source_link_label(teardown_urls[0])}</a>'
 
         rows = ''
         for key, label in [('camera_system','Camera'), ('audio_system','Audio'),
@@ -243,10 +255,11 @@ def build_category_tab(cat, devs):
 
         src_html = ''
         if d.get('teardown_source'):
-            for url in d['teardown_source'].split('|'):
-                url = url.strip()
-                if url:
-                    src_html += f'<a href="{e(url)}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">Teardown Source↗</a> '
+            for source in split_sources(d.get('teardown_source')):
+                if is_url(source):
+                    src_html += f'<a href="{e(source)}" target="_blank" class="text-xs text-amber-400 hover:text-amber-300 underline">Teardown Source↗</a> '
+                elif not source.upper().startswith('N/A'):
+                    src_html += f'<span class="text-xs text-gray-500">{e(source)}</span> '
 
         html += (f'<div class="bg-gray-800 rounded-xl border border-gray-700 p-5">'
                  f'<div class="flex items-center gap-3 mb-5">{cat_badge(d["category"])}'
@@ -351,6 +364,19 @@ def build_html(devices):
   }}
   .main-tab:hover {{ color:#d1d5db; }}
   .main-tab.active {{ color:#fff; border-bottom-color:#60a5fa; }}
+
+  body {{ background:#f8fafc; color:#111827; }}
+  .bg-gray-800 {{ background:#ffffff !important; }}
+  .bg-gray-700, .bg-gray-700\\/40 {{ background:#f1f5f9 !important; }}
+  .bg-gray-900 {{ background:#f8fafc !important; }}
+  .border-gray-700, .border-gray-700\\/40, .border-gray-700\\/50 {{ border-color:#e2e8f0 !important; }}
+  .text-white, .text-gray-200, .text-gray-300 {{ color:#111827 !important; }}
+  .text-gray-400, .text-gray-500, .text-gray-600 {{ color:#64748b !important; }}
+  .bar-bg {{ background:#e2e8f0; }}
+  .kv-row:nth-child(odd) {{ background:#f8fafc; }}
+  .main-tab:hover {{ color:#111827; background:#f8fafc; }}
+  .main-tab.active {{ color:#2563eb; border-bottom-color:#2563eb; background:#eff6ff; }}
+  .tag {{ border:1px solid rgba(148,163,184,0.35); }}
 </style>
 </head>
 <body class="min-h-screen">
@@ -451,7 +477,7 @@ function updateDashboard() {{
     }})
     .catch(function(err) {{
       if (err.message && err.message.indexOf('Failed to fetch') !== -1) {{
-        alert('無法連線到伺服器。\n請改用以下指令啟動：\n\n  python serve_dashboard.py');
+        alert('無法連線到伺服器。\\n請改用以下指令啟動：\\n\\n  python serve_dashboard.py');
       }} else {{
         alert('錯誤：' + err.message);
       }}
