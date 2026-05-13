@@ -98,8 +98,8 @@ def cat_pill(cat):
 def soc_status(d):
     v = str(d.get('teardown_pcb') or '').strip()
     if v and v not in _NA_VALS and len(v) > 3:
-        return '<span style="color:#16a34a;font-weight:600;font-size:0.75rem">✓ 有資料</span>'
-    return '<span style="color:#a8a29e;font-size:0.75rem">—</span>'
+        return '<span class="soc-confirmed">✓ 有資料</span>'
+    return '<span class="soc-na">—</span>'
 
 
 def completeness(d):
@@ -208,56 +208,61 @@ def build_drawer_panel(d):
     )
 
 
+def build_product_row(d):
+    return (
+        f'<div class="product-row" data-name="{e(d["product_name"])}" onclick="openDrawer({d["id"]})">'
+        f'<span class="pr-name">{e(d["product_name"])}</span>'
+        f'{soc_status(d)}'
+        f'</div>'
+    )
+
+
+def build_all_panel(devices, cats):
+    html = ''
+    for cat in cats:
+        cat_devs = [d for d in devices if d['category'] == cat]
+        rows = ''.join(build_product_row(d) for d in cat_devs)
+        html += (
+            f'<div class="cat-block">'
+            f'<div class="cat-block-hd" data-cat="{e(cat)}" onclick="showView(this.dataset.cat)">'
+            f'{cat_pill(cat)}'
+            f'<span class="cat-count">{len(cat_devs)} 筆</span>'
+            f'<span class="cat-arrow">→</span>'
+            f'</div>'
+            f'<div class="product-list">{rows}</div>'
+            f'</div>'
+        )
+    return html
+
+
 def build_html(devices):
     now = datetime.now().strftime('%Y-%m-%d %H:%M')
     cats = list(dict.fromkeys(d['category'] for d in devices if d['category']))
     count = len(devices)
     cat_count = len(cats)
-    td_count = sum(
-        1 for d in devices
-        if d.get('teardown_pcb') and str(d['teardown_pcb']).strip() not in _NA_VALS
-        and len(str(d['teardown_pcb'])) > 3
-    )
 
     kpi_html = (
         f'<div class="kpi-chip"><span class="kpi-val">{count}</span>'
         f'<span class="kpi-label">競品總數</span></div>'
         f'<div class="kpi-chip"><span class="kpi-val">{cat_count}</span>'
         f'<span class="kpi-label">產品類別</span></div>'
-        f'<div class="kpi-chip"><span class="kpi-val">{td_count}</span>'
-        f'<span class="kpi-label">有 SoC 資料</span></div>'
     )
 
-    pill_html = ('<button class="cat-pill-btn pill-active" data-cat="all"'
-                 ' onclick="setCategory(this.dataset.cat)">All</button>')
-    for cat in cats:
-        pill_html += (f'<button class="cat-pill-btn" data-cat="{e(cat)}"'
-                      f' onclick="setCategory(this.dataset.cat)">{e(cat)}</button>')
+    all_panel_html = build_all_panel(devices, cats)
 
-    table_rows = ''
-    for i, d in enumerate(devices, 1):
-        power = str(d.get('power_consumption') or '').strip()
-        if not power or power == 'N/A':
-            power_html = '<span class="muted">—</span>'
-        else:
-            trunc = power[:45] + '…' if len(power) > 45 else power
-            power_html = e(trunc)
-        link_html = ''
-        if is_url(d.get('datasheet_url')):
-            link_html = (f'<a href="{e(d["datasheet_url"])}" target="_blank"'
-                         f' class="tbl-link" onclick="event.stopPropagation()">↗</a>')
-        row_cls = 'tbl-row tbl-alt' if i % 2 == 0 else 'tbl-row'
-        table_rows += (
-            f'<tr class="{row_cls}" data-id="{d["id"]}" data-cat="{e(d["category"])}"'
-            f' data-name="{e(d["product_name"])}" onclick="openDrawer({d["id"]})">'
-            f'<td class="tc tc-num">{i}</td>'
-            f'<td class="tc tc-name">{e(d["product_name"])}</td>'
-            f'<td class="tc">{cat_pill(d["category"])}</td>'
-            f'<td class="tc tc-muted">{power_html}</td>'
-            f'<td class="tc">{soc_status(d)}</td>'
-            f'<td class="tc tc-date">{e(d.get("date_added") or "")}</td>'
-            f'<td class="tc tc-link">{link_html}</td>'
-            f'</tr>'
+    cat_panels_html = ''
+    for cat in cats:
+        cat_devs = [d for d in devices if d['category'] == cat]
+        rows = ''.join(build_product_row(d) for d in cat_devs)
+        cat_panels_html += (
+            f'<div class="panel-cat" data-cat="{e(cat)}" style="display:none">'
+            f'<div class="cat-panel-hd">'
+            f'<button class="back-btn" onclick="showView(\'all\')">← 全部</button>'
+            f'{cat_pill(cat)}'
+            f'<span class="cat-count">{len(cat_devs)} 筆</span>'
+            f'</div>'
+            f'<div class="product-list">{rows}</div>'
+            f'</div>'
         )
 
     drawer_panels = ''.join(build_drawer_panel(d) for d in devices)
@@ -281,9 +286,11 @@ def build_html(devices):
 <style>
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
 body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c1917;line-height:1.5}}
+/* ── Sticky top block ── */
+#sticky-top{{position:sticky;top:0;z-index:30;background:#fff}}
 #site-header{{
-  position:sticky;top:0;z-index:30;background:#fff;border-bottom:1px solid #e7e5e4;
-  padding:12px 24px;display:flex;align-items:center;gap:16px;
+  border-bottom:1px solid #e7e5e4;padding:12px 24px;
+  display:flex;align-items:center;gap:16px;
 }}
 .header-brand .title{{font-size:1rem;font-weight:700;color:#1c1917}}
 .header-brand .sub{{font-size:0.72rem;color:#a8a29e;margin-top:1px}}
@@ -294,6 +301,12 @@ body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c19
 #search-box:focus{{border-color:#4f46e5;background:#fff}}
 .header-right{{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}}
 #gen-time{{font-size:0.72rem;color:#a8a29e}}
+#theme-btn{{
+  background:none;border:1px solid #e7e5e4;border-radius:8px;
+  padding:6px 10px;font-size:1rem;cursor:pointer;color:#78716c;
+  transition:background .15s;line-height:1;
+}}
+#theme-btn:hover{{background:#f5f5f4}}
 #update-btn{{
   display:flex;align-items:center;gap:6px;background:#4f46e5;color:#fff;
   border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;
@@ -301,47 +314,57 @@ body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c19
 }}
 #update-btn:hover{{background:#4338ca}}
 #update-btn:disabled{{opacity:.5;cursor:default}}
-#filter-bar{{
-  position:sticky;top:61px;z-index:20;background:#fff;border-bottom:1px solid #e7e5e4;
-  padding:10px 24px;display:flex;align-items:center;gap:10px;flex-wrap:wrap;
+#kpi-bar{{
+  border-bottom:1px solid #e7e5e4;padding:8px 24px;
+  display:flex;align-items:center;gap:10px;
 }}
 .kpi-chip{{
   display:flex;align-items:center;gap:6px;background:#fafaf9;
-  border:1px solid #e7e5e4;border-radius:8px;padding:4px 12px;flex-shrink:0;
+  border:1px solid #e7e5e4;border-radius:8px;padding:4px 12px;
 }}
 .kpi-val{{font-size:0.95rem;font-weight:700;color:#1c1917}}
 .kpi-label{{font-size:0.7rem;color:#a8a29e}}
-.filter-sep{{width:1px;height:20px;background:#e7e5e4;flex-shrink:0}}
-.cat-pill-btn{{
-  background:#fafaf9;color:#78716c;border:1px solid #e7e5e4;border-radius:9999px;
-  padding:4px 12px;font-size:0.72rem;font-weight:600;cursor:pointer;white-space:nowrap;
-  transition:all .1s;
+/* ── Main content ── */
+main{{padding:24px 24px 100px}}
+/* ── Category blocks (All view) ── */
+.cat-block{{
+  background:#fff;border:1px solid #e7e5e4;border-radius:12px;
+  margin-bottom:14px;overflow:hidden;
 }}
-.cat-pill-btn:hover{{background:#f5f5f4;color:#1c1917}}
-.cat-pill-btn.pill-active{{background:#4f46e5;color:#fff;border-color:#4f46e5}}
-#row-count{{font-size:0.72rem;color:#a8a29e;margin-left:auto;white-space:nowrap}}
-main{{padding:0 24px 80px}}
-#main-table{{width:100%;border-collapse:collapse;min-width:700px}}
-#main-table thead th{{
-  background:#fff;border-bottom:2px solid #e7e5e4;
-  padding:10px 12px;font-size:0.72rem;font-weight:600;color:#78716c;
-  text-align:left;white-space:nowrap;
+.cat-block-hd{{
+  display:flex;align-items:center;gap:10px;padding:12px 20px;
+  cursor:pointer;border-bottom:1px solid #e7e5e4;
+  transition:background .1s;
 }}
-.tbl-row{{cursor:pointer;transition:background .1s}}
-.tbl-row:hover{{background:#eff6ff !important}}
-.tbl-alt{{background:#f5f5f4}}
-.tc{{
-  padding:10px 12px;font-size:0.82rem;color:#1c1917;
-  border-bottom:1px solid #e7e5e4;vertical-align:middle;
+.cat-block-hd:hover{{background:#f5f5f4}}
+.cat-count{{font-size:0.72rem;color:#a8a29e}}
+.cat-arrow{{margin-left:auto;color:#a8a29e;font-size:0.9rem;transition:color .1s}}
+.cat-block-hd:hover .cat-arrow{{color:#4f46e5}}
+/* ── Category panel (single category view) ── */
+.cat-panel-hd{{
+  display:flex;align-items:center;gap:12px;
+  padding:4px 0 16px;
 }}
-.tc-num{{color:#a8a29e;font-size:0.75rem;width:40px}}
-.tc-name{{font-weight:600;max-width:240px}}
-.tc-muted{{color:#78716c;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}}
-.tc-date{{color:#a8a29e;font-size:0.75rem;white-space:nowrap}}
-.tc-link{{width:36px;text-align:center}}
-.tbl-link{{color:#4f46e5;text-decoration:none;font-size:0.9rem}}
-.tbl-link:hover{{color:#4338ca}}
+.back-btn{{
+  background:none;border:1px solid #e7e5e4;border-radius:8px;
+  padding:5px 12px;font-size:0.78rem;color:#78716c;cursor:pointer;
+  transition:background .1s;white-space:nowrap;
+}}
+.back-btn:hover{{background:#f5f5f4;color:#1c1917}}
+/* ── Product rows ── */
+.product-list{{}}
+.product-row{{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:10px 20px;cursor:pointer;
+  border-bottom:1px solid #f5f5f4;transition:background .1s;
+}}
+.product-row:last-child{{border-bottom:none}}
+.product-row:hover{{background:#eff6ff}}
+.pr-name{{font-size:0.85rem;color:#1c1917;font-weight:500}}
+.soc-confirmed{{color:#16a34a;font-weight:600;font-size:0.75rem}}
+.soc-na{{color:#a8a29e;font-size:0.75rem}}
 .muted{{color:#a8a29e;font-size:0.75rem}}
+/* ── Drawer ── */
 #drawer{{
   position:fixed;right:0;top:0;height:100%;
   width:44vw;min-width:420px;max-width:680px;
@@ -401,49 +424,67 @@ details[open] .drawer-summary .arrow{{transform:rotate(90deg)}}
   background:#fafaf9;border:1px solid #e7e5e4;border-radius:8px;
   padding:10px 14px;font-size:0.78rem;color:#78716c;line-height:1.6;
 }}
+/* ── Dark mode ── */
+body.dark{{background:#1c1917;color:#fafaf9}}
+body.dark #sticky-top{{background:#292524}}
+body.dark #site-header,body.dark #kpi-bar{{background:#292524;border-color:#44403c}}
+body.dark #search-box{{background:#1c1917;border-color:#44403c;color:#fafaf9}}
+body.dark #search-box:focus{{border-color:#818cf8;background:#292524}}
+body.dark #theme-btn{{border-color:#44403c;color:#a8a29e}}
+body.dark #theme-btn:hover{{background:#44403c}}
+body.dark .kpi-chip{{background:#1c1917;border-color:#44403c}}
+body.dark .kpi-val{{color:#fafaf9}}
+body.dark .cat-block{{background:#292524;border-color:#44403c}}
+body.dark .cat-block-hd{{border-color:#44403c}}
+body.dark .cat-block-hd:hover{{background:#1c1917}}
+body.dark .product-row{{border-color:#44403c}}
+body.dark .product-row:hover{{background:#1e1b4b}}
+body.dark .pr-name{{color:#fafaf9}}
+body.dark .back-btn{{border-color:#44403c;color:#a8a29e}}
+body.dark .back-btn:hover{{background:#44403c;color:#fafaf9}}
+body.dark #drawer{{background:#292524;border-color:#44403c}}
+body.dark .drawer-hd{{background:#292524;border-color:#44403c}}
+body.dark .drawer-name{{color:#fafaf9}}
+body.dark .drawer-links-row{{border-color:#44403c}}
+body.dark .close-btn{{border-color:#44403c;color:#a8a29e}}
+body.dark .close-btn:hover{{background:#44403c}}
+body.dark .drawer-details{{border-color:#44403c}}
+body.dark .kv-label{{color:#a8a29e}}
+body.dark .kv-val{{color:#fafaf9}}
+body.dark .drawer-section{{color:#fafaf9}}
+body.dark .notes-box{{background:#1c1917;border-color:#44403c;color:#a8a29e}}
+body.dark #drawer-overlay{{background:rgba(0,0,0,.4)}}
+body.dark .muted{{color:#78716c}}
 #drawer-panels{{display:none}}
 </style>
 </head>
 <body>
 
-<header id="site-header">
-  <div class="header-brand">
-    <div class="title">VC Competitor Benchmarker</div>
-    <div class="sub">Logitech 競品分析儀表板</div>
+<div id="sticky-top">
+  <header id="site-header">
+    <div class="header-brand">
+      <div class="title">VC Competitor Benchmarker</div>
+      <div class="sub">Logitech 競品分析儀表板</div>
+    </div>
+    <input id="search-box" type="text" placeholder="搜尋產品名稱…" oninput="applySearch()">
+    <div class="header-right">
+      <span id="gen-time">Generated {now}</span>
+      <button id="theme-btn" onclick="toggleTheme()" title="切換深色/淺色模式">&#9790;</button>
+      <button id="update-btn" onclick="updateDashboard()">
+        <span id="update-icon">&#x21BB;</span> 更新資料
+      </button>
+    </div>
+  </header>
+  <div id="kpi-bar">
+    {kpi_html}
   </div>
-  <input id="search-box" type="text" placeholder="搜尋產品名稱…" oninput="applyFilters()">
-  <div class="header-right">
-    <span id="gen-time">Generated {now}</span>
-    <button id="update-btn" onclick="updateDashboard()">
-      <span id="update-icon">&#x21BB;</span> 更新資料
-    </button>
-  </div>
-</header>
-
-<div id="filter-bar">
-  {kpi_html}
-  <div class="filter-sep"></div>
-  {pill_html}
-  <span id="row-count">顯示 {count} / {count} 筆</span>
 </div>
 
 <main>
-  <table id="main-table">
-    <thead>
-      <tr>
-        <th class="tc-num">#</th>
-        <th style="min-width:200px">產品名稱</th>
-        <th>Category</th>
-        <th style="min-width:130px">Power 功耗</th>
-        <th>SoC 狀態</th>
-        <th>新增日期</th>
-        <th></th>
-      </tr>
-    </thead>
-    <tbody id="table-body">
-      {table_rows}
-    </tbody>
-  </table>
+  <div id="panel-all">
+    {all_panel_html}
+  </div>
+  {cat_panels_html}
 </main>
 
 <aside id="drawer">
@@ -457,7 +498,22 @@ details[open] .drawer-summary .arrow{{transform:rotate(90deg)}}
 </div>
 
 <script>
-var activeCategory = 'all';
+function showView(cat) {{
+  document.getElementById('panel-all').style.display = cat === 'all' ? '' : 'none';
+  document.querySelectorAll('.panel-cat').forEach(function(p) {{
+    p.style.display = p.dataset.cat === cat ? '' : 'none';
+  }});
+  closeDrawer();
+  document.getElementById('search-box').value = '';
+}}
+
+function applySearch() {{
+  var search = (document.getElementById('search-box').value || '').toLowerCase();
+  document.querySelectorAll('.product-row').forEach(function(row) {{
+    var visible = !search || row.dataset.name.toLowerCase().indexOf(search) !== -1;
+    row.style.display = visible ? '' : 'none';
+  }});
+}}
 
 function openDrawer(id) {{
   var panel = document.querySelector('#drawer-panels .drawer-panel[data-id="' + id + '"]');
@@ -477,36 +533,6 @@ function closeDrawer() {{
 document.addEventListener('keydown', function(ev) {{
   if (ev.key === 'Escape') {{ closeDrawer(); }}
 }});
-
-function setCategory(cat) {{
-  activeCategory = cat;
-  document.querySelectorAll('.cat-pill-btn').forEach(function(btn) {{
-    if (btn.dataset.cat === cat) {{
-      btn.classList.add('pill-active');
-    }} else {{
-      btn.classList.remove('pill-active');
-    }}
-  }});
-  applyFilters();
-}}
-
-function applyFilters() {{
-  var search = (document.getElementById('search-box').value || '').toLowerCase();
-  var rows = document.querySelectorAll('#table-body tr');
-  var shown = 0;
-  rows.forEach(function(row) {{
-    var matchCat = activeCategory === 'all' || row.dataset.cat === activeCategory;
-    var matchSearch = !search || row.dataset.name.toLowerCase().indexOf(search) !== -1;
-    if (matchCat && matchSearch) {{
-      row.style.display = '';
-      shown++;
-    }} else {{
-      row.style.display = 'none';
-    }}
-  }});
-  document.getElementById('row-count').textContent =
-    '顯示 ' + shown + ' / ' + rows.length + ' 筆';
-}}
 
 var DEVICES = {data_json};
 var MATRIX_FIELDS = {matrix_json};
@@ -537,6 +563,20 @@ function exportMarkdown() {{
   a.download = 'vc_benchmark_' + new Date().toISOString().slice(0, 10) + '.md';
   a.click();
 }}
+
+function toggleTheme() {{
+  var dark = document.body.classList.toggle('dark');
+  document.getElementById('theme-btn').innerHTML = dark ? '&#9728;' : '&#9790;';
+  try {{ localStorage.setItem('vcb-theme', dark ? 'dark' : 'light'); }} catch(e) {{}}
+}}
+(function() {{
+  try {{
+    if (localStorage.getItem('vcb-theme') === 'dark') {{
+      document.body.classList.add('dark');
+      document.getElementById('theme-btn').innerHTML = '&#9728;';
+    }}
+  }} catch(e) {{}}
+}})();
 
 function updateDashboard() {{
   var btn = document.getElementById('update-btn');
