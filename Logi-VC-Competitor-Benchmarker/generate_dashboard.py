@@ -208,11 +208,62 @@ def build_drawer_panel(d):
     )
 
 
-def build_product_row(d):
+def _short(val, maxlen):
+    v = str(val or '').strip()
+    if not v or v in _NA_VALS:
+        return ''
+    return (v[:maxlen] + '…') if len(v) > maxlen else v
+
+
+def _thermal_type(d):
+    v = str(d.get('teardown_thermal') or '').lower()
+    if any(w in v for w in ('active', 'fan', 'blower')):
+        return 'Active'
+    if 'passive' in v:
+        return 'Passive'
+    return ''
+
+
+def build_row_all(d):
+    """Plain row for All view — no drawer on click."""
     return (
-        f'<div class="product-row" data-name="{e(d["product_name"])}" onclick="openDrawer({d["id"]})">'
+        f'<div class="pr-all searchable-row" data-name="{e(d["product_name"])}">'
         f'<span class="pr-name">{e(d["product_name"])}</span>'
         f'{soc_status(d)}'
+        f'</div>'
+    )
+
+
+def build_row_cat(d):
+    """Expanded row for Category view — opens Drawer on click."""
+    def meta_field(label, val):
+        if not val:
+            return ''
+        return (f'<span class="cpr-field">'
+                f'<span class="cpr-label">{label}</span>'
+                f'<span class="cpr-v">{e(val)}</span>'
+                f'</span>')
+
+    power   = _short(d.get('power_consumption'), 35)
+    camera  = _short(d.get('camera_system'), 50)
+    speaker = _short(d.get('audio_system'), 45)
+    thermal = _thermal_type(d)
+
+    soc_html = (f'<span class="cpr-field">'
+                f'<span class="cpr-label">SoC</span>'
+                f'{soc_status(d)}'
+                f'</span>')
+
+    meta = (soc_html
+            + meta_field('Power', power)
+            + meta_field('Camera', camera)
+            + meta_field('Speaker', speaker)
+            + meta_field('Thermal', thermal))
+
+    return (
+        f'<div class="cpr searchable-row" data-name="{e(d["product_name"])}" onclick="openDrawer({d["id"]})">'
+        f'<div class="cpr-name">{e(d["product_name"])}</div>'
+        f'<div class="cpr-meta">{meta}</div>'
         f'</div>'
     )
 
@@ -221,7 +272,7 @@ def build_all_panel(devices, cats):
     html = ''
     for cat in cats:
         cat_devs = [d for d in devices if d['category'] == cat]
-        rows = ''.join(build_product_row(d) for d in cat_devs)
+        rows = ''.join(build_row_all(d) for d in cat_devs)
         html += (
             f'<div class="cat-block">'
             f'<div class="cat-block-hd" data-cat="{e(cat)}" onclick="showView(this.dataset.cat)">'
@@ -253,7 +304,7 @@ def build_html(devices):
     cat_panels_html = ''
     for cat in cats:
         cat_devs = [d for d in devices if d['category'] == cat]
-        rows = ''.join(build_product_row(d) for d in cat_devs)
+        rows = ''.join(build_row_cat(d) for d in cat_devs)
         cat_panels_html += (
             f'<div class="panel-cat" data-cat="{e(cat)}" style="display:none">'
             f'<div class="cat-panel-hd">'
@@ -261,7 +312,7 @@ def build_html(devices):
             f'{cat_pill(cat)}'
             f'<span class="cat-count">{len(cat_devs)} 筆</span>'
             f'</div>'
-            f'<div class="product-list">{rows}</div>'
+            f'<div class="cat-product-list">{rows}</div>'
             f'</div>'
         )
 
@@ -326,41 +377,50 @@ body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c19
 .kpi-label{{font-size:0.7rem;color:#a8a29e}}
 /* ── Main content ── */
 main{{padding:24px 24px 100px}}
+/* ── All view: 3-column grid ── */
+#panel-all{{display:grid;grid-template-columns:repeat(3,1fr);gap:14px;align-items:start}}
 /* ── Category blocks (All view) ── */
 .cat-block{{
-  background:#fff;border:1px solid #e7e5e4;border-radius:12px;
-  margin-bottom:14px;overflow:hidden;
+  background:#fff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;
 }}
 .cat-block-hd{{
-  display:flex;align-items:center;gap:10px;padding:12px 20px;
-  cursor:pointer;border-bottom:1px solid #e7e5e4;
-  transition:background .1s;
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  cursor:pointer;border-bottom:1px solid #e7e5e4;transition:background .1s;
 }}
 .cat-block-hd:hover{{background:#f5f5f4}}
 .cat-count{{font-size:0.72rem;color:#a8a29e}}
-.cat-arrow{{margin-left:auto;color:#a8a29e;font-size:0.9rem;transition:color .1s}}
+.cat-arrow{{margin-left:auto;color:#a8a29e;font-size:0.85rem;transition:color .1s}}
 .cat-block-hd:hover .cat-arrow{{color:#4f46e5}}
-/* ── Category panel (single category view) ── */
-.cat-panel-hd{{
-  display:flex;align-items:center;gap:12px;
-  padding:4px 0 16px;
+/* ── All-view plain rows (no drawer) ── */
+.pr-all{{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:8px 16px;border-bottom:1px solid #f5f5f4;
 }}
+.pr-all:last-child{{border-bottom:none}}
+.pr-name{{font-size:0.82rem;color:#1c1917;font-weight:500}}
+/* ── Category panel ── */
+.cat-panel-hd{{display:flex;align-items:center;gap:12px;padding:4px 0 16px}}
 .back-btn{{
   background:none;border:1px solid #e7e5e4;border-radius:8px;
   padding:5px 12px;font-size:0.78rem;color:#78716c;cursor:pointer;
   transition:background .1s;white-space:nowrap;
 }}
 .back-btn:hover{{background:#f5f5f4;color:#1c1917}}
-/* ── Product rows ── */
-.product-list{{}}
-.product-row{{
-  display:flex;align-items:center;justify-content:space-between;
-  padding:10px 20px;cursor:pointer;
+/* ── Category-view expanded rows ── */
+.cat-product-list{{
+  background:#fff;border:1px solid #e7e5e4;border-radius:12px;overflow:hidden;
+}}
+.cpr{{
+  padding:11px 20px;cursor:pointer;
   border-bottom:1px solid #f5f5f4;transition:background .1s;
 }}
-.product-row:last-child{{border-bottom:none}}
-.product-row:hover{{background:#eff6ff}}
-.pr-name{{font-size:0.85rem;color:#1c1917;font-weight:500}}
+.cpr:last-child{{border-bottom:none}}
+.cpr:hover{{background:#eff6ff}}
+.cpr-name{{font-size:0.85rem;font-weight:600;color:#1c1917;margin-bottom:5px}}
+.cpr-meta{{display:flex;flex-wrap:wrap;gap:6px 18px}}
+.cpr-field{{display:flex;align-items:center;gap:4px}}
+.cpr-label{{font-size:0.68rem;color:#a8a29e;font-weight:500;white-space:nowrap}}
+.cpr-v{{font-size:0.75rem;color:#57534e}}
 .soc-confirmed{{color:#16a34a;font-weight:600;font-size:0.75rem}}
 .soc-na{{color:#a8a29e;font-size:0.75rem}}
 .muted{{color:#a8a29e;font-size:0.75rem}}
@@ -437,9 +497,13 @@ body.dark .kpi-val{{color:#fafaf9}}
 body.dark .cat-block{{background:#292524;border-color:#44403c}}
 body.dark .cat-block-hd{{border-color:#44403c}}
 body.dark .cat-block-hd:hover{{background:#1c1917}}
-body.dark .product-row{{border-color:#44403c}}
-body.dark .product-row:hover{{background:#1e1b4b}}
+body.dark .pr-all{{border-color:#44403c}}
 body.dark .pr-name{{color:#fafaf9}}
+body.dark .cat-product-list{{background:#292524;border-color:#44403c}}
+body.dark .cpr{{border-color:#44403c}}
+body.dark .cpr:hover{{background:#1e1b4b}}
+body.dark .cpr-name{{color:#fafaf9}}
+body.dark .cpr-v{{color:#a8a29e}}
 body.dark .back-btn{{border-color:#44403c;color:#a8a29e}}
 body.dark .back-btn:hover{{background:#44403c;color:#fafaf9}}
 body.dark #drawer{{background:#292524;border-color:#44403c}}
@@ -509,7 +573,7 @@ function showView(cat) {{
 
 function applySearch() {{
   var search = (document.getElementById('search-box').value || '').toLowerCase();
-  document.querySelectorAll('.product-row').forEach(function(row) {{
+  document.querySelectorAll('.searchable-row').forEach(function(row) {{
     var visible = !search || row.dataset.name.toLowerCase().indexOf(search) !== -1;
     row.style.display = visible ? '' : 'none';
   }});
