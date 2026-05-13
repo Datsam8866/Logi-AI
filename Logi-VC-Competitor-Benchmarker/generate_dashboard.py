@@ -98,8 +98,15 @@ def cat_pill(cat):
 def soc_status(d):
     v = str(d.get('teardown_pcb') or '').strip()
     if v and v not in _NA_VALS and len(v) > 3:
-        return '<span class="soc-confirmed">✓ 有資料</span>'
+        return '<span class="soc-confirmed">✓</span>'
     return '<span class="soc-na">—</span>'
+
+
+def soc_value(d):
+    v = str(d.get('teardown_pcb') or '').strip()
+    if v and v not in _NA_VALS and len(v) > 3:
+        return (v[:45] + '…') if len(v) > 45 else v
+    return ''
 
 
 def completeness(d):
@@ -215,14 +222,6 @@ def _short(val, maxlen):
     return (v[:maxlen] + '…') if len(v) > maxlen else v
 
 
-def _thermal_type(d):
-    v = str(d.get('teardown_thermal') or '').lower()
-    if any(w in v for w in ('active', 'fan', 'blower')):
-        return 'Active'
-    if 'passive' in v:
-        return 'Passive'
-    return ''
-
 
 def build_row_all(d):
     """Plain row for All view — no drawer on click."""
@@ -236,29 +235,19 @@ def build_row_all(d):
 
 def build_row_cat(d):
     """Expanded row for Category view — opens Drawer on click."""
-    def meta_field(label, val):
-        if not val:
-            return ''
-        return (f'<span class="cpr-field">'
-                f'<span class="cpr-label">{label}</span>'
-                f'<span class="cpr-v">{e(val)}</span>'
-                f'</span>')
+    soc  = soc_value(d)
+    power = _short(d.get('power_consumption'), 35)
 
-    power   = _short(d.get('power_consumption'), 35)
-    camera  = _short(d.get('camera_system'), 50)
-    speaker = _short(d.get('audio_system'), 45)
-    thermal = _thermal_type(d)
-
-    soc_html = (f'<span class="cpr-field">'
-                f'<span class="cpr-label">SoC</span>'
-                f'{soc_status(d)}'
-                f'</span>')
-
-    meta = (soc_html
-            + meta_field('Power', power)
-            + meta_field('Camera', camera)
-            + meta_field('Speaker', speaker)
-            + meta_field('Thermal', thermal))
+    meta_parts = []
+    if soc:
+        meta_parts.append(
+            f'<span class="cpr-field"><span class="cpr-label">SoC</span>'
+            f'<span class="cpr-v">{e(soc)}</span></span>')
+    if power:
+        meta_parts.append(
+            f'<span class="cpr-field"><span class="cpr-label">Power</span>'
+            f'<span class="cpr-v">{e(power)}</span></span>')
+    meta = ''.join(meta_parts) if meta_parts else '<span class="soc-na">—</span>'
 
     return (
         f'<div class="cpr searchable-row" data-name="{e(d["product_name"])}" onclick="openDrawer({d["id"]})">'
@@ -271,14 +260,16 @@ def build_row_cat(d):
 def build_all_panel(devices, cats):
     html = ''
     for cat in cats:
+        c = CAT_COLORS.get(cat, DEFAULT_CAT_COLOR)
         cat_devs = [d for d in devices if d['category'] == cat]
         rows = ''.join(build_row_all(d) for d in cat_devs)
         html += (
-            f'<div class="cat-block">'
-            f'<div class="cat-block-hd" data-cat="{e(cat)}" onclick="showView(this.dataset.cat)">'
+            f'<div class="cat-block" style="border-color:{c["border"]}">'
+            f'<div class="cat-block-hd" data-cat="{e(cat)}" onclick="showView(this.dataset.cat)"'
+            f' style="background:{c["bg"]};border-color:{c["border"]}">'
             f'{cat_pill(cat)}'
-            f'<span class="cat-count">{len(cat_devs)} 筆</span>'
-            f'<span class="cat-arrow">→</span>'
+            f'<span class="cat-count" style="color:{c["text"]};opacity:0.6">{len(cat_devs)} 筆</span>'
+            f'<span class="cat-arrow" style="color:{c["text"]};opacity:0.5">→</span>'
             f'</div>'
             f'<div class="product-list">{rows}</div>'
             f'</div>'
