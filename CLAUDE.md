@@ -1,7 +1,7 @@
 # Logi AI — 我的班級工具總專案
 
 ## 對話開始時請先讀
-進度與最近更動都在 Obsidian：`G:\其他電腦\我的電腦\Obsidian Vault\Logitech\工作筆記.md`
+進度與最近更動在 Obsidian（只讀 VC Benchmarker 這份）：`G:\其他電腦\我的電腦\Obsidian Vault\Logitech\Logi-VC-Competitor-Benchmarker工作筆記.md`
 
 ## 工作模式
 - **加新工具**：對 Claude 說「我想做一個 XXX 工具」→ Claude 會建 `tools/<工具名>/` 子資料夾、引導我跟著 EP10 影片做
@@ -11,7 +11,7 @@
 ## 工作桌 + 三個家
 - 💻 本機工作桌：`C:\Users\skuan1\Desktop\Logi AI\`
 - 🐙 GitHub repo：`Datsam8866/Logi-AI`（公開，網頁的家）
-- 📘 Obsidian 駕駛艙：`Obsidian Vault\Logitech\工作筆記.md`（想法的家）
+- 📘 Obsidian 駕駛艙：`G:\其他電腦\我的電腦\Obsidian Vault\Logitech\Logi-VC-Competitor-Benchmarker工作筆記.md`（想法的家）
 
 ## 工具清單
 （之後加新工具時會自動更新）

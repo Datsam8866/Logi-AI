@@ -56,7 +56,7 @@ MATRIX_FIELDS = [
 ]
 
 CAT_COLORS = {
-    'PTZ Camera':      {'bg': '#eef2ff', 'text': '#3730a3', 'border': '#c7d2fe'},
+    'PTZ Camera':      {'bg': '#E6FAF8', 'text': '#3730a3', 'border': '#99E8DF'},
     'Room Bar':        {'bg': '#eff6ff', 'text': '#1d4ed8', 'border': '#bfdbfe'},
     'Table Camera':    {'bg': '#f0fdfa', 'text': '#0f766e', 'border': '#99f6e4'},
     'Mic':             {'bg': '#f5f3ff', 'text': '#6d28d9', 'border': '#ddd6fe'},
@@ -89,9 +89,9 @@ def source_link_label(url):
 
 def cat_pill(cat):
     c = CAT_COLORS.get(cat, DEFAULT_CAT_COLOR)
-    st = (f'background:{c["bg"]};color:{c["text"]};border:1px solid {c["border"]};'
+    st = (f'background:{c["bg"]};color:{c["text"]};border:1px solid #CCCCCC;'
           'display:inline-block;padding:2px 10px;border-radius:9999px;'
-          'font-size:0.7rem;font-weight:700;letter-spacing:0.04em;white-space:nowrap')
+          'font-size:0.82rem;font-weight:700;letter-spacing:0.04em;white-space:nowrap')
     return f'<span style="{st}">{e(cat)}</span>'
 
 
@@ -282,12 +282,15 @@ def build_html(devices):
     cats = list(dict.fromkeys(d['category'] for d in devices if d['category']))
     count = len(devices)
     cat_count = len(cats)
+    brand_count = len(set(d['product_name'].split()[0] for d in devices if d.get('product_name')))
 
     kpi_html = (
         f'<div class="kpi-chip"><span class="kpi-val">{count}</span>'
-        f'<span class="kpi-label">競品總數</span></div>'
+        f'<span class="kpi-label">Competitors</span></div>'
         f'<div class="kpi-chip"><span class="kpi-val">{cat_count}</span>'
-        f'<span class="kpi-label">產品類別</span></div>'
+        f'<span class="kpi-label">Categories</span></div>'
+        f'<div class="kpi-chip"><span class="kpi-val">{brand_count}</span>'
+        f'<span class="kpi-label">Brands</span></div>'
     )
 
     all_panel_html = build_all_panel(devices, cats)
@@ -326,23 +329,24 @@ def build_html(devices):
 <meta name="viewport" content="width=device-width,initial-scale=1">
 <title>VC Competitor Benchmarker</title>
 <style>
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700;800&display=swap');
 *,*::before,*::after{{box-sizing:border-box;margin:0;padding:0}}
-body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c1917;line-height:1.5}}
+body{{font-family:'Poppins','Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c1917;line-height:1.5}}
+#breakthrough-bar{{height:4px;background:#0DFDCF;width:100%}}
 /* ── Sticky top block ── */
 #sticky-top{{position:sticky;top:0;z-index:30;background:#fff}}
 #site-header{{
   border-bottom:1px solid #e7e5e4;padding:12px 24px;
   display:flex;align-items:center;gap:16px;
 }}
-.header-brand .title{{font-size:1rem;font-weight:700;color:#1c1917}}
-.header-brand .sub{{font-size:0.72rem;color:#a8a29e;margin-top:1px}}
+.header-brand .title{{font-size:1.35rem;font-weight:800;color:#1c1917;letter-spacing:-0.01em}}
 #search-box{{
   flex:1;max-width:300px;border:1px solid #e7e5e4;border-radius:8px;
-  padding:7px 12px;font-size:0.85rem;color:#1c1917;background:#fafaf9;outline:none;
+  padding:7px 12px;font-size:1rem;color:#1c1917;background:#fafaf9;outline:none;
 }}
-#search-box:focus{{border-color:#4f46e5;background:#fff}}
+#search-box:focus{{border-color:#00978A;background:#fff}}
 .header-right{{display:flex;align-items:center;gap:10px;margin-left:auto;flex-shrink:0}}
-#gen-time{{font-size:0.72rem;color:#a8a29e}}
+#gen-time{{font-size:0.85rem;color:#a8a29e}}
 #theme-btn{{
   background:none;border:1px solid #e7e5e4;border-radius:8px;
   padding:6px 10px;font-size:1rem;cursor:pointer;color:#78716c;
@@ -350,22 +354,22 @@ body{{font-family:'Segoe UI',system-ui,sans-serif;background:#fafaf9;color:#1c19
 }}
 #theme-btn:hover{{background:#f5f5f4}}
 #update-btn{{
-  display:flex;align-items:center;gap:6px;background:#4f46e5;color:#fff;
-  border:none;border-radius:8px;padding:7px 14px;font-size:0.8rem;font-weight:600;
+  display:flex;align-items:center;gap:6px;background:#00978A;color:#fff;
+  border:none;border-radius:8px;padding:7px 14px;font-size:0.92rem;font-weight:600;
   cursor:pointer;transition:background .15s;
 }}
-#update-btn:hover{{background:#4338ca}}
+#update-btn:hover{{background:#007A6E}}
 #update-btn:disabled{{opacity:.5;cursor:default}}
 #kpi-bar{{
-  border-bottom:1px solid #e7e5e4;padding:8px 24px;
-  display:flex;align-items:center;gap:10px;
+  border-bottom:1px solid #e7e5e4;padding:14px 24px;
+  display:flex;align-items:center;gap:16px;
 }}
 .kpi-chip{{
-  display:flex;align-items:center;gap:6px;background:#fafaf9;
-  border:1px solid #e7e5e4;border-radius:8px;padding:4px 12px;
+  display:flex;flex-direction:column;align-items:center;gap:2px;background:#fafaf9;
+  border:1px solid #e7e5e4;border-radius:12px;padding:14px 32px;
 }}
-.kpi-val{{font-size:0.95rem;font-weight:700;color:#1c1917}}
-.kpi-label{{font-size:0.7rem;color:#a8a29e}}
+.kpi-val{{font-size:2.2rem;font-weight:800;color:#00978A;line-height:1}}
+.kpi-label{{font-size:0.88rem;color:#a8a29e;font-weight:500;margin-top:4px}}
 /* ── Main content ── */
 main{{padding:24px 24px 100px}}
 /* ── All view: 3-column grid ── */
@@ -379,21 +383,21 @@ main{{padding:24px 24px 100px}}
   cursor:pointer;border-bottom:1px solid #e7e5e4;transition:background .1s;
 }}
 .cat-block-hd:hover{{background:#f5f5f4}}
-.cat-count{{font-size:0.72rem;color:#a8a29e}}
+.cat-count{{font-size:0.88rem;color:#a8a29e}}
 .cat-arrow{{margin-left:auto;color:#a8a29e;font-size:0.85rem;transition:color .1s}}
-.cat-block-hd:hover .cat-arrow{{color:#4f46e5}}
+.cat-block-hd:hover .cat-arrow{{color:#00978A}}
 /* ── All-view plain rows (no drawer) ── */
 .pr-all{{
   display:flex;align-items:center;justify-content:space-between;
   padding:8px 16px;border-bottom:1px solid #f5f5f4;
 }}
 .pr-all:last-child{{border-bottom:none}}
-.pr-name{{font-size:0.82rem;color:#1c1917;font-weight:500}}
+.pr-name{{font-size:1rem;color:#1c1917;font-weight:500}}
 /* ── Category panel ── */
 .cat-panel-hd{{display:flex;align-items:center;gap:12px;padding:4px 0 16px}}
 .back-btn{{
   background:none;border:1px solid #e7e5e4;border-radius:8px;
-  padding:5px 12px;font-size:0.78rem;color:#78716c;cursor:pointer;
+  padding:5px 12px;font-size:0.92rem;color:#78716c;cursor:pointer;
   transition:background .1s;white-space:nowrap;
 }}
 .back-btn:hover{{background:#f5f5f4;color:#1c1917}}
@@ -407,14 +411,14 @@ main{{padding:24px 24px 100px}}
 }}
 .cpr:last-child{{border-bottom:none}}
 .cpr:hover{{background:#eff6ff}}
-.cpr-name{{font-size:0.85rem;font-weight:600;color:#1c1917;margin-bottom:5px}}
+.cpr-name{{font-size:1rem;font-weight:600;color:#1c1917;margin-bottom:5px}}
 .cpr-meta{{display:flex;flex-wrap:wrap;gap:6px 18px}}
 .cpr-field{{display:flex;align-items:center;gap:4px}}
-.cpr-label{{font-size:0.68rem;color:#a8a29e;font-weight:500;white-space:nowrap}}
-.cpr-v{{font-size:0.75rem;color:#57534e}}
-.soc-confirmed{{color:#16a34a;font-weight:600;font-size:0.75rem}}
-.soc-na{{color:#a8a29e;font-size:0.75rem}}
-.muted{{color:#a8a29e;font-size:0.75rem}}
+.cpr-label{{font-size:0.8rem;color:#a8a29e;font-weight:500;white-space:nowrap}}
+.cpr-v{{font-size:0.88rem;color:#57534e}}
+.soc-confirmed{{color:#16a34a;font-weight:600;font-size:0.88rem}}
+.soc-na{{color:#a8a29e;font-size:0.88rem}}
+.muted{{color:#a8a29e;font-size:0.88rem}}
 /* ── Drawer ── */
 #drawer{{
   position:fixed;right:0;top:0;height:100%;
@@ -435,9 +439,9 @@ main{{padding:24px 24px 100px}}
   position:sticky;top:0;background:#fff;z-index:5;
 }}
 .drawer-title-col{{min-width:0}}
-.drawer-name{{font-size:1.05rem;font-weight:700;color:#1c1917;line-height:1.3;margin-bottom:6px}}
+.drawer-name{{font-size:1.25rem;font-weight:700;color:#1c1917;line-height:1.3;margin-bottom:6px}}
 .drawer-meta{{display:flex;align-items:center;gap:8px;flex-wrap:wrap}}
-.date-chip{{color:#a8a29e;font-size:0.72rem}}
+.date-chip{{color:#a8a29e;font-size:0.85rem}}
 .close-btn{{
   background:none;border:1px solid #e7e5e4;cursor:pointer;
   font-size:1rem;color:#78716c;padding:4px 10px;border-radius:6px;flex-shrink:0;
@@ -451,63 +455,66 @@ main{{padding:24px 24px 100px}}
 .comp-row{{display:flex;align-items:center;gap:6px}}
 .mini-bar{{background:#e7e5e4;border-radius:9999px;height:5px;width:72px;overflow:hidden}}
 .mini-bar-fill{{height:5px;border-radius:9999px}}
-.dl-link{{text-decoration:none;font-size:0.78rem;font-weight:600;border-radius:6px;padding:4px 10px}}
-.indigo-link{{background:#eef2ff;color:#4f46e5;border:1px solid #c7d2fe}}
-.indigo-link:hover{{background:#e0e7ff}}
+.dl-link{{text-decoration:none;font-size:0.9rem;font-weight:600;border-radius:6px;padding:4px 10px}}
+.indigo-link{{background:#E6FAF8;color:#00978A;border:1px solid #99E8DF}}
+.indigo-link:hover{{background:#CCF5F1}}
 .amber-link{{background:#fffbeb;color:#b45309;border:1px solid #fde68a}}
 .amber-link:hover{{background:#fef3c7}}
-.amber-link-sm{{color:#b45309;font-size:0.75rem}}
+.amber-link-sm{{color:#b45309;font-size:0.88rem}}
 .drawer-details{{border-bottom:1px solid #e7e5e4}}
 .drawer-summary{{
   display:flex;align-items:center;gap:6px;padding:12px 24px;cursor:pointer;
-  font-size:0.8rem;font-weight:600;color:#4f46e5;list-style:none;
+  font-size:0.95rem;font-weight:600;color:#00978A;list-style:none;
 }}
 .drawer-summary::-webkit-details-marker{{display:none}}
 .drawer-summary .arrow{{transition:transform .2s}}
 details[open] .drawer-summary .arrow{{transform:rotate(90deg)}}
 .kv-section{{padding:4px 24px 14px}}
 .kv-table{{width:100%;border-collapse:collapse}}
-.kv-label{{color:#78716c;font-size:0.72rem;padding:5px 14px 5px 0;white-space:nowrap;vertical-align:top;width:140px}}
-.kv-val{{font-size:0.8rem;color:#1c1917;padding:5px 0;vertical-align:top}}
+.kv-label{{color:#78716c;font-size:0.85rem;padding:5px 14px 5px 0;white-space:nowrap;vertical-align:top;width:140px}}
+.kv-val{{font-size:0.95rem;color:#1c1917;padding:5px 0;vertical-align:top}}
 .drawer-section{{padding:14px 24px}}
-.section-hd{{font-size:0.8rem;font-weight:600;color:#4f46e5;margin-bottom:8px}}
+.section-hd{{font-size:0.95rem;font-weight:600;color:#00978A;margin-bottom:8px}}
 .notes-box{{
   background:#fafaf9;border:1px solid #e7e5e4;border-radius:8px;
-  padding:10px 14px;font-size:0.78rem;color:#78716c;line-height:1.6;
+  padding:10px 14px;font-size:0.92rem;color:#78716c;line-height:1.6;
 }}
 /* ── Dark mode ── */
-body.dark{{background:#1c1917;color:#fafaf9}}
-body.dark #sticky-top{{background:#292524}}
-body.dark #site-header,body.dark #kpi-bar{{background:#292524;border-color:#44403c}}
-body.dark #search-box{{background:#1c1917;border-color:#44403c;color:#fafaf9}}
-body.dark #search-box:focus{{border-color:#818cf8;background:#292524}}
-body.dark #theme-btn{{border-color:#44403c;color:#a8a29e}}
-body.dark #theme-btn:hover{{background:#44403c}}
-body.dark .kpi-chip{{background:#1c1917;border-color:#44403c}}
+body.dark{{background:#1B1B1B;color:#fafaf9}}
+body.dark #breakthrough-bar{{background:#0DFDCF}}
+body.dark #sticky-top{{background:#242424}}
+body.dark #site-header,body.dark #kpi-bar{{background:#242424;border-color:#333333}}
+body.dark .header-brand .title{{color:#fafaf9}}
+body.dark #search-box{{background:#1B1B1B;border-color:#333333;color:#fafaf9}}
+body.dark #search-box:focus{{border-color:#0DFDCF;background:#292524}}
+body.dark #theme-btn{{border-color:#333333;color:#a8a29e}}
+body.dark #theme-btn:hover{{background:#333333}}
+body.dark .kpi-chip{{background:#1B1B1B;border-color:#333333}}
+body.dark .kpi-val{{color:#0DFDCF}}
 body.dark .kpi-val{{color:#fafaf9}}
-body.dark .cat-block{{background:#292524;border-color:#44403c}}
-body.dark .cat-block-hd{{border-color:#44403c}}
-body.dark .cat-block-hd:hover{{background:#1c1917}}
-body.dark .pr-all{{border-color:#44403c}}
+body.dark .cat-block{{background:#242424;border-color:#333333}}
+body.dark .cat-block-hd{{border-color:#333333}}
+body.dark .cat-block-hd:hover{{background:#1B1B1B}}
+body.dark .pr-all{{border-color:#333333}}
 body.dark .pr-name{{color:#fafaf9}}
-body.dark .cat-product-list{{background:#292524;border-color:#44403c}}
-body.dark .cpr{{border-color:#44403c}}
-body.dark .cpr:hover{{background:#1e1b4b}}
+body.dark .cat-product-list{{background:#242424;border-color:#333333}}
+body.dark .cpr{{border-color:#333333}}
+body.dark .cpr:hover{{background:#0A2A27}}
 body.dark .cpr-name{{color:#fafaf9}}
 body.dark .cpr-v{{color:#a8a29e}}
-body.dark .back-btn{{border-color:#44403c;color:#a8a29e}}
-body.dark .back-btn:hover{{background:#44403c;color:#fafaf9}}
-body.dark #drawer{{background:#292524;border-color:#44403c}}
-body.dark .drawer-hd{{background:#292524;border-color:#44403c}}
+body.dark .back-btn{{border-color:#333333;color:#a8a29e}}
+body.dark .back-btn:hover{{background:#333333;color:#fafaf9}}
+body.dark #drawer{{background:#242424;border-color:#333333}}
+body.dark .drawer-hd{{background:#242424;border-color:#333333}}
 body.dark .drawer-name{{color:#fafaf9}}
-body.dark .drawer-links-row{{border-color:#44403c}}
-body.dark .close-btn{{border-color:#44403c;color:#a8a29e}}
-body.dark .close-btn:hover{{background:#44403c}}
-body.dark .drawer-details{{border-color:#44403c}}
+body.dark .drawer-links-row{{border-color:#333333}}
+body.dark .close-btn{{border-color:#333333;color:#a8a29e}}
+body.dark .close-btn:hover{{background:#333333}}
+body.dark .drawer-details{{border-color:#333333}}
 body.dark .kv-label{{color:#a8a29e}}
 body.dark .kv-val{{color:#fafaf9}}
 body.dark .drawer-section{{color:#fafaf9}}
-body.dark .notes-box{{background:#1c1917;border-color:#44403c;color:#a8a29e}}
+body.dark .notes-box{{background:#1B1B1B;border-color:#333333;color:#a8a29e}}
 body.dark #drawer-overlay{{background:rgba(0,0,0,.4)}}
 body.dark .muted{{color:#78716c}}
 #drawer-panels{{display:none}}
@@ -516,10 +523,10 @@ body.dark .muted{{color:#78716c}}
 <body>
 
 <div id="sticky-top">
+  <div id="breakthrough-bar"></div>
   <header id="site-header">
     <div class="header-brand">
-      <div class="title">VC Competitor Benchmarker</div>
-      <div class="sub">Logitech 競品分析儀表板</div>
+      <div class="title">Logitech VC Competitor Benchmarker</div>
     </div>
     <input id="search-box" type="text" placeholder="搜尋產品名稱…" oninput="applySearch()">
     <div class="header-right">
