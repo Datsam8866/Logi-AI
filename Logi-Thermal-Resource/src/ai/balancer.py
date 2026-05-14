@@ -46,7 +46,7 @@ def _build_context(year: int) -> str:
         idle_rows.to_string(index=False) if not idle_rows.empty else "無",
         "",
         "## 現有專案狀態",
-        projects[["name", "sub_category", "state", "target_mp"]].to_string(index=False),
+        projects[[c for c in ["Project", "sub_category", "state", "target_mp"] if c in projects.columns]].to_string(index=False),
         "",
         "## Thermal Loading 指標說明",
         indicator.to_string(index=False),

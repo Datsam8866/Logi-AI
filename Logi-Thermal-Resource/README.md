@@ -4,9 +4,9 @@ Logitech 熱設計工程資源分析與 AI 問答工具。
 
 ---
 
-## 最新進度（2026-05-11）
+## 最新進度（2026-05-14）
 
-Dashboard 全功能完成並可正常啟動（`streamlit run app.py`，HTTP 200 驗證通過）。
+Dashboard 全功能完成，並套用 Logitech 品牌設計語言，與 VC Competitor Benchmarker 風格一致。
 
 完成項目：
 - ETL：`Logi Thermal Resource Dashboard.xlsx` → `data/thermal.db`（710 筆 loadings，2021–2027）
@@ -14,7 +14,12 @@ Dashboard 全功能完成並可正常啟動（`streamlit run app.py`，HTTP 200 
 - Claude Sonnet 4.6 自然語言問答（tool use + SQLite SELECT-only gate）
 - 資源過載/閒置自動偵測 + LLM 調配建議
 - 基於 State 典型曲線的未來 6–12 個月負載預測
-- `CLAUDE.md` 初始化完成
+- **Logitech Brand Design**：
+  - Poppins 字型（wght 400–800）
+  - Breakthrough Bar（頁面頂端 4px `#0DFDCF` 色條）
+  - 主色 `#00978A`，KPI 數字 2.2rem / 800 weight
+  - Dark Mode toggle（sidebar 頂端，`#1B1B1B` 背景 + `#0DFDCF` 強調色）
+  - `.streamlit/config.toml` 設定 Logitech 基底主題
 
 ---
 
