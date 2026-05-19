@@ -44,7 +44,7 @@
   --bg-page: #263238;
   --bg-card: #37474F;
   --bg-header: #1C272C;
-  --text-primary: #ECEFF1;
+  --text-primary: #FFFFFF;
   --text-secondary: #B0BEC5;
   --text-muted: #78909C;
   --accent: #64FFDA;
@@ -123,7 +123,7 @@ header {
 .mode-btn:hover { border-color: var(--accent); color: var(--accent); }
 
 /* ── Main ── */
-main { max-width: 1180px; margin: 0 auto; padding: 26px 32px 52px; }
+main { max-width: 1100px; margin: 0 auto; padding: 26px 32px 52px; }
 
 /* ── Deadline Chips ── */
 .deadline-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
@@ -142,7 +142,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 26px 32px 52px; }
 
 /* ── Section Header ── */
 .sec-hd {
-  font-size: 0.85rem; font-weight: 600;
+  font-size: 0.95rem; font-weight: 600;
   color: var(--text-secondary);
   padding-bottom: 7px;
   border-bottom: 1px solid var(--border);
@@ -150,7 +150,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 26px 32px 52px; }
 }
 
 /* ── KPI Grid ── */
-.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 20px; }
 .kpi-card {
   background: var(--bg-card);
   border-left: 4px solid var(--accent);
@@ -162,7 +162,7 @@ main { max-width: 1180px; margin: 0 auto; padding: 26px 32px 52px; }
 .kpi-card.warn { border-left-color: var(--warn-text); }
 .kpi-card.done-exp { border-left-color: var(--exp-text); }
 .kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
-.kpi-val { font-size: 1.85rem; font-weight: 700; color: var(--kpi-value); line-height: 1.1; }
+.kpi-val { font-size: 1.9rem; font-weight: 700; color: var(--kpi-value); line-height: 1.1; }
 .kpi-card.warn .kpi-val { color: var(--warn-text); }
 .kpi-card.done-exp .kpi-val { color: var(--exp-text); }
 .kpi-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
@@ -333,6 +333,73 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 .tab-panel { display: none; }
 .tab-panel.active { display: block; }
 
+/* ── KPI card danger variant ── */
+.kpi-card.danger { border-left-color: var(--danger-text); }
+.kpi-card.danger .kpi-val { color: var(--danger-text); }
+
+/* ── Quarterly Bar Chart ── */
+.qbar-card {
+  background: var(--bg-card);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 18px 20px 14px;
+  box-shadow: var(--shadow);
+  margin-bottom: 8px;
+}
+.qbar-row { display: flex; align-items: center; gap: 14px; margin-bottom: 13px; }
+.qbar-row:last-child { margin-bottom: 0; }
+.qbar-qlabel {
+  font-size: .78rem; font-weight: 700;
+  color: var(--text-secondary);
+  width: 22px; flex-shrink: 0;
+}
+.qbar-track {
+  flex: 1; height: 26px;
+  background: var(--border);
+  border-radius: 4px; overflow: hidden;
+  display: flex;
+}
+.qbar-seg { height: 100%; transition: width .4s; }
+.qbar-seg.done-pr  { background: var(--accent); }
+.qbar-seg.done-exp { background: var(--exp-text); opacity: .85; }
+.qbar-seg.will-pr  { background: var(--warn-text); opacity: .75; }
+.qbar-seg.remaining { background: var(--ok-bg); border-right: 1px solid rgba(0,137,123,.15); }
+.qbar-seg.pending  { background: var(--neutral-bg); }
+.qbar-meta {
+  display: flex; flex-direction: column; align-items: flex-end;
+  flex-shrink: 0; width: 76px;
+}
+.qbar-amount { font-size: .8rem; font-weight: 700; color: var(--text-primary); }
+.qbar-amount.dim { color: var(--text-muted); font-weight: 400; }
+.qbar-pct { font-size: .68rem; color: var(--text-muted); margin-top: 1px; }
+.qbar-legend {
+  display: flex; flex-wrap: wrap; gap: 14px;
+  margin-top: 14px; padding-top: 12px;
+  border-top: 1px solid var(--border);
+}
+.qbar-legend-item { display: flex; align-items: center; gap: 5px; font-size: .72rem; color: var(--text-muted); }
+.qbar-legend-dot { width: 10px; height: 10px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── Tab Active Badge ── */
+.tab-active-badge {
+  display: inline-flex; align-items: center;
+  padding: 1px 6px; border-radius: 3px;
+  font-size: .62rem; font-weight: 600; letter-spacing: .03em;
+  background: var(--ok-bg); color: var(--ok-text); border: 1px solid var(--ok-border);
+  margin-left: 5px; vertical-align: middle;
+}
+
+/* ── Quarter Cells (Overview table) ── */
+.q-cell { min-width: 110px; vertical-align: middle; }
+.q-amount { font-size: .78rem; font-weight: 600; color: var(--kpi-value); }
+.q-amount.dim { color: var(--text-muted); font-weight: 400; }
+.q-mini-bar { height: 3px; background: var(--border); border-radius: 2px; margin: 4px 0 5px; overflow: hidden; }
+.q-mini-fill { height: 100%; border-radius: 2px; transition: width .3s; }
+.q-mini-fill.ok      { background: var(--accent); }
+.q-mini-fill.pipe    { background: var(--pipe-text); }
+.q-mini-fill.warn    { background: var(--warn-text); }
+.q-mini-fill.danger  { background: var(--danger-text); }
+
 /* Responsive */
 @media (max-width: 960px) {
   .kpi-grid { grid-template-columns: repeat(2,1fr); }
@@ -347,8 +414,8 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 
 <header>
   <div class="header-left">
-    <h1>ME Budget FY27 &mdash; Q1 Tracker</h1>
-    <p>Manager: Mike Downing &nbsp;&middot;&nbsp; OPEX &nbsp;&middot;&nbsp; Updated: 2026-05-19</p>
+    <h1>ME Budget FY27 &mdash; Tracker</h1>
+    <p>Manager: Mike Downing &nbsp;&middot;&nbsp; OPEX &nbsp;&middot;&nbsp; Updated: <span id="today-date"></span></p>
   </div>
   <button class="mode-btn" id="modeBtn" onclick="toggleMode()">🌙 Dark</button>
 </header>
@@ -356,14 +423,27 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 <!-- Tab Bar -->
 <div class="tab-bar">
   <button class="tab-btn active" id="tab-overview" onclick="switchTab('overview')">Overview</button>
-  <button class="tab-btn"        id="tab-q1me"     onclick="switchTab('q1me')">Q1 ME Transactions</button>
+  <button class="tab-btn" id="tab-Q1" onclick="switchTab('Q1')">Q1 <span class="tab-active-badge">Active</span></button>
+  <button class="tab-btn" id="tab-Q2" onclick="switchTab('Q2')">Q2</button>
+  <button class="tab-btn" id="tab-Q3" onclick="switchTab('Q3')">Q3</button>
+  <button class="tab-btn" id="tab-Q4" onclick="switchTab('Q4')">Q4</button>
 </div>
 
 <main>
 
-  <!-- ══ Tab 1: Overview ══ -->
+  <!-- ══ Tab: Overview ══ -->
   <div class="tab-panel active" id="panel-overview">
-    <p class="sec-hd" style="margin-top:0">Budget Code Overview</p>
+
+    <!-- KPI Cards -->
+    <p class="sec-hd" style="margin-top:0">FY27 At a Glance</p>
+    <div class="kpi-grid" id="ov-kpi" style="grid-template-columns:repeat(3,1fr)"></div>
+
+    <!-- Quarterly Bar Chart -->
+    <p class="sec-hd">Quarterly Budget Distribution</p>
+    <div class="qbar-card" id="ov-chart"></div>
+
+    <!-- Table -->
+    <p class="sec-hd">Budget Code Overview</p>
     <div class="tbl-wrap">
       <div class="tbl-toolbar">
         <span class="tbl-count" id="ovCount">24 budget codes</span>
@@ -375,11 +455,10 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
             <th onclick="sortTbl('ovTable','ovBody',0,this)">Code <span class="si">↕</span></th>
             <th onclick="sortTbl('ovTable','ovBody',1,this)">Category <span class="si">↕</span></th>
             <th onclick="sortTbl('ovTable','ovBody',2,this)">Content <span class="si">↕</span></th>
-            <th onclick="sortTbl('ovTable','ovBody',3,this)" style="text-align:right">Budget <span class="si">↕</span></th>
-            <th onclick="sortTbl('ovTable','ovBody',4,this)" style="text-align:right">Done PR <span class="si">↕</span></th>
-            <th onclick="sortTbl('ovTable','ovBody',5,this)" style="text-align:right">Will PR <span class="si">↕</span></th>
-            <th onclick="sortTbl('ovTable','ovBody',6,this)" style="text-align:right">Remaining <span class="si">↕</span></th>
-            <th>Status</th>
+            <th>Q1</th>
+            <th>Q2</th>
+            <th>Q3</th>
+            <th>Q4</th>
           </tr>
         </thead>
         <tbody id="ovBody"></tbody>
@@ -387,83 +466,10 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
     </div>
   </div>
 
-  <!-- ══ Tab 2: Q1 ME Transactions ══ -->
-  <div class="tab-panel" id="panel-q1me">
-
-    <!-- Deadlines -->
-    <div class="deadline-bar">
-      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create PR Deadline</span><span class="dl-date">2026/06/12</span></div>
-      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Received PO Deadline</span><span class="dl-date">2026/06/24</span></div>
-      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create Expensify Deadline</span><span class="dl-date">2026/06/25</span></div>
-    </div>
-
-    <!-- KPIs -->
-    <p class="sec-hd" style="margin-top:0">Q1 Summary</p>
-    <div class="kpi-grid">
-      <div class="kpi-card">
-        <div class="kpi-label">Total Budget</div>
-        <div class="kpi-val">$213K</div>
-        <div class="kpi-sub">16 codes with allocation &nbsp;·&nbsp; 24 total codes</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Remaining</div>
-        <div class="kpi-val">$168.7K</div>
-        <div class="kpi-sub">79.2% of allocated budget</div>
-      </div>
-      <div class="kpi-card warn">
-        <div class="kpi-label">Will PR (Pipeline)</div>
-        <div class="kpi-val">$36.9K</div>
-        <div class="kpi-sub">PR not yet submitted &mdash; action needed</div>
-      </div>
-      <div class="kpi-card">
-        <div class="kpi-label">Done PR</div>
-        <div class="kpi-val">$16.8K</div>
-        <div class="kpi-sub">$16,680 PR &nbsp;&middot;&nbsp; $113 Expensify</div>
-      </div>
-    </div>
-
-    <!-- Spend Bar -->
-    <div class="prog-card">
-      <div class="prog-hd">
-        <span class="prog-title">Budget Utilization (Spent + Committed)</span>
-        <span class="prog-pct">25.1% committed &nbsp;&middot;&nbsp; 7.9% done</span>
-      </div>
-      <div class="bar-track">
-        <div class="bar-fill">
-          <div class="seg-done-pr"  style="width:7.83%"  title="Done PR $16,680"></div>
-          <div class="seg-done-exp" style="width:0.05%"  title="Done Expensify $113"></div>
-          <div class="seg-will-pr"  style="width:17.25%" title="Will PR $36,858"></div>
-          <div class="seg-will-exp" style="width:0.13%"  title="Will Expensify $285"></div>
-        </div>
-      </div>
-      <div class="bar-legend">
-        <div class="bl-item"><div class="bl-dot" style="background:var(--accent)"></div>Done PR ($16,680)</div>
-        <div class="bl-item"><div class="bl-dot" style="background:var(--exp-text);opacity:.8"></div>Done Expensify ($113)</div>
-        <div class="bl-item"><div class="bl-dot" style="background:var(--warn-text);opacity:.75"></div>Will PR ($36,858)</div>
-        <div class="bl-item"><div class="bl-dot" style="background:var(--border)"></div>Remaining ($168,740)</div>
-      </div>
-    </div>
-
-    <!-- Transactions Table -->
-    <p class="sec-hd">Q1 Transactions (15)</p>
-    <div class="tbl-wrap">
-      <table id="txTable">
-        <thead>
-          <tr>
-            <th onclick="sortTbl('txTable','txBody',0,this)">Buyer <span class="si">↕</span></th>
-            <th onclick="sortTbl('txTable','txBody',1,this)">Budget Code <span class="si">↕</span></th>
-            <th>Item</th>
-            <th onclick="sortTbl('txTable','txBody',3,this)" style="text-align:right">Cost USD <span class="si">↕</span></th>
-            <th>Project</th>
-            <th>Status</th>
-            <th onclick="sortTbl('txTable','txBody',6,this)">Date <span class="si">↕</span></th>
-          </tr>
-        </thead>
-        <tbody id="txBody"></tbody>
-      </table>
-    </div>
-
-  </div><!-- /panel-q1me -->
+  <!-- ══ Tab: Quarter (shared, rendered by JS) ══ -->
+  <div class="tab-panel" id="panel-quarter">
+    <div id="quarter-content"></div>
+  </div>
 
 </main>
 
@@ -481,22 +487,51 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 </div>
 
 <script>
-// ── Data ──
-const OV = [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":113.19,"remaining":2887},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":9026.62,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":1765.77,"will_expensify":284.94,"done_expensify":0,"remaining":12949},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":2666.47,"will_expensify":0,"done_expensify":0,"remaining":334},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":1763.48,"will_expensify":0,"done_expensify":0,"remaining":18237},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":30000},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":36648.52,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":209.42,"done_pr":1457.54,"will_expensify":0,"done_expensify":0,"remaining":8333},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000}];
+// ── Quarter Data ──
+const QUARTERS = {
+  Q1: {
+    deadlines: {pr:"2026/06/12", po:"2026/06/24", expensify:"2026/06/25"},
+    summary: {total_budget:213000, total_remaining:168740, total_done_pr:16679.88, total_done_exp:113.19, total_will_pr:36857.95, total_will_exp:284.94},
+    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":113.19,"remaining":2887},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":9026.62,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":1765.77,"will_expensify":284.94,"done_expensify":0,"remaining":12949},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":2666.47,"will_expensify":0,"done_expensify":0,"remaining":334},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":1763.48,"will_expensify":0,"done_expensify":0,"remaining":18237},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":30000},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":36648.52,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":209.42,"done_pr":1457.54,"will_expensify":0,"done_expensify":0,"remaining":8333},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000}],
+    txns: [{"buyer_name":"Jerry CW HUANG","budget_code":27286,"item":"Parking Fee","cost_usd":113.19,"currency":"TWD","project":null,"supplier":null,"purchase_plan":"Done - Expensify","pr_expensify_date":"2026-05-07"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Thermal data logger, YOKOGAWA GP10+GX90XA-10-U2N-CN","cost_usd":8469.42,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Portable temperature device, Fluke 54-2B","cost_usd":557.20,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover CNC mockup","cost_usd":815.20,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-07"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover deflection improvement sample option 1-5 mockup","cost_usd":950.57,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-05"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Bowser competitor tear down - Yealink MSpeaker","cost_usd":284.94,"currency":"TWD","project":"Bowser","supplier":"Fomica","purchase_plan":"Will Expensify","pr_expensify_date":null},{"buyer_name":"Angela Chao","budget_code":27291,"item":"FY27 Q1 SLA J750 materials purchase","cost_usd":2666.47,"currency":"TWD","project":"SLA","supplier":"GIT","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-15"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Plan B tool sample verification","cost_usd":933.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Low vibration grommet","cost_usd":830.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky vibration & noise simulation [Cadmen]","cost_usd":25000,"currency":"USD","project":"Swanky","supplier":"Cadman","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Jerry CW HUANG","budget_code":27303,"item":"Swanky teams acoustic pre-test","cost_usd":5000,"currency":"USD","project":"Swanky","supplier":"PAL","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Gen2 Mount thermal simulation [Flotrend]","cost_usd":4748.94,"currency":"TWD","project":"Gen2 mount","supplier":"Flotrend","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky thermal mockup for heatpipe study","cost_usd":1899.58,"currency":"TWD","project":"Swanky","supplier":"Tianmai","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Angela Chao","budget_code":27307,"item":"[Weedle] CNC Cable Clamp for Cable Retention","cost_usd":1457.54,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-23"},{"buyer_name":"Angela Chao","budget_code":27307,"item":"Weedle Lid cover 3D printed mockup","cost_usd":209.42,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Will PR","pr_expensify_date":"2026-05-12"}]
+  },
+  Q2: {
+    deadlines: {pr:"2026/09/11", po:"2026/09/23", expensify:"2026/09/24"},
+    summary: {total_budget:236000, total_remaining:236000, total_done_pr:0, total_done_exp:0, total_will_pr:0, total_will_exp:0},
+    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":6000},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":26000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":26000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":30000},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000}],
+    txns: []
+  },
+  Q3: {
+    deadlines: {pr:"2026/12/11", po:"2026/12/23", expensify:"2026/12/24"},
+    summary: {total_budget:113000, total_remaining:113000, total_done_pr:0, total_done_exp:0, total_will_pr:0, total_will_exp:0},
+    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":6000},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":5000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":5000},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null}],
+    txns: []
+  },
+  Q4: {
+    deadlines: {pr:"2027/03/19", po:"2027/03/26", expensify:"2027/03/30"},
+    summary: {total_budget:98000, total_remaining:98000, total_done_pr:0, total_done_exp:0, total_will_pr:0, total_will_exp:0},
+    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":6000},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":16000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":16000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":5000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":5000},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null}],
+    txns: []
+  }
+};
 
-const TX = [{"buyer_name":"Jerry CW HUANG","budget_code":27286,"item":"Parking Fee","cost_usd":113.19,"currency":"TWD","project":null,"supplier":null,"purchase_plan":"Done - Expensify","pr_expensify_date":"2026-05-07","received":"-"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Thermal data logger, YOKOGAWA GP10+GX90XA-10-U2N-CN","cost_usd":8469.42,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07","received":"X"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Portable temperature device, Fluke 54-2B","cost_usd":557.20,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07","received":"X"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover CNC mockup","cost_usd":815.20,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-07","received":"O"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover deflection improvement sample option 1-5 mockup","cost_usd":950.57,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-05","received":"O"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Bowser competitor tear down - Yealink MSpeaker","cost_usd":284.94,"currency":"TWD","project":"Bowser","supplier":"Fomica","purchase_plan":"Will Expensify","pr_expensify_date":null,"received":"-"},{"buyer_name":"Angela Chao","budget_code":27291,"item":"FY27 Q1 SLA J750 materials purchase","cost_usd":2666.47,"currency":"TWD","project":"SLA","supplier":"GIT","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-15","received":"X"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Plan B tool sample verification","cost_usd":933.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30","received":"X"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Low vibration grommet","cost_usd":830.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30","received":"X"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky vibration & noise simulation [Cadmen]","cost_usd":25000.00,"currency":"USD","project":"Swanky","supplier":"Cadman","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Jerry CW HUANG","budget_code":27303,"item":"Swanky teams acoustic pre-test","cost_usd":5000.00,"currency":"USD","project":"Swanky","supplier":"PAL","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Gen2 Mount thermal simulation [Flotrend]","cost_usd":4748.94,"currency":"TWD","project":"Gen2 mount","supplier":"Flotrend","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky thermal mockup for heatpipe study","cost_usd":1899.58,"currency":"TWD","project":"Swanky","supplier":"Tianmai","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Angela Chao","budget_code":27307,"item":"[Weedle] CNC Cable Clamp for Cable Retention","cost_usd":1457.54,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-23","received":"X"},{"buyer_name":"Angela Chao","budget_code":27307,"item":"Weedle Lid cover 3D printed mockup","cost_usd":209.42,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Will PR","pr_expensify_date":"2026-05-12","received":"?"}];
+// Overview tab drawer uses Q1 data (only Q1 has real spending)
+const OV = QUARTERS.Q1.overview;
 
 // ── Helpers ──
-const usd = n => n == null ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
+const usd   = n => n == null ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
 const usdSm = n => (!n || n===0) ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
+const pct   = (a,b) => b ? (a/b*100).toFixed(1)+'%' : '0%';
 
-function statusBadge(d) {
+let activeQ = 'Q1';   // currently rendered quarter
+
+function statusBadge(d, noTx) {
   if (!d.budget_usd) return '<span class="badge b-neutral">No Budget</span>';
+  if (noTx) return '<span class="badge b-neutral">Pending</span>';
   if (d.remaining === null) return '<span class="badge b-danger">Overbudget</span>';
   if (d.will_pr > 0 || d.will_expensify > 0) return '<span class="badge b-pipe">In Pipeline</span>';
   if (d.done_pr > 0 || d.done_expensify > 0) {
-    const usedPct = 1 - d.remaining / d.budget_usd;
-    return usedPct > 0.85
+    return (1 - d.remaining/d.budget_usd) > 0.85
       ? '<span class="badge b-warn">Near Limit</span>'
       : '<span class="badge b-ok">Active</span>';
   }
@@ -504,35 +539,143 @@ function statusBadge(d) {
 }
 
 function planBadge(p) {
-  const m = {
-    'Done - PR':         '<span class="badge b-ok">Done PR</span>',
-    'Done - Expensify':  '<span class="badge b-exp">Done Exp</span>',
-    'Will PR':           '<span class="badge b-pipe">Will PR</span>',
-    'Will Expensify':    '<span class="badge b-warn">Will Exp</span>',
-  };
+  const m = {'Done - PR':'<span class="badge b-ok">Done PR</span>','Done - Expensify':'<span class="badge b-exp">Done Exp</span>','Will PR':'<span class="badge b-pipe">Will PR</span>','Will Expensify':'<span class="badge b-warn">Will Exp</span>'};
   return m[p] || `<span class="badge b-neutral">${p}</span>`;
 }
 
-// ── Render Overview ──
-let ovFiltered = [...OV];
+// ── Overview KPI + Chart ──
+function renderOverviewKpiAndChart() {
+  // Totals
+  const fy27Budget = Object.values(QUARTERS).reduce((s,q) => s + (q.summary.total_budget||0), 0);
+  const q1 = QUARTERS.Q1.summary;
+  const burnRate    = fy27Budget ? ((q1.total_done_pr+q1.total_done_exp+q1.total_will_pr+q1.total_will_exp)/q1.total_budget*100).toFixed(1) : 0;
+  const donePct     = q1.total_budget ? ((q1.total_done_pr+q1.total_done_exp)/q1.total_budget*100).toFixed(1) : 0;
+  const overbudget  = QUARTERS.Q1.overview.filter(d => d.budget_usd && d.remaining===null && (d.done_pr+d.done_expensify)>0).length;
+
+  // KPI Cards
+  document.getElementById('ov-kpi').innerHTML = `
+    <div class="kpi-card">
+      <div class="kpi-label">FY27 Total Budget</div>
+      <div class="kpi-val">$${(fy27Budget/1000).toFixed(0)}K</div>
+      <div class="kpi-sub">Q1–Q4 combined &nbsp;&middot;&nbsp; OPEX</div>
+    </div>
+    <div class="kpi-card ${overbudget>0?'danger':''}">
+      <div class="kpi-label">Overbudget Alerts</div>
+      <div class="kpi-val">${overbudget}</div>
+      <div class="kpi-sub">${overbudget>0?'27287 (Equipment) &nbsp;&middot;&nbsp; 27303 (Swanky)':'All codes within budget'}</div>
+    </div>
+    <div class="kpi-card">
+      <div class="kpi-label">Active Quarters</div>
+      <div class="kpi-val">1 / 4</div>
+      <div class="kpi-sub">Q1 in progress &nbsp;&middot;&nbsp; Q2–Q4 pending</div>
+    </div>
+  `;
+
+  // Bar chart — widths relative to max quarter budget
+  const budgets = {Q1:213000, Q2:236000, Q3:113000, Q4:98000};
+  const maxB = Math.max(...Object.values(budgets));
+
+  const rows = ['Q1','Q2','Q3','Q4'].map(q => {
+    const b = budgets[q];
+    const pct = (b/maxB*100).toFixed(1);
+    const qs  = QUARTERS[q].summary;
+    const hasTx = QUARTERS[q].txns.length > 0;
+
+    let segs = '';
+    let metaSub = 'Pending';
+    if (hasTx) {
+      const dp  = (qs.total_done_pr  / maxB * 100).toFixed(2);
+      const de  = (qs.total_done_exp / maxB * 100).toFixed(2);
+      const wp  = (qs.total_will_pr  / maxB * 100).toFixed(2);
+      const rem = ((qs.total_remaining) / maxB * 100).toFixed(2);
+      segs = `
+        <div class="qbar-seg done-pr"   style="width:${+dp >0?`max(${dp}%,2%)`:'0'}" title="Done PR ${usd(qs.total_done_pr)}"></div>
+        <div class="qbar-seg done-exp"  style="width:${+de >0?`max(${de}%,2%)`:'0'}" title="Done Exp ${usd(qs.total_done_exp)}"></div>
+        <div class="qbar-seg will-pr"   style="width:${+wp >0?`max(${wp}%,2%)`:'0'}" title="Will PR ${usd(qs.total_will_pr)}"></div>
+        <div class="qbar-seg remaining" style="width:${rem}%" title="Remaining ${usd(qs.total_remaining)}"></div>
+      `;
+      const utilPct = ((qs.total_done_pr+qs.total_done_exp+qs.total_will_pr+qs.total_will_exp)/b*100).toFixed(1);
+      metaSub = `Budget Utilization ${utilPct}%`;
+    } else {
+      segs = `<div class="qbar-seg pending" style="width:${pct}%" title="${usd(b)} budget"></div>`;
+    }
+    return `
+      <div class="qbar-row">
+        <div class="qbar-qlabel">${q}</div>
+        <div class="qbar-track">${segs}</div>
+        <div class="qbar-meta">
+          <div class="qbar-amount ${hasTx?'':'dim'}">$${(b/1000).toFixed(0)}K</div>
+          <div class="qbar-pct">${metaSub}</div>
+        </div>
+      </div>`;
+  }).join('');
+
+  document.getElementById('ov-chart').innerHTML = rows + `
+    <div class="qbar-legend">
+      <div class="qbar-legend-item"><div class="qbar-legend-dot" style="background:var(--accent)"></div>Done PR</div>
+      <div class="qbar-legend-item"><div class="qbar-legend-dot" style="background:var(--exp-text);opacity:.85"></div>Done Expensify</div>
+      <div class="qbar-legend-item"><div class="qbar-legend-dot" style="background:var(--warn-text);opacity:.75"></div>Will PR</div>
+      <div class="qbar-legend-item"><div class="qbar-legend-dot" style="background:var(--ok-bg);border:1px solid rgba(0,137,123,.25)"></div>Remaining</div>
+      <div class="qbar-legend-item"><div class="qbar-legend-dot" style="background:var(--neutral-bg)"></div>Pending</div>
+    </div>
+  `;
+}
+
+// ── Overview: cross-quarter cell builder ──
+function qCellInfo(d, hasTx) {
+  if (!d.budget_usd) return {label:'No Budget', cls:'b-neutral', barW:0, barCls:'', dim:true};
+  if (!hasTx)        return {label:'Pending',   cls:'b-neutral', barW:0, barCls:'', dim:true};
+  if (d.remaining === null) {
+    const over = (d.done_pr+d.done_expensify+d.will_pr+d.will_expensify);
+    return {label:'Overbudget', cls:'b-danger', barW:100, barCls:'danger', dim:false};
+  }
+  const used    = d.budget_usd - d.remaining;
+  const usedPct = used / d.budget_usd;
+  const barW    = Math.min(Math.max((d.done_pr+d.done_expensify+d.will_pr+d.will_expensify)/d.budget_usd*100, 0), 100);
+  if (usedPct >= 0.85) return {label:'Near Limit', cls:'b-warn',    barW, barCls:'warn', dim:false};
+  if (d.will_pr>0||d.will_expensify>0) return {label:'In Pipeline', cls:'b-pipe', barW, barCls:'pipe', dim:false};
+  if (d.done_pr>0||d.done_expensify>0) return {label:'Active',      cls:'b-ok',   barW, barCls:'ok',   dim:false};
+  return {label:'Unused', cls:'b-neutral', barW:0, barCls:'', dim:true};
+}
+
+function buildQCell(code, q) {
+  const qData = QUARTERS[q];
+  const d     = qData.overview.find(x => x.budget_code === code);
+  const hasTx = qData.txns.length > 0;
+  if (!d) return `<td class="q-cell c-muted">—</td>`;
+  const {label, cls, barW, barCls, dim} = qCellInfo(d, hasTx);
+  const amountStr = d.budget_usd ? usd(d.budget_usd) : '—';
+  const bar = d.budget_usd && hasTx
+    ? `<div class="q-mini-bar"><div class="q-mini-fill ${barCls}" style="width:${barW.toFixed(1)}%"></div></div>`
+    : `<div style="height:3px;margin:4px 0 5px"></div>`;
+  return `<td class="q-cell">
+    <div class="q-amount ${dim?'dim':''}">${amountStr}</div>
+    ${bar}
+    <span class="badge ${cls}">${label}</span>
+  </td>`;
+}
+
+// ── Render Overview Tab (cross-quarter) ──
+// Use Q1 overview as the canonical budget code list (same 24 codes all quarters)
+const ALL_CODES = QUARTERS.Q1.overview;
+let ovFiltered = [...ALL_CODES];
+
 function renderOv(data) {
   document.getElementById('ovBody').innerHTML = data.map(d => `
-    <tr onclick="openDrawer(${d.budget_code})">
+    <tr onclick="openDrawerOv(${d.budget_code})">
       <td class="c-num c-accent" style="text-align:left">${d.budget_code}</td>
       <td>${d.category}</td>
       <td class="c-muted">${d.category_content}</td>
-      <td class="c-num c-accent">${usd(d.budget_usd)}</td>
-      <td class="c-num ${d.done_pr>0?'c-accent':''}">${usdSm(d.done_pr)}</td>
-      <td class="c-num ${d.will_pr>0?'c-warn':''}">${usdSm(d.will_pr)}</td>
-      <td class="c-num ${d.remaining===null?'c-danger':''}">${usd(d.remaining)}</td>
-      <td>${statusBadge(d)}</td>
+      ${buildQCell(d.budget_code,'Q1')}
+      ${buildQCell(d.budget_code,'Q2')}
+      ${buildQCell(d.budget_code,'Q3')}
+      ${buildQCell(d.budget_code,'Q4')}
     </tr>`).join('');
   document.getElementById('ovCount').textContent = `${data.length} budget codes`;
 }
-
 function filterOv() {
   const q = document.getElementById('ovSearch').value.toLowerCase();
-  ovFiltered = OV.filter(d =>
+  ovFiltered = ALL_CODES.filter(d =>
     String(d.budget_code).includes(q) ||
     d.category.toLowerCase().includes(q) ||
     d.category_content.toLowerCase().includes(q)
@@ -540,34 +683,106 @@ function filterOv() {
   renderOv(ovFiltered);
 }
 
-// ── Render Transactions ──
-function renderTx() {
-  document.getElementById('txBody').innerHTML = TX.map(t => `
-    <tr onclick="openDrawer(${t.budget_code})">
-      <td>${t.buyer_name}</td>
-      <td class="c-num c-accent" style="text-align:left">${t.budget_code}</td>
-      <td class="truncate" title="${t.item}">${t.item}</td>
-      <td class="c-num c-accent">${usd(t.cost_usd)}</td>
-      <td class="c-muted">${t.project||'—'}</td>
-      <td>${planBadge(t.purchase_plan)}</td>
-      <td class="c-muted">${t.pr_expensify_date||'—'}</td>
-    </tr>`).join('');
+// ── Render Quarter Panel ──
+function renderQuarter(q) {
+  activeQ = q;
+  const {deadlines, summary, overview, txns} = QUARTERS[q];
+  const noTx = txns.length === 0;
+  const budget = summary.total_budget;
+  const donePr = summary.total_done_pr, doneExp = summary.total_done_exp;
+  const willPr = summary.total_will_pr, willExp = summary.total_will_exp;
+  const remaining = noTx ? budget : (budget - donePr - doneExp - willPr - willExp);
+  const committedPct = budget ? ((donePr+doneExp+willPr+willExp)/budget*100).toFixed(1) : 0;
+  const donePct      = budget ? ((donePr+doneExp)/budget*100).toFixed(1) : 0;
+
+  const barDonePr  = budget ? (donePr/budget*100).toFixed(2) : 0;
+  const barDoneExp = budget ? (doneExp/budget*100).toFixed(2) : 0;
+  const barWillPr  = budget ? (willPr/budget*100).toFixed(2) : 0;
+  const barWillExp = budget ? (willExp/budget*100).toFixed(2) : 0;
+
+  // KPI sub text for remaining
+  const remPct = budget ? (remaining/budget*100).toFixed(1) : 0;
+
+  document.getElementById('quarter-content').innerHTML = `
+    <div class="deadline-bar">
+      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create PR Deadline</span><span class="dl-date">${deadlines.pr}</span></div>
+      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Received PO Deadline</span><span class="dl-date">${deadlines.po}</span></div>
+      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create Expensify Deadline</span><span class="dl-date">${deadlines.expensify}</span></div>
+    </div>
+
+    <p class="sec-hd" style="margin-top:0">${q} Summary</p>
+    <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Budget</div>
+        <div class="kpi-val">${budget>=1000?'$'+(budget/1000).toFixed(0)+'K':usd(budget)}</div>
+        <div class="kpi-sub">${overview.filter(d=>d.budget_usd).length} codes with allocation &nbsp;&middot;&nbsp; 24 total</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Remaining</div>
+        <div class="kpi-val">${noTx?'$'+(budget/1000).toFixed(0)+'K':'$'+(remaining/1000).toFixed(1)+'K'}</div>
+        <div class="kpi-sub">${noTx?'No transactions yet':remPct+'% of allocated budget'}</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Budget Utilization</div>
+        <div class="kpi-val">${noTx?'0%':committedPct+'%'}</div>
+        <div class="kpi-sub">${noTx?'No data yet':donePct+'% done &nbsp;&middot;&nbsp; $'+(( donePr+doneExp+willPr+willExp)/1000).toFixed(1)+'K committed'}</div>
+      </div>
+    </div>
+
+    <div class="prog-card">
+      <div class="prog-hd">
+        <span class="prog-title">Budget Utilization (Spent + Committed)</span>
+        <span class="prog-pct">${noTx?'No data yet':committedPct+'% committed &nbsp;&middot;&nbsp; '+donePct+'% done'}</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill">
+          <div class="seg-done-pr"  style="width:${+barDonePr >0?`max(${barDonePr}%,2%)`:'0'}"  title="Done PR ${usd(donePr)}"></div>
+          <div class="seg-done-exp" style="width:${+barDoneExp>0?`max(${barDoneExp}%,2%)`:'0'}" title="Done Exp ${usd(doneExp)}"></div>
+          <div class="seg-will-pr"  style="width:${+barWillPr >0?`max(${barWillPr}%,2%)`:'0'}"  title="Will PR ${usd(willPr)}"></div>
+          <div class="seg-will-exp" style="width:${+barWillExp>0?`max(${barWillExp}%,2%)`:'0'}" title="Will Exp ${usd(willExp)}"></div>
+        </div>
+      </div>
+      <div class="bar-legend">
+        <div class="bl-item"><div class="bl-dot" style="background:var(--accent)"></div>Done PR (${usd(donePr)})</div>
+        <div class="bl-item"><div class="bl-dot" style="background:var(--exp-text);opacity:.8"></div>Done Exp (${usd(doneExp)})</div>
+        <div class="bl-item"><div class="bl-dot" style="background:var(--warn-text);opacity:.75"></div>Will PR (${usd(willPr)})</div>
+        <div class="bl-item"><div class="bl-dot" style="background:var(--border)"></div>Remaining (${usd(remaining)})</div>
+      </div>
+    </div>
+
+    <p class="sec-hd">${q} Transactions (${txns.length})</p>
+    <div class="tbl-wrap">
+      ${noTx
+        ? `<div style="padding:28px;text-align:center;color:var(--text-muted);font-size:.82rem">No transactions recorded for ${q} yet</div>`
+        : `<table>
+            <thead><tr>
+              <th>Buyer</th><th>Budget Code</th><th>Item</th>
+              <th style="text-align:right">Cost USD</th><th>Project</th><th>Status</th><th>Date</th>
+            </tr></thead>
+            <tbody>${txns.map(t=>`
+              <tr onclick="openDrawerQ(${t.budget_code})">
+                <td>${t.buyer_name}</td>
+                <td class="c-num c-accent" style="text-align:left">${t.budget_code}</td>
+                <td class="truncate" title="${t.item}">${t.item}</td>
+                <td class="c-num c-accent">${usd(t.cost_usd)}</td>
+                <td class="c-muted">${t.project||'—'}</td>
+                <td>${planBadge(t.purchase_plan)}</td>
+                <td class="c-muted">${t.pr_expensify_date||'—'}</td>
+              </tr>`).join('')}
+            </tbody>
+          </table>`}
+    </div>
+  `;
 }
 
-// ── Drawer ──
-function openDrawer(code) {
-  const d   = OV.find(x => x.budget_code === code);
-  const txs = TX.filter(x => x.budget_code === code);
+// ── Drawer body builder (shared) ──
+function buildDrawerBody(d, txs) {
   const committed = (d.done_pr||0)+(d.done_expensify||0)+(d.will_pr||0)+(d.will_expensify||0);
-
-  document.getElementById('drwTitle').textContent = `Budget Code ${code}`;
-  document.getElementById('drwSub').textContent   = `${d.category}  ·  ${d.category_content}`;
-
-  document.getElementById('drwBody').innerHTML = `
+  return `
     <div class="dkpi-grid">
       <div class="dkpi"><div class="lbl">Budget</div><div class="val">${usd(d.budget_usd)}</div></div>
-      <div class="dkpi"><div class="lbl">Remaining</div><div class="val ${d.remaining===null?'danger':''}">${usd(d.remaining)}</div></div>
-      <div class="dkpi"><div class="lbl">Total Committed</div><div class="val">${usdSm(committed)||'—'}</div></div>
+      <div class="dkpi"><div class="lbl">Remaining</div><div class="val ${d.remaining===null&&committed>0?'danger':''}">${usd(d.remaining)}</div></div>
+      <div class="dkpi"><div class="lbl">Committed</div><div class="val">${usdSm(committed)||'—'}</div></div>
     </div>
     <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
       <div class="dkpi"><div class="lbl">Done PR</div><div class="val ${d.done_pr>0?'':'neutral'}">${usdSm(d.done_pr)}</div></div>
@@ -580,10 +795,7 @@ function openDrawer(code) {
       ? '<div class="no-tx">No transactions recorded for this code</div>'
       : txs.map(t=>`
         <div class="tx-card">
-          <div class="tx-top">
-            <div class="tx-item-text">${t.item}</div>
-            <div class="tx-cost-text">${usd(t.cost_usd)}</div>
-          </div>
+          <div class="tx-top"><div class="tx-item-text">${t.item}</div><div class="tx-cost-text">${usd(t.cost_usd)}</div></div>
           <div class="tx-meta">
             <span class="tx-meta-item">👤 ${t.buyer_name}</span>
             ${t.project?`<span class="tx-meta-item">📁 ${t.project}</span>`:''}
@@ -594,6 +806,54 @@ function openDrawer(code) {
           </div>
         </div>`).join('')}
   `;
+}
+
+// ── Drawer (Overview tab) — with quarter selector ──
+let drawerOvCode = null;
+
+function openDrawerOv(code) {
+  drawerOvCode = code;
+  const d = QUARTERS.Q1.overview.find(x => x.budget_code === code);
+
+  document.getElementById('drwTitle').textContent = `Budget Code ${code}`;
+  document.getElementById('drwSub').innerHTML = `
+    <span style="color:var(--text-muted);font-size:.74rem;display:block;margin-bottom:6px">${d.category} &nbsp;·&nbsp; ${d.category_content}</span>
+    <select id="drw-q-sel" onchange="switchDrawerQ(this.value)"
+      style="padding:3px 10px;border:1px solid var(--border);border-radius:4px;
+             background:var(--bg-page);color:var(--text-primary);
+             font-family:inherit;font-size:.78rem;font-weight:600;outline:none;cursor:pointer">
+      <option value="Q1" selected>Q1 — Active</option>
+      <option value="Q2">Q2</option>
+      <option value="Q3">Q3</option>
+      <option value="Q4">Q4</option>
+    </select>
+  `;
+  renderDrawerOvBody('Q1');
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+
+function switchDrawerQ(q) {
+  renderDrawerOvBody(q);
+}
+
+function renderDrawerOvBody(q) {
+  const qData = QUARTERS[q];
+  const d   = qData.overview.find(x => x.budget_code === drawerOvCode);
+  const txs = qData.txns.filter(x => x.budget_code === drawerOvCode);
+  document.getElementById('drwBody').innerHTML = buildDrawerBody(d, txs);
+}
+
+// ── Drawer (Quarter tab) ──
+function openDrawerQ(code) {
+  const qData = QUARTERS[activeQ];
+  const d   = qData.overview.find(x => x.budget_code === code);
+  const txs = qData.txns.filter(x => x.budget_code === code);
+  document.getElementById('drwTitle').textContent = `Budget Code ${code}`;
+  document.getElementById('drwSub').innerHTML =
+    `<span style="color:var(--text-muted);font-size:.74rem">${d.category} &nbsp;·&nbsp; ${d.category_content}</span>
+     <span class="badge b-ok" style="margin-left:8px">${activeQ}</span>`;
+  document.getElementById('drwBody').innerHTML = buildDrawerBody(d, txs);
   document.getElementById('overlay').classList.add('open');
   document.getElementById('drawer').classList.add('open');
 }
@@ -628,8 +888,11 @@ function sortTbl(tblId, bodyId, col, th) {
 function switchTab(id) {
   document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
-  document.getElementById('panel-' + id).classList.add('active');
+  const isQuarter = ['Q1','Q2','Q3','Q4'].includes(id);
+  const panelId = isQuarter ? 'panel-quarter' : 'panel-' + id;
+  document.getElementById(panelId).classList.add('active');
   document.getElementById('tab-' + id).classList.add('active');
+  if (isQuarter) renderQuarter(id);
   localStorage.setItem('vcb-tab', id);
 }
 
@@ -649,10 +912,11 @@ function toggleMode() {
     document.documentElement.setAttribute('data-theme', savedMode);
     document.getElementById('modeBtn').textContent = savedMode==='business-light'?'🌙 Dark':'☀️ Light';
   }
-  const savedTab = localStorage.getItem('vcb-tab');
-  if(savedTab) switchTab(savedTab);
-  renderOv(OV);
-  renderTx();
+  document.getElementById('today-date').textContent = new Date().toISOString().slice(0,10);
+  renderOverviewKpiAndChart();
+  renderOv(ALL_CODES);
+  const savedTab = localStorage.getItem('vcb-tab') || 'overview';
+  switchTab(savedTab);
 })();
 </script>
 </body>
