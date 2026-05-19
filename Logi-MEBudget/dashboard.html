@@ -1,0 +1,659 @@
+<!DOCTYPE html>
+<html lang="zh-TW" data-theme="business-light">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>ME Budget FY27 — Q1 Tracker</title>
+<link href="https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ── Design Tokens ── */
+[data-theme="business-light"] {
+  --bg-page: #F7F9FA;
+  --bg-card: #FFFFFF;
+  --bg-header: #FFFFFF;
+  --text-primary: #263238;
+  --text-secondary: #546E7A;
+  --text-muted: #78909C;
+  --accent: #00897B;
+  --accent-hover: #00695C;
+  --kpi-value: #00897B;
+  --border: #CFD8DC;
+  --bar-top: #64FFDA;
+  --row-hover: #F0F9F8;
+  --ok-bg: rgba(0,137,123,0.08);
+  --ok-text: #00695C;
+  --ok-border: rgba(0,137,123,0.25);
+  --warn-bg: rgba(230,81,0,0.07);
+  --warn-text: #BF360C;
+  --warn-border: rgba(230,81,0,0.22);
+  --danger-bg: rgba(198,40,40,0.07);
+  --danger-text: #B71C1C;
+  --danger-border: rgba(198,40,40,0.22);
+  --neutral-bg: #ECEFF1;
+  --neutral-text: #546E7A;
+  --neutral-border: #B0BEC5;
+  --pipe-bg: rgba(245,124,0,0.08);
+  --pipe-text: #E65100;
+  --pipe-border: rgba(245,124,0,0.25);
+  --exp-bg: rgba(126,87,194,0.08);
+  --exp-text: #4527A0;
+  --exp-border: rgba(126,87,194,0.22);
+  --shadow: 0 1px 4px rgba(38,50,56,0.08);
+}
+[data-theme="business-dark"] {
+  --bg-page: #263238;
+  --bg-card: #37474F;
+  --bg-header: #1C272C;
+  --text-primary: #ECEFF1;
+  --text-secondary: #B0BEC5;
+  --text-muted: #78909C;
+  --accent: #64FFDA;
+  --accent-hover: #1DE9B6;
+  --kpi-value: #64FFDA;
+  --border: #455A64;
+  --bar-top: #64FFDA;
+  --row-hover: rgba(100,255,218,0.05);
+  --ok-bg: rgba(100,255,218,0.1);
+  --ok-text: #64FFDA;
+  --ok-border: rgba(100,255,218,0.25);
+  --warn-bg: rgba(255,183,77,0.1);
+  --warn-text: #FFB74D;
+  --warn-border: rgba(255,183,77,0.25);
+  --danger-bg: rgba(239,154,154,0.1);
+  --danger-text: #EF9A9A;
+  --danger-border: rgba(239,154,154,0.25);
+  --neutral-bg: rgba(69,90,100,0.6);
+  --neutral-text: #90A4AE;
+  --neutral-border: #546E7A;
+  --pipe-bg: rgba(255,183,77,0.1);
+  --pipe-text: #FFB74D;
+  --pipe-border: rgba(255,183,77,0.25);
+  --exp-bg: rgba(179,157,219,0.1);
+  --exp-text: #CE93D8;
+  --exp-border: rgba(179,157,219,0.25);
+  --shadow: 0 2px 10px rgba(0,0,0,0.35);
+}
+
+*, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+body {
+  font-family: 'Poppins', 'Segoe UI', system-ui, sans-serif;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-size: 0.88rem;
+  line-height: 1.6;
+  transition: background .22s, color .22s;
+}
+
+/* Breakthrough Bar */
+body::before {
+  content: '';
+  position: fixed;
+  top: 0; left: 0; right: 0;
+  height: 4px;
+  background: var(--bar-top);
+  z-index: 1000;
+}
+
+/* ── Header ── */
+header {
+  position: sticky;
+  top: 4px;
+  z-index: 100;
+  background: var(--bg-header);
+  border-bottom: 2px solid var(--border);
+  padding: 13px 32px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  box-shadow: var(--shadow);
+  transition: background .22s, border-color .22s;
+}
+.header-left h1 { font-size: 1.05rem; font-weight: 700; letter-spacing: -0.01em; }
+.header-left p { font-size: 0.76rem; color: var(--text-muted); margin-top: 1px; }
+.mode-btn {
+  display: flex; align-items: center; gap: 6px;
+  padding: 5px 14px;
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  background: transparent;
+  color: var(--text-secondary);
+  font-family: inherit; font-size: 0.8rem; font-weight: 500;
+  cursor: pointer; transition: all .18s;
+}
+.mode-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Main ── */
+main { max-width: 1180px; margin: 0 auto; padding: 26px 32px 52px; }
+
+/* ── Deadline Chips ── */
+.deadline-bar { display: flex; gap: 10px; flex-wrap: wrap; margin-bottom: 22px; }
+.dl-chip {
+  display: flex; align-items: center; gap: 7px;
+  padding: 5px 12px;
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  font-size: 0.76rem;
+  box-shadow: var(--shadow);
+}
+.dl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.dl-label { color: var(--text-muted); }
+.dl-date { font-weight: 600; color: var(--text-primary); }
+
+/* ── Section Header ── */
+.sec-hd {
+  font-size: 0.85rem; font-weight: 600;
+  color: var(--text-secondary);
+  padding-bottom: 7px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 16px; margin-top: 30px;
+}
+
+/* ── KPI Grid ── */
+.kpi-grid { display: grid; grid-template-columns: repeat(4,1fr); gap: 14px; }
+.kpi-card {
+  background: var(--bg-card);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 17px 20px;
+  box-shadow: var(--shadow);
+  transition: background .22s;
+}
+.kpi-card.warn { border-left-color: var(--warn-text); }
+.kpi-card.done-exp { border-left-color: var(--exp-text); }
+.kpi-label { font-size: 0.72rem; font-weight: 600; color: var(--text-muted); text-transform: uppercase; letter-spacing: .07em; margin-bottom: 5px; }
+.kpi-val { font-size: 1.85rem; font-weight: 700; color: var(--kpi-value); line-height: 1.1; }
+.kpi-card.warn .kpi-val { color: var(--warn-text); }
+.kpi-card.done-exp .kpi-val { color: var(--exp-text); }
+.kpi-sub { font-size: 0.72rem; color: var(--text-muted); margin-top: 4px; }
+
+/* ── Progress Bar Card ── */
+.prog-card {
+  background: var(--bg-card);
+  border-left: 4px solid var(--accent);
+  border-radius: 6px;
+  padding: 16px 20px;
+  box-shadow: var(--shadow);
+  margin-top: 14px;
+}
+.prog-hd { display: flex; justify-content: space-between; align-items: baseline; margin-bottom: 10px; }
+.prog-title { font-size: 0.72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .07em; color: var(--text-muted); }
+.prog-pct { font-size: 0.95rem; font-weight: 700; color: var(--kpi-value); }
+.bar-track { height: 9px; background: var(--border); border-radius: 5px; overflow: hidden; }
+.bar-fill { height: 100%; display: flex; border-radius: 5px; }
+.seg-done-pr  { background: var(--accent); }
+.seg-will-pr  { background: var(--warn-text); opacity: .75; }
+.seg-done-exp { background: var(--exp-text); opacity: .8; }
+.seg-will-exp { background: var(--pipe-text); opacity: .65; }
+.bar-legend { display: flex; flex-wrap: wrap; gap: 14px; margin-top: 9px; }
+.bl-item { display: flex; align-items: center; gap: 5px; font-size: 0.72rem; color: var(--text-muted); }
+.bl-dot { width: 8px; height: 8px; border-radius: 2px; flex-shrink: 0; }
+
+/* ── Table Wrapper ── */
+.tbl-wrap { background: var(--bg-card); border-radius: 6px; box-shadow: var(--shadow); overflow: hidden; }
+.tbl-toolbar {
+  display: flex; align-items: center; justify-content: space-between;
+  padding: 11px 16px; border-bottom: 1px solid var(--border);
+}
+.tbl-count { font-size: 0.76rem; color: var(--text-muted); }
+.search-box {
+  padding: 5px 11px;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: var(--bg-page);
+  color: var(--text-primary);
+  font-family: inherit; font-size: 0.8rem;
+  width: 210px; outline: none;
+  transition: border-color .18s;
+}
+.search-box:focus { border-color: var(--accent); }
+.search-box::placeholder { color: var(--text-muted); }
+table { width: 100%; border-collapse: collapse; font-size: 0.8rem; }
+thead th {
+  text-align: left; padding: 9px 13px;
+  font-size: 0.72rem; font-weight: 600;
+  color: var(--text-muted); text-transform: uppercase; letter-spacing: .05em;
+  border-bottom: 1px solid var(--border);
+  cursor: pointer; user-select: none; white-space: nowrap;
+  transition: color .15s;
+}
+thead th:hover { color: var(--accent); }
+thead th.sorted { color: var(--accent); }
+.si { margin-left: 3px; opacity: .4; }
+.sorted .si { opacity: 1; }
+tbody tr { border-bottom: 1px solid var(--border); cursor: pointer; transition: background .13s; }
+tbody tr:last-child { border-bottom: none; }
+tbody tr:hover { background: var(--row-hover); }
+tbody td { padding: 9px 13px; vertical-align: middle; }
+.c-muted { color: var(--text-muted); }
+.c-num { font-weight: 600; font-variant-numeric: tabular-nums; text-align: right; }
+.c-accent { color: var(--kpi-value); }
+.c-warn { color: var(--warn-text); }
+.c-danger { color: var(--danger-text); }
+.c-exp { color: var(--exp-text); }
+.truncate { max-width: 260px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+
+/* ── Badges ── */
+.badge {
+  display: inline-flex; align-items: center;
+  padding: 2px 8px; border-radius: 4px;
+  font-size: 0.7rem; font-weight: 500; white-space: nowrap; border: 1px solid transparent;
+}
+.b-ok      { background: var(--ok-bg);      color: var(--ok-text);      border-color: var(--ok-border); }
+.b-warn    { background: var(--warn-bg);     color: var(--warn-text);    border-color: var(--warn-border); }
+.b-danger  { background: var(--danger-bg);   color: var(--danger-text);  border-color: var(--danger-border); }
+.b-neutral { background: var(--neutral-bg);  color: var(--neutral-text); border-color: var(--neutral-border); }
+.b-pipe    { background: var(--pipe-bg);     color: var(--pipe-text);    border-color: var(--pipe-border); }
+.b-exp     { background: var(--exp-bg);      color: var(--exp-text);     border-color: var(--exp-border); }
+
+/* ── Drawer ── */
+.overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.32);
+  z-index: 200; opacity: 0; pointer-events: none;
+  transition: opacity .22s;
+}
+.overlay.open { opacity: 1; pointer-events: all; }
+.drawer {
+  position: fixed; top: 0; right: 0;
+  width: 44vw; min-width: 420px; max-width: 680px;
+  height: 100vh;
+  background: var(--bg-card);
+  z-index: 201;
+  box-shadow: -6px 0 28px rgba(0,0,0,.18);
+  transform: translateX(100%);
+  transition: transform .26s cubic-bezier(.4,0,.2,1);
+  display: flex; flex-direction: column; overflow: hidden;
+}
+.drawer.open { transform: translateX(0); }
+.drw-hd {
+  padding: 20px 22px 15px;
+  border-bottom: 1px solid var(--border);
+  display: flex; align-items: flex-start; justify-content: space-between;
+  flex-shrink: 0;
+}
+.drw-title { font-size: .98rem; font-weight: 700; }
+.drw-sub { font-size: .74rem; color: var(--text-muted); margin-top: 2px; line-height: 1.4; }
+.drw-close {
+  background: none; border: none;
+  font-size: 1.1rem; color: var(--text-muted);
+  cursor: pointer; padding: 2px 6px; border-radius: 4px; line-height: 1;
+}
+.drw-close:hover { background: var(--row-hover); color: var(--text-primary); }
+.drw-body { padding: 18px 22px; overflow-y: auto; flex: 1; }
+
+.dkpi-grid { display: grid; grid-template-columns: repeat(3,1fr); gap: 10px; margin-bottom: 16px; }
+.dkpi {
+  background: var(--bg-page);
+  border-radius: 6px; padding: 11px 13px;
+}
+.dkpi .lbl { font-size: .68rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.dkpi .val { font-size: 1.05rem; font-weight: 700; color: var(--kpi-value); margin-top: 2px; }
+.dkpi .val.danger { color: var(--danger-text); }
+.dkpi .val.warn { color: var(--warn-text); }
+.dkpi .val.exp { color: var(--exp-text); }
+.dkpi .val.neutral { color: var(--text-muted); font-size: .9rem; }
+
+.drw-sec { font-size: .78rem; font-weight: 600; color: var(--text-secondary); border-bottom: 1px solid var(--border); padding-bottom: 5px; margin: 14px 0 10px; }
+
+.tx-card {
+  background: var(--bg-page);
+  border-radius: 6px; padding: 11px 13px; margin-bottom: 9px;
+}
+.tx-top { display: flex; justify-content: space-between; align-items: flex-start; gap: 8px; }
+.tx-item-text { font-size: .8rem; font-weight: 500; line-height: 1.4; flex: 1; }
+.tx-cost-text { font-size: .85rem; font-weight: 700; color: var(--kpi-value); white-space: nowrap; }
+.tx-meta { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 7px; align-items: center; }
+.tx-meta-item { font-size: .7rem; color: var(--text-muted); }
+.no-tx { text-align: center; color: var(--text-muted); font-size: .8rem; padding: 20px 0; }
+
+/* ── Tabs ── */
+.tab-bar {
+  background: var(--bg-header);
+  border-bottom: 1px solid var(--border);
+  padding: 0 32px;
+  display: flex;
+  gap: 0;
+  transition: background .22s, border-color .22s;
+}
+.tab-btn {
+  padding: 11px 20px;
+  font-family: inherit; font-size: 0.82rem; font-weight: 500;
+  color: var(--text-muted);
+  background: none; border: none;
+  border-bottom: 2px solid transparent;
+  cursor: pointer;
+  transition: color .15s, border-color .15s;
+  white-space: nowrap;
+  margin-bottom: -1px;
+}
+.tab-btn:hover { color: var(--text-primary); }
+.tab-btn.active { color: var(--accent); border-bottom-color: var(--accent); font-weight: 600; }
+
+.tab-panel { display: none; }
+.tab-panel.active { display: block; }
+
+/* Responsive */
+@media (max-width: 960px) {
+  .kpi-grid { grid-template-columns: repeat(2,1fr); }
+  .drawer { width: 90vw; min-width: unset; }
+  main { padding: 18px 16px 40px; }
+  header { padding: 11px 16px; }
+  .tab-bar { padding: 0 16px; }
+}
+</style>
+</head>
+<body>
+
+<header>
+  <div class="header-left">
+    <h1>ME Budget FY27 &mdash; Q1 Tracker</h1>
+    <p>Manager: Mike Downing &nbsp;&middot;&nbsp; OPEX &nbsp;&middot;&nbsp; Updated: 2026-05-19</p>
+  </div>
+  <button class="mode-btn" id="modeBtn" onclick="toggleMode()">🌙 Dark</button>
+</header>
+
+<!-- Tab Bar -->
+<div class="tab-bar">
+  <button class="tab-btn active" id="tab-overview" onclick="switchTab('overview')">Overview</button>
+  <button class="tab-btn"        id="tab-q1me"     onclick="switchTab('q1me')">Q1 ME Transactions</button>
+</div>
+
+<main>
+
+  <!-- ══ Tab 1: Overview ══ -->
+  <div class="tab-panel active" id="panel-overview">
+    <p class="sec-hd" style="margin-top:0">Budget Code Overview</p>
+    <div class="tbl-wrap">
+      <div class="tbl-toolbar">
+        <span class="tbl-count" id="ovCount">24 budget codes</span>
+        <input class="search-box" type="text" placeholder="Search code / category…" id="ovSearch" oninput="filterOv()">
+      </div>
+      <table id="ovTable">
+        <thead>
+          <tr>
+            <th onclick="sortTbl('ovTable','ovBody',0,this)">Code <span class="si">↕</span></th>
+            <th onclick="sortTbl('ovTable','ovBody',1,this)">Category <span class="si">↕</span></th>
+            <th onclick="sortTbl('ovTable','ovBody',2,this)">Content <span class="si">↕</span></th>
+            <th onclick="sortTbl('ovTable','ovBody',3,this)" style="text-align:right">Budget <span class="si">↕</span></th>
+            <th onclick="sortTbl('ovTable','ovBody',4,this)" style="text-align:right">Done PR <span class="si">↕</span></th>
+            <th onclick="sortTbl('ovTable','ovBody',5,this)" style="text-align:right">Will PR <span class="si">↕</span></th>
+            <th onclick="sortTbl('ovTable','ovBody',6,this)" style="text-align:right">Remaining <span class="si">↕</span></th>
+            <th>Status</th>
+          </tr>
+        </thead>
+        <tbody id="ovBody"></tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- ══ Tab 2: Q1 ME Transactions ══ -->
+  <div class="tab-panel" id="panel-q1me">
+
+    <!-- Deadlines -->
+    <div class="deadline-bar">
+      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create PR Deadline</span><span class="dl-date">2026/06/12</span></div>
+      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Received PO Deadline</span><span class="dl-date">2026/06/24</span></div>
+      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create Expensify Deadline</span><span class="dl-date">2026/06/25</span></div>
+    </div>
+
+    <!-- KPIs -->
+    <p class="sec-hd" style="margin-top:0">Q1 Summary</p>
+    <div class="kpi-grid">
+      <div class="kpi-card">
+        <div class="kpi-label">Total Budget</div>
+        <div class="kpi-val">$213K</div>
+        <div class="kpi-sub">16 codes with allocation &nbsp;·&nbsp; 24 total codes</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Remaining</div>
+        <div class="kpi-val">$168.7K</div>
+        <div class="kpi-sub">79.2% of allocated budget</div>
+      </div>
+      <div class="kpi-card warn">
+        <div class="kpi-label">Will PR (Pipeline)</div>
+        <div class="kpi-val">$36.9K</div>
+        <div class="kpi-sub">PR not yet submitted &mdash; action needed</div>
+      </div>
+      <div class="kpi-card">
+        <div class="kpi-label">Done PR</div>
+        <div class="kpi-val">$16.8K</div>
+        <div class="kpi-sub">$16,680 PR &nbsp;&middot;&nbsp; $113 Expensify</div>
+      </div>
+    </div>
+
+    <!-- Spend Bar -->
+    <div class="prog-card">
+      <div class="prog-hd">
+        <span class="prog-title">Budget Utilization (Spent + Committed)</span>
+        <span class="prog-pct">25.1% committed &nbsp;&middot;&nbsp; 7.9% done</span>
+      </div>
+      <div class="bar-track">
+        <div class="bar-fill">
+          <div class="seg-done-pr"  style="width:7.83%"  title="Done PR $16,680"></div>
+          <div class="seg-done-exp" style="width:0.05%"  title="Done Expensify $113"></div>
+          <div class="seg-will-pr"  style="width:17.25%" title="Will PR $36,858"></div>
+          <div class="seg-will-exp" style="width:0.13%"  title="Will Expensify $285"></div>
+        </div>
+      </div>
+      <div class="bar-legend">
+        <div class="bl-item"><div class="bl-dot" style="background:var(--accent)"></div>Done PR ($16,680)</div>
+        <div class="bl-item"><div class="bl-dot" style="background:var(--exp-text);opacity:.8"></div>Done Expensify ($113)</div>
+        <div class="bl-item"><div class="bl-dot" style="background:var(--warn-text);opacity:.75"></div>Will PR ($36,858)</div>
+        <div class="bl-item"><div class="bl-dot" style="background:var(--border)"></div>Remaining ($168,740)</div>
+      </div>
+    </div>
+
+    <!-- Transactions Table -->
+    <p class="sec-hd">Q1 Transactions (15)</p>
+    <div class="tbl-wrap">
+      <table id="txTable">
+        <thead>
+          <tr>
+            <th onclick="sortTbl('txTable','txBody',0,this)">Buyer <span class="si">↕</span></th>
+            <th onclick="sortTbl('txTable','txBody',1,this)">Budget Code <span class="si">↕</span></th>
+            <th>Item</th>
+            <th onclick="sortTbl('txTable','txBody',3,this)" style="text-align:right">Cost USD <span class="si">↕</span></th>
+            <th>Project</th>
+            <th>Status</th>
+            <th onclick="sortTbl('txTable','txBody',6,this)">Date <span class="si">↕</span></th>
+          </tr>
+        </thead>
+        <tbody id="txBody"></tbody>
+      </table>
+    </div>
+
+  </div><!-- /panel-q1me -->
+
+</main>
+
+<!-- Drawer -->
+<div class="overlay" id="overlay" onclick="closeDrawer()"></div>
+<div class="drawer" id="drawer">
+  <div class="drw-hd">
+    <div>
+      <div class="drw-title" id="drwTitle">—</div>
+      <div class="drw-sub"   id="drwSub">—</div>
+    </div>
+    <button class="drw-close" onclick="closeDrawer()">✕</button>
+  </div>
+  <div class="drw-body" id="drwBody"></div>
+</div>
+
+<script>
+// ── Data ──
+const OV = [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":113.19,"remaining":2887},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":9026.62,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":1765.77,"will_expensify":284.94,"done_expensify":0,"remaining":12949},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":2666.47,"will_expensify":0,"done_expensify":0,"remaining":334},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":1763.48,"will_expensify":0,"done_expensify":0,"remaining":18237},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":30000},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":36648.52,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":209.42,"done_pr":1457.54,"will_expensify":0,"done_expensify":0,"remaining":8333},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000}];
+
+const TX = [{"buyer_name":"Jerry CW HUANG","budget_code":27286,"item":"Parking Fee","cost_usd":113.19,"currency":"TWD","project":null,"supplier":null,"purchase_plan":"Done - Expensify","pr_expensify_date":"2026-05-07","received":"-"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Thermal data logger, YOKOGAWA GP10+GX90XA-10-U2N-CN","cost_usd":8469.42,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07","received":"X"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Portable temperature device, Fluke 54-2B","cost_usd":557.20,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07","received":"X"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover CNC mockup","cost_usd":815.20,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-07","received":"O"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover deflection improvement sample option 1-5 mockup","cost_usd":950.57,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-05","received":"O"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Bowser competitor tear down - Yealink MSpeaker","cost_usd":284.94,"currency":"TWD","project":"Bowser","supplier":"Fomica","purchase_plan":"Will Expensify","pr_expensify_date":null,"received":"-"},{"buyer_name":"Angela Chao","budget_code":27291,"item":"FY27 Q1 SLA J750 materials purchase","cost_usd":2666.47,"currency":"TWD","project":"SLA","supplier":"GIT","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-15","received":"X"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Plan B tool sample verification","cost_usd":933.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30","received":"X"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Low vibration grommet","cost_usd":830.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30","received":"X"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky vibration & noise simulation [Cadmen]","cost_usd":25000.00,"currency":"USD","project":"Swanky","supplier":"Cadman","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Jerry CW HUANG","budget_code":27303,"item":"Swanky teams acoustic pre-test","cost_usd":5000.00,"currency":"USD","project":"Swanky","supplier":"PAL","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Gen2 Mount thermal simulation [Flotrend]","cost_usd":4748.94,"currency":"TWD","project":"Gen2 mount","supplier":"Flotrend","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky thermal mockup for heatpipe study","cost_usd":1899.58,"currency":"TWD","project":"Swanky","supplier":"Tianmai","purchase_plan":"Will PR","pr_expensify_date":null,"received":"?"},{"buyer_name":"Angela Chao","budget_code":27307,"item":"[Weedle] CNC Cable Clamp for Cable Retention","cost_usd":1457.54,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-23","received":"X"},{"buyer_name":"Angela Chao","budget_code":27307,"item":"Weedle Lid cover 3D printed mockup","cost_usd":209.42,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Will PR","pr_expensify_date":"2026-05-12","received":"?"}];
+
+// ── Helpers ──
+const usd = n => n == null ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
+const usdSm = n => (!n || n===0) ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
+
+function statusBadge(d) {
+  if (!d.budget_usd) return '<span class="badge b-neutral">No Budget</span>';
+  if (d.remaining === null) return '<span class="badge b-danger">Overbudget</span>';
+  if (d.will_pr > 0 || d.will_expensify > 0) return '<span class="badge b-pipe">In Pipeline</span>';
+  if (d.done_pr > 0 || d.done_expensify > 0) {
+    const usedPct = 1 - d.remaining / d.budget_usd;
+    return usedPct > 0.85
+      ? '<span class="badge b-warn">Near Limit</span>'
+      : '<span class="badge b-ok">Active</span>';
+  }
+  return '<span class="badge b-neutral">Unused</span>';
+}
+
+function planBadge(p) {
+  const m = {
+    'Done - PR':         '<span class="badge b-ok">Done PR</span>',
+    'Done - Expensify':  '<span class="badge b-exp">Done Exp</span>',
+    'Will PR':           '<span class="badge b-pipe">Will PR</span>',
+    'Will Expensify':    '<span class="badge b-warn">Will Exp</span>',
+  };
+  return m[p] || `<span class="badge b-neutral">${p}</span>`;
+}
+
+// ── Render Overview ──
+let ovFiltered = [...OV];
+function renderOv(data) {
+  document.getElementById('ovBody').innerHTML = data.map(d => `
+    <tr onclick="openDrawer(${d.budget_code})">
+      <td class="c-num c-accent" style="text-align:left">${d.budget_code}</td>
+      <td>${d.category}</td>
+      <td class="c-muted">${d.category_content}</td>
+      <td class="c-num c-accent">${usd(d.budget_usd)}</td>
+      <td class="c-num ${d.done_pr>0?'c-accent':''}">${usdSm(d.done_pr)}</td>
+      <td class="c-num ${d.will_pr>0?'c-warn':''}">${usdSm(d.will_pr)}</td>
+      <td class="c-num ${d.remaining===null?'c-danger':''}">${usd(d.remaining)}</td>
+      <td>${statusBadge(d)}</td>
+    </tr>`).join('');
+  document.getElementById('ovCount').textContent = `${data.length} budget codes`;
+}
+
+function filterOv() {
+  const q = document.getElementById('ovSearch').value.toLowerCase();
+  ovFiltered = OV.filter(d =>
+    String(d.budget_code).includes(q) ||
+    d.category.toLowerCase().includes(q) ||
+    d.category_content.toLowerCase().includes(q)
+  );
+  renderOv(ovFiltered);
+}
+
+// ── Render Transactions ──
+function renderTx() {
+  document.getElementById('txBody').innerHTML = TX.map(t => `
+    <tr onclick="openDrawer(${t.budget_code})">
+      <td>${t.buyer_name}</td>
+      <td class="c-num c-accent" style="text-align:left">${t.budget_code}</td>
+      <td class="truncate" title="${t.item}">${t.item}</td>
+      <td class="c-num c-accent">${usd(t.cost_usd)}</td>
+      <td class="c-muted">${t.project||'—'}</td>
+      <td>${planBadge(t.purchase_plan)}</td>
+      <td class="c-muted">${t.pr_expensify_date||'—'}</td>
+    </tr>`).join('');
+}
+
+// ── Drawer ──
+function openDrawer(code) {
+  const d   = OV.find(x => x.budget_code === code);
+  const txs = TX.filter(x => x.budget_code === code);
+  const committed = (d.done_pr||0)+(d.done_expensify||0)+(d.will_pr||0)+(d.will_expensify||0);
+
+  document.getElementById('drwTitle').textContent = `Budget Code ${code}`;
+  document.getElementById('drwSub').textContent   = `${d.category}  ·  ${d.category_content}`;
+
+  document.getElementById('drwBody').innerHTML = `
+    <div class="dkpi-grid">
+      <div class="dkpi"><div class="lbl">Budget</div><div class="val">${usd(d.budget_usd)}</div></div>
+      <div class="dkpi"><div class="lbl">Remaining</div><div class="val ${d.remaining===null?'danger':''}">${usd(d.remaining)}</div></div>
+      <div class="dkpi"><div class="lbl">Total Committed</div><div class="val">${usdSm(committed)||'—'}</div></div>
+    </div>
+    <div style="display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:14px">
+      <div class="dkpi"><div class="lbl">Done PR</div><div class="val ${d.done_pr>0?'':'neutral'}">${usdSm(d.done_pr)}</div></div>
+      <div class="dkpi"><div class="lbl">Will PR</div><div class="val ${d.will_pr>0?'warn':'neutral'}">${usdSm(d.will_pr)}</div></div>
+      <div class="dkpi"><div class="lbl">Done Expensify</div><div class="val ${d.done_expensify>0?'exp':'neutral'}">${usdSm(d.done_expensify)}</div></div>
+      <div class="dkpi"><div class="lbl">Will Expensify</div><div class="val ${d.will_expensify>0?'warn':'neutral'}">${usdSm(d.will_expensify)}</div></div>
+    </div>
+    <div class="drw-sec">Transactions (${txs.length})</div>
+    ${txs.length===0
+      ? '<div class="no-tx">No transactions recorded for this code</div>'
+      : txs.map(t=>`
+        <div class="tx-card">
+          <div class="tx-top">
+            <div class="tx-item-text">${t.item}</div>
+            <div class="tx-cost-text">${usd(t.cost_usd)}</div>
+          </div>
+          <div class="tx-meta">
+            <span class="tx-meta-item">👤 ${t.buyer_name}</span>
+            ${t.project?`<span class="tx-meta-item">📁 ${t.project}</span>`:''}
+            ${t.supplier?`<span class="tx-meta-item">🏭 ${t.supplier}</span>`:''}
+            <span class="tx-meta-item">${t.currency}</span>
+            ${planBadge(t.purchase_plan)}
+            ${t.pr_expensify_date?`<span class="tx-meta-item">📅 ${t.pr_expensify_date}</span>`:''}
+          </div>
+        </div>`).join('')}
+  `;
+  document.getElementById('overlay').classList.add('open');
+  document.getElementById('drawer').classList.add('open');
+}
+function closeDrawer() {
+  document.getElementById('overlay').classList.remove('open');
+  document.getElementById('drawer').classList.remove('open');
+}
+document.addEventListener('keydown', e => { if(e.key==='Escape') closeDrawer(); });
+
+// ── Sort ──
+const sortState = {};
+function sortTbl(tblId, bodyId, col, th) {
+  const key = `${tblId}-${col}`;
+  const asc = sortState[key] !== true;
+  sortState[key] = asc;
+  document.querySelectorAll(`#${tblId} thead th`).forEach(h=>h.classList.remove('sorted'));
+  th.classList.add('sorted');
+  th.querySelector('.si').textContent = asc ? '↑' : '↓';
+  const tbody = document.getElementById(bodyId);
+  Array.from(tbody.querySelectorAll('tr'))
+    .sort((a,b)=>{
+      const va = a.cells[col]?.textContent.replace(/[$,—]/g,'').trim()||'';
+      const vb = b.cells[col]?.textContent.replace(/[$,—]/g,'').trim()||'';
+      const na = parseFloat(va), nb = parseFloat(vb);
+      if(!isNaN(na)&&!isNaN(nb)) return asc?na-nb:nb-na;
+      return asc?va.localeCompare(vb):vb.localeCompare(va);
+    })
+    .forEach(r=>tbody.appendChild(r));
+}
+
+// ── Tab Switch ──
+function switchTab(id) {
+  document.querySelectorAll('.tab-panel').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.tab-btn').forEach(b => b.classList.remove('active'));
+  document.getElementById('panel-' + id).classList.add('active');
+  document.getElementById('tab-' + id).classList.add('active');
+  localStorage.setItem('vcb-tab', id);
+}
+
+// ── Mode Toggle ──
+function toggleMode() {
+  const html = document.documentElement;
+  const next = html.getAttribute('data-theme')==='business-light'?'business-dark':'business-light';
+  html.setAttribute('data-theme', next);
+  document.getElementById('modeBtn').textContent = next==='business-light'?'🌙 Dark':'☀️ Light';
+  localStorage.setItem('vcb-mode', next);
+}
+
+// ── Init ──
+(function(){
+  const savedMode = localStorage.getItem('vcb-mode');
+  if(savedMode) {
+    document.documentElement.setAttribute('data-theme', savedMode);
+    document.getElementById('modeBtn').textContent = savedMode==='business-light'?'🌙 Dark':'☀️ Light';
+  }
+  const savedTab = localStorage.getItem('vcb-tab');
+  if(savedTab) switchTab(savedTab);
+  renderOv(OV);
+  renderTx();
+})();
+</script>
+</body>
+</html>
