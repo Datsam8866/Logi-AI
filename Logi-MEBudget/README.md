@@ -1,6 +1,6 @@
 # Logi-MEBudget — ME 部門 FY27 預算追蹤工具
 
-**最後更新：2026-05-20（新增 CRUD + SQLite 雙模式架構：Add/Delete Transaction + server.py + export_dashboard.py）**
+**最後更新：2026-05-20（修正 server.py charset 問題；dashboard 可正常在 http://localhost:5173 使用）**
 
 ---
 
@@ -48,14 +48,22 @@ Logi-MEBudget 是 ME 部門 FY27 預算管理工具，將 Excel 原始預算表�
 
 ## Dashboard 使用方式
 
-直接用瀏覽器開啟（單一 HTML 檔，無需伺服器）：
+**Server mode（推薦，支援新增/刪除寫入 SQLite）：**
 
+```powershell
+cd "C:\Users\skuan1\Desktop\Logi AI\Logi-MEBudget"
+python server.py
+# 開瀏覽器 → http://localhost:5173
+# 注意：PowerShell 視窗不能關，server 才會持續運作
 ```
-Logi-MEBudget/dashboard.html
+
+**Static mode（離線，僅 localStorage）：**
+```
+直接開 Logi-MEBudget/dashboard.html
 ```
 
 - **Overview tab**：所有 Budget Code 的預算 / 消耗 / 剩餘總覽；點 row 開右側 Drawer 看明細
-- **Q1 ME Transactions tab**：Deadline 截止日提醒 + KPI 摘要 + 所有交易紀錄
+- **Q1–Q4 tab**：Deadline 倒數 + KPI 摘要 + 交易紀錄（可新增 ＋ / 刪除 ✕）
 
 ---
 
