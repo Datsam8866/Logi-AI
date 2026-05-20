@@ -1,6 +1,6 @@
 # Logi-MEBudget — ME 部門 FY27 預算追蹤工具
 
-**最後更新：2026-05-19（Dashboard 大幅升級：Q1-Q4 季度切換 + Overview 跨季視覺化 + UX 改善）**
+**最後更新：2026-05-20（新增 CRUD + SQLite 雙模式架構：Add/Delete Transaction + server.py + export_dashboard.py）**
 
 ---
 
@@ -19,19 +19,20 @@ Logi-MEBudget 是 ME 部門 FY27 預算管理工具，將 Excel 原始預算表�
 
 ## 最新進度
 
+### 2026-05-20：CRUD + SQLite 雙模式架構
+
+- **Deadline 倒數示警**：每個 Quarter tab 的 Deadline chip 自動計算 days left，顏色分級（綠 >21d / 橘 8–21d / 紅 ≤7d / 暗紅 overdue）
+- **Add Transaction**：右下 FAB（＋）開 Modal，輸入 Item 自動建議 Budget Code，支援 Project 選擇
+- **Delete Transaction**：每筆交易右側 ✕ 按鈕，confirm 後刪除
+- **SQLite 雙模式**：
+  - `python server.py` → `http://localhost:5173`：新增/刪除直接寫入 SQLite，自動重新匯出 dashboard.html
+  - 直接開 .html：localStorage 暫存（離線用）
+- **`server.py`（新）**：Flask local server，`POST/DELETE /api/txn`
+- **`export_dashboard.py`（新）**：從 SQLite 讀取最新資料，重寫 QUARTERS JSON block
+
 ### 2026-05-19：Dashboard 大幅升級
 
-- **5 Tab 架構**：Overview + Q1 / Q2 / Q3 / Q4（JS 動態渲染，data-driven）
-- **Overview Tab**：
-  - 3 張 KPI（FY27 Total Budget / Overbudget Alerts / Active Quarters）
-  - Horizontal Stacked Bar：Q1–Q4 預算規模比較 + Budget Utilization 標示
-  - Budget Code 表格：跨季 Q1/Q2/Q3/Q4 欄位，狀態 badge 顏色示警（Overbudget / Near Limit / In Pipeline / Active / Pending）
-- **Q1–Q4 Tabs**：3 張 KPI + Deadline chips + 利用率進度條 + Transactions 表格
-- **UX 改善**：Overview Drawer 加季度下拉選單（預設 Q1）、Q1 tab Active badge、進度條最小可見寬度、Header 日期動態顯示、Business design token 修正
-
-### 2026-05-19：初始化
-
-- 解析 `FY27_ME_Budget.xlsx` 雙區塊結構，建立 SQLite DB（96 + 15 筆），Business Light/Dark Dashboard
+- 5 Tab 架構（Overview + Q1–Q4）、跨季 Stacked Bar、Drawer 季度選單、UX 修正
 
 ---
 
@@ -41,7 +42,7 @@ Logi-MEBudget 是 ME 部門 FY27 預算管理工具，將 Excel 原始預算表�
 |------|------|------|
 | **A** | 把 ACC_Q1~Q4 匯入 DB（目前只有 ME） | 待辦 |
 | **B** | 整合 `dump_data.py` / `verify_db.py` / `dump_quarters.py` → 合入 `import_to_db.py` | 待辦 |
-| **C** | Deadline 截止日倒數提示（days left + 顏色示警） | 待辦 |
+| ~~C~~ | ~~Deadline 截止日倒數提示~~ | ✅ 完成 |
 
 ---
 
@@ -64,8 +65,10 @@ Logi-MEBudget/dashboard.html
 |------|------|
 | `FY27_ME_Budget.xlsx` | 原始預算 Excel，13 個 sheet（ME_Q1~Q4、ACC_Q1~Q4 等） |
 | `import_to_db.py` | 解析 Excel → SQLite，執行一次即匯入全部 ME 四個季度 |
-| `me_budget.db` | SQLite 資料庫；`budget_overview`（96筆）+ `transactions`（15筆） |
-| `dashboard.html` | Business Light/Dark 單頁 Dashboard |
+| `me_budget.db` | SQLite 資料庫；`budget_overview`（96筆）+ `transactions`（15筆起） |
+| `dashboard.html` | Business Light/Dark 單頁 Dashboard（inline QUARTERS JSON） |
+| `server.py` | Flask local server（port 5173），提供 CRUD API |
+| `export_dashboard.py` | 從 SQLite 重新產生 dashboard.html 的 QUARTERS block |
 
 ---
 
