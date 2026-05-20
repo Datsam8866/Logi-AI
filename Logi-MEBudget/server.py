@@ -24,6 +24,7 @@ Endpoints:
 """
 from urllib.parse import urlencode
 from pathlib import Path
+import json
 import os
 import secrets
 import sqlite3
@@ -47,7 +48,7 @@ ALLOWED_EDITORS = os.environ.get("ALLOWED_EDITORS", "")
 ALLOWED_VIEWERS = os.environ.get("ALLOWED_VIEWERS", "")
 
 app = Flask(__name__)
-app.secret_key = os.environ.get("MEBUDGET_SECRET_KEY", secrets.token_hex(32))
+app.secret_key = os.environ.get("MEBUDGET_SECRET_KEY") or secrets.token_hex(32)
 
 
 def parse_emails(value):
@@ -85,15 +86,42 @@ def oauth_configured():
 
 
 def external_base_url():
-    forwarded_proto = request.headers.get("X-Forwarded-Proto")
-    forwarded_host = request.headers.get("X-Forwarded-Host")
-    if forwarded_proto and forwarded_host:
-        return f"{forwarded_proto}://{forwarded_host}"
+    forwarded_proto = request.headers.get("X-Forwarded-Proto", "").split(",")[0].strip()
+    forwarded_host = request.headers.get("X-Forwarded-Host") or request.headers.get("Host")
+    proto = forwarded_proto or request.scheme
+
+    cf_visitor = request.headers.get("Cf-Visitor")
+    if not forwarded_proto and cf_visitor:
+        try:
+            proto = json.loads(cf_visitor).get("scheme") or proto
+        except ValueError:
+            pass
+
+    if forwarded_host:
+        host_only = forwarded_host.split(":", 1)[0].lower()
+        if not forwarded_proto and host_only.endswith(".trycloudflare.com"):
+            proto = "https"
+        return f"{proto}://{forwarded_host}"
     return request.url_root.rstrip("/")
 
 
 def oauth_redirect_uri():
     return f"{external_base_url()}/auth/google/callback"
+
+
+def cloud_run_port(env=os.environ):
+    try:
+        return int(env.get("PORT", 5173))
+    except ValueError:
+        return 5173
+
+
+def mask_value(value):
+    if not value:
+        return "NOT_SET"
+    if len(value) <= 12:
+        return f"SET(length={len(value)})"
+    return f"{value[:8]}...{value[-8:]} (length={len(value)})"
 
 
 @app.before_request
@@ -280,7 +308,11 @@ if __name__ == "__main__":
     if not oauth_configured():
         print("WARNING: Google OAuth is not fully configured.")
         print("Set GOOGLE_CLIENT_ID, GOOGLE_CLIENT_SECRET, and ALLOWED_EDITORS.")
+    print(f"Server file: {Path(__file__).resolve()}")
+    print(f"Google Client ID: {mask_value(GOOGLE_CLIENT_ID)}")
+    print(f"Allowed viewers: {len(VIEWER_EMAILS)}")
+    print(f"Allowed editors: {len(EDITOR_EMAILS)}")
     print("ME Budget Server: http://localhost:5173")
     print("LAN access: http://<this-computer-ip>:5173")
     print("Press Ctrl+C to stop.")
-    app.run(host="0.0.0.0", port=5173, debug=False)
+    app.run(host="0.0.0.0", port=cloud_run_port(), debug=False)

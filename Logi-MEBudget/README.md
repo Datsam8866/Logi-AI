@@ -1,6 +1,6 @@
 # Logi-MEBudget — ME 部門 FY27 預算追蹤工具
 
-**最後更新：2026-05-20（改用 Google OAuth + viewer/editor 權限；server mode 可正常在 http://localhost:5173 使用）**
+**最後更新：2026-05-20（Google OAuth + viewer/editor 權限；Cloudflare Tunnel 已可跨 Wi-Fi 登入）**
 
 ---
 
@@ -61,7 +61,7 @@ $env:GOOGLE_CLIENT_ID="Google OAuth Client ID"
 $env:GOOGLE_CLIENT_SECRET="Google OAuth Client Secret"
 $env:ALLOWED_VIEWERS="viewer1@example.com,viewer2@example.com"
 $env:ALLOWED_EDITORS="editor@example.com"
-$env:MEBUDGET_SECRET_KEY="任意長隨機字串，重啟後 session 才能穩定"
+$env:MEBUDGET_SECRET_KEY="任意長隨機字串，重啟後 session 才能穩定；留空會自動產生臨時值"
 python server.py
 # 開瀏覽器 → http://localhost:5173
 # 同一個 Wi-Fi / LAN 的其他裝置 → http://192.168.0.113:5173
@@ -69,7 +69,49 @@ python server.py
 ```
 
 若其他裝置無法連線，先確認兩台裝置在同一個網路，並允許 Windows 防火牆讓 Python 使用私人網路。
-若使用 Cloudflare Tunnel，公開網址會先導到 Google 登入；quick tunnel 網址改變時，Google OAuth Client 的 redirect URI 也要同步新增。
+若使用 Cloudflare Tunnel，公開網址會先導到 Google 登入；quick tunnel 網址改變時，Google OAuth Client 的 redirect URI 也要同步新增。callback 請使用 `https://<quick-tunnel-domain>/auth/google/callback`。
+
+Cloudflare Tunnel 成功流程：
+
+```powershell
+# 視窗 1：啟動 Flask server，並保持視窗開啟
+python server.py
+
+# 視窗 2：啟動 tunnel，並保持視窗開啟
+& "C:\Program Files (x86)\cloudflared\cloudflared.exe" tunnel --url http://127.0.0.1:5173
+```
+
+拿到新的 `https://xxxxx.trycloudflare.com` 後，必須在 Google OAuth Client 同步新增：
+
+- Authorized JavaScript origins：`https://xxxxx.trycloudflare.com`
+- Authorized redirect URIs：`https://xxxxx.trycloudflare.com/auth/google/callback`
+
+若出現 `Error 1033`，代表 `cloudflared` 已停止或 quick tunnel 失效；重新啟動 tunnel 後會產生新網址，OAuth 設定也要跟著更新。若出現 `invalid_client`，代表 server 使用的 `GOOGLE_CLIENT_SECRET` 不正確，需重設 secret 並重啟 `server.py`。
+
+**Google Cloud Run 部署：**
+
+```powershell
+gcloud config set project logi-mebudget-dashboard
+gcloud run deploy logi-mebudget --source . --region asia-east1 --allow-unauthenticated
+```
+
+部署完成後，把 Cloud Run 產生的 `https://...run.app` 加到 Google OAuth Client：
+
+- Authorized JavaScript origins：`https://...run.app`
+- Authorized redirect URIs：`https://...run.app/auth/google/callback`
+
+再設定 Cloud Run runtime env：
+
+```powershell
+gcloud run services update logi-mebudget --region asia-east1 `
+  --update-env-vars GOOGLE_CLIENT_ID="..." `
+  --update-env-vars GOOGLE_CLIENT_SECRET="..." `
+  --update-env-vars ALLOWED_VIEWERS="viewer@example.com" `
+  --update-env-vars ALLOWED_EDITORS="editor@example.com" `
+  --update-env-vars MEBUDGET_SECRET_KEY="固定長隨機字串"
+```
+
+注意：目前雲端版仍使用 repo 內 SQLite 檔案，適合先驗證登入與瀏覽；若要多人長期新增/刪除，後續應改 Cloud SQL 或 Firestore。
 
 **Static mode（離線，僅 localStorage）：**
 ```
