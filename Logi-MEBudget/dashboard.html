@@ -135,10 +135,28 @@ main { max-width: 1100px; margin: 0 auto; padding: 26px 32px 52px; }
   border-radius: 4px;
   font-size: 0.76rem;
   box-shadow: var(--shadow);
+  transition: border-color .18s, background .18s;
 }
+.dl-chip.dl-ok     { border-color: var(--ok-border); }
+.dl-chip.dl-warn   { border-color: var(--warn-border); }
+.dl-chip.dl-urgent { border-color: var(--danger-border); background: var(--danger-bg); }
+.dl-chip.dl-past   { border-color: var(--danger-border); background: var(--danger-bg); opacity: .78; }
 .dl-dot { width: 6px; height: 6px; border-radius: 50%; background: var(--accent); flex-shrink: 0; }
+.dl-chip.dl-ok     .dl-dot { background: var(--ok-text); }
+.dl-chip.dl-warn   .dl-dot { background: var(--warn-text); }
+.dl-chip.dl-urgent .dl-dot { background: var(--danger-text); }
+.dl-chip.dl-past   .dl-dot { background: var(--danger-text); }
 .dl-label { color: var(--text-muted); }
 .dl-date { font-weight: 600; color: var(--text-primary); }
+.dl-days {
+  font-size: 0.68rem; font-weight: 600;
+  padding: 1px 6px; border-radius: 3px; white-space: nowrap;
+  background: var(--neutral-bg); color: var(--neutral-text);
+}
+.dl-chip.dl-ok     .dl-days { background: var(--ok-bg);     color: var(--ok-text); }
+.dl-chip.dl-warn   .dl-days { background: var(--warn-bg);   color: var(--warn-text); }
+.dl-chip.dl-urgent .dl-days { background: transparent;      color: var(--danger-text); }
+.dl-chip.dl-past   .dl-days { background: transparent;      color: var(--danger-text); }
 
 /* ── Section Header ── */
 .sec-hd {
@@ -408,6 +426,88 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
   header { padding: 11px 16px; }
   .tab-bar { padding: 0 16px; }
 }
+
+/* ── FAB ── */
+.fab {
+  position: fixed; bottom: 28px; right: 28px;
+  width: 50px; height: 50px; border-radius: 50%;
+  background: var(--accent); color: #fff;
+  font-size: 1.6rem; font-weight: 300; line-height: 1;
+  border: none; cursor: pointer;
+  box-shadow: 0 4px 16px rgba(0,0,0,.25);
+  display: flex; align-items: center; justify-content: center;
+  z-index: 300; transition: background .18s, transform .15s;
+}
+.fab:hover { background: var(--accent-hover); transform: scale(1.08); }
+
+/* ── Modal ── */
+.modal-overlay {
+  position: fixed; inset: 0;
+  background: rgba(0,0,0,.4);
+  z-index: 400; display: flex; align-items: center; justify-content: center;
+  opacity: 0; pointer-events: none; transition: opacity .22s;
+}
+.modal-overlay.open { opacity: 1; pointer-events: all; }
+.modal-box {
+  background: var(--bg-card); border-radius: 8px;
+  width: 560px; max-width: 96vw;
+  box-shadow: 0 8px 36px rgba(0,0,0,.28);
+  transform: translateY(14px); transition: transform .22s;
+}
+.modal-overlay.open .modal-box { transform: translateY(0); }
+.modal-hd {
+  padding: 18px 22px 14px; border-bottom: 1px solid var(--border);
+  display: flex; align-items: center; justify-content: space-between;
+}
+.modal-hd h3 { font-size: .98rem; font-weight: 700; }
+.modal-close {
+  background: none; border: none; font-size: 1.1rem;
+  cursor: pointer; color: var(--text-muted); padding: 2px 7px; border-radius: 4px;
+}
+.modal-close:hover { background: var(--row-hover); color: var(--text-primary); }
+.modal-body { padding: 18px 22px; max-height: 72vh; overflow-y: auto; }
+.modal-footer { padding: 12px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+
+/* ── Form ── */
+.form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
+.form-row.full { grid-template-columns: 1fr; }
+.form-field { display: flex; flex-direction: column; gap: 5px; }
+.form-label { font-size: .72rem; font-weight: 600; text-transform: uppercase; letter-spacing: .06em; color: var(--text-muted); }
+.form-input, .form-select {
+  padding: 7px 11px; border: 1px solid var(--border); border-radius: 5px;
+  background: var(--bg-page); color: var(--text-primary);
+  font-family: inherit; font-size: .83rem; outline: none; transition: border-color .15s;
+}
+.form-input:focus, .form-select:focus { border-color: var(--accent); }
+.suggest-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; min-height: 22px; }
+.suggest-label { font-size: .7rem; color: var(--text-muted); align-self: center; }
+.suggest-chip {
+  padding: 2px 10px; border-radius: 4px; font-size: .72rem; font-weight: 500;
+  border: 1px solid var(--ok-border); background: var(--ok-bg); color: var(--ok-text);
+  cursor: pointer; transition: background .13s, color .13s;
+}
+.suggest-chip:hover { background: var(--accent); color: #fff; border-color: var(--accent); }
+.btn-primary {
+  padding: 7px 20px; border-radius: 5px;
+  background: var(--accent); color: #fff;
+  border: none; font-family: inherit; font-size: .83rem; font-weight: 600;
+  cursor: pointer; transition: background .15s;
+}
+.btn-primary:hover { background: var(--accent-hover); }
+.btn-ghost {
+  padding: 7px 16px; border-radius: 5px; background: none;
+  color: var(--text-secondary); border: 1px solid var(--border);
+  font-family: inherit; font-size: .83rem; cursor: pointer; transition: border-color .15s, color .15s;
+}
+.btn-ghost:hover { border-color: var(--accent); color: var(--accent); }
+
+/* ── Delete button ── */
+.del-btn {
+  background: none; border: none; color: var(--text-muted);
+  font-size: .78rem; cursor: pointer; padding: 2px 6px; border-radius: 3px;
+  opacity: .5; transition: color .13s, background .13s, opacity .13s;
+}
+.del-btn:hover { color: var(--danger-text); background: var(--danger-bg); opacity: 1; }
 </style>
 </head>
 <body>
@@ -486,37 +586,1406 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
   <div class="drw-body" id="drwBody"></div>
 </div>
 
+<!-- FAB -->
+<button class="fab" onclick="openAddModal()" title="Add Transaction">＋</button>
+
+<!-- Add Transaction Modal -->
+<div class="modal-overlay" id="addModal" onclick="if(event.target===this)closeAddModal()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3>Add Transaction</h3>
+      <button class="modal-close" onclick="closeAddModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Quarter</label>
+          <select class="form-select" id="add-q" onchange="onItemInput()">
+            <option value="Q1">Q1</option>
+            <option value="Q2">Q2</option>
+            <option value="Q3">Q3</option>
+            <option value="Q4">Q4</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Buyer Name</label>
+          <input class="form-input" id="add-buyer" type="text" placeholder="e.g. Sam Kuan">
+        </div>
+      </div>
+      <div class="form-row full">
+        <div class="form-field">
+          <label class="form-label">Item Description</label>
+          <input class="form-input" id="add-item" type="text" placeholder="e.g. Thermal data logger, YOKOGAWA" oninput="onItemInput()">
+          <div class="suggest-row" id="suggest-row"></div>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Cost</label>
+          <input class="form-input" id="add-cost" type="number" min="0" step="0.01" placeholder="260000">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Currency</label>
+          <select class="form-select" id="add-currency">
+            <option value="TWD">TWD</option>
+            <option value="USD">USD</option>
+          </select>
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Purchase Plan</label>
+          <select class="form-select" id="add-plan">
+            <option value="Will PR">Will PR</option>
+            <option value="Done - PR">Done - PR</option>
+            <option value="Will Expensify">Will Expensify</option>
+            <option value="Done - Expensify">Done - Expensify</option>
+          </select>
+        </div>
+        <div class="form-field">
+          <label class="form-label">Date (optional)</label>
+          <input class="form-input" id="add-date" type="date">
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-field">
+          <label class="form-label">Budget Code</label>
+          <input class="form-input" id="add-code" type="number" placeholder="e.g. 27287">
+        </div>
+        <div class="form-field">
+          <label class="form-label">Project</label>
+          <select class="form-select" id="add-project"></select>
+        </div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeAddModal()">Cancel</button>
+      <button class="btn-primary" onclick="submitTransaction()">Add Transaction</button>
+    </div>
+  </div>
+</div>
+
 <script>
 // ── Quarter Data ──
 const QUARTERS = {
-  Q1: {
-    deadlines: {pr:"2026/06/12", po:"2026/06/24", expensify:"2026/06/25"},
-    summary: {total_budget:213000, total_remaining:168740, total_done_pr:16679.88, total_done_exp:113.19, total_will_pr:36857.95, total_will_exp:284.94},
-    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":113.19,"remaining":2887},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":9026.62,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":1765.77,"will_expensify":284.94,"done_expensify":0,"remaining":12949},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":2666.47,"will_expensify":0,"done_expensify":0,"remaining":334},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":1763.48,"will_expensify":0,"done_expensify":0,"remaining":18237},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":30000},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":36648.52,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":209.42,"done_pr":1457.54,"will_expensify":0,"done_expensify":0,"remaining":8333},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000}],
-    txns: [{"buyer_name":"Jerry CW HUANG","budget_code":27286,"item":"Parking Fee","cost_usd":113.19,"currency":"TWD","project":null,"supplier":null,"purchase_plan":"Done - Expensify","pr_expensify_date":"2026-05-07"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Thermal data logger, YOKOGAWA GP10+GX90XA-10-U2N-CN","cost_usd":8469.42,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07"},{"buyer_name":"Vincent Chen","budget_code":27287,"item":"Portable temperature device, Fluke 54-2B","cost_usd":557.20,"currency":"TWD","project":null,"supplier":"RADIOTEK","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-07"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover CNC mockup","cost_usd":815.20,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-07"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Goomba Cable cover deflection improvement sample option 1-5 mockup","cost_usd":950.57,"currency":"TWD","project":"Goomba","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-05-05"},{"buyer_name":"Chris Huang","budget_code":27290,"item":"Bowser competitor tear down - Yealink MSpeaker","cost_usd":284.94,"currency":"TWD","project":"Bowser","supplier":"Fomica","purchase_plan":"Will Expensify","pr_expensify_date":null},{"buyer_name":"Angela Chao","budget_code":27291,"item":"FY27 Q1 SLA J750 materials purchase","cost_usd":2666.47,"currency":"TWD","project":"SLA","supplier":"GIT","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-15"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Plan B tool sample verification","cost_usd":933.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30"},{"buyer_name":"Ron Lan","budget_code":27295,"item":"[Lanky] Low vibration grommet","cost_usd":830.24,"currency":"TWD","project":"Lanky","supplier":"Unitrion","purchase_plan":"Done - PR","pr_expensify_date":"2026-03-30"},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky vibration & noise simulation [Cadmen]","cost_usd":25000,"currency":"USD","project":"Swanky","supplier":"Cadman","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Jerry CW HUANG","budget_code":27303,"item":"Swanky teams acoustic pre-test","cost_usd":5000,"currency":"USD","project":"Swanky","supplier":"PAL","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Gen2 Mount thermal simulation [Flotrend]","cost_usd":4748.94,"currency":"TWD","project":"Gen2 mount","supplier":"Flotrend","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Vincent Chen","budget_code":27303,"item":"Swanky thermal mockup for heatpipe study","cost_usd":1899.58,"currency":"TWD","project":"Swanky","supplier":"Tianmai","purchase_plan":"Will PR","pr_expensify_date":null},{"buyer_name":"Angela Chao","budget_code":27307,"item":"[Weedle] CNC Cable Clamp for Cable Retention","cost_usd":1457.54,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Done - PR","pr_expensify_date":"2026-04-23"},{"buyer_name":"Angela Chao","budget_code":27307,"item":"Weedle Lid cover 3D printed mockup","cost_usd":209.42,"currency":"TWD","project":"Weedle","supplier":"Delin","purchase_plan":"Will PR","pr_expensify_date":"2026-05-12"}]
+  "Q1": {
+    "deadlines": {
+      "pr": "2026/06/12",
+      "po": "2026/06/24",
+      "expensify": "2026/06/25"
+    },
+    "summary": {
+      "total_budget": 213000.0,
+      "total_remaining": 159064.05,
+      "total_done_pr": 16679.88,
+      "total_done_exp": 113.19,
+      "total_will_pr": 36857.95,
+      "total_will_exp": 284.94
+    },
+    "overview": [
+      {
+        "budget_code": 27222,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 20000.0
+      },
+      {
+        "budget_code": 27286,
+        "category": "(101) General - Personnel",
+        "category_content": "(109) Outsource Labor - SOW (Milestone/Deliverable Based)",
+        "budget_usd": 3000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 113.19,
+        "remaining": 2886.81
+      },
+      {
+        "budget_code": 27287,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(102) Equipment",
+        "budget_usd": 6000.0,
+        "will_pr": 0.0,
+        "done_pr": 9026.62,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27288,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27289,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27290,
+        "category": "(206) HW Platform",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 15000.0,
+        "will_pr": 0.0,
+        "done_pr": 1765.77,
+        "will_expensify": 284.94,
+        "done_expensify": 0.0,
+        "remaining": 12949.29
+      },
+      {
+        "budget_code": 27291,
+        "category": "(213) Hardware Sustaining (Compliance, etc)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 3000.0,
+        "will_pr": 0.0,
+        "done_pr": 2666.47,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 333.53
+      },
+      {
+        "budget_code": 27292,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27293,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27294,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27295,
+        "category": "(304) Lanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 1763.48,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 18236.52
+      },
+      {
+        "budget_code": 27296,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27297,
+        "category": "(307) Cranky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27298,
+        "category": "(307) Cranky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27299,
+        "category": "(318) Kiddy",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27300,
+        "category": "(320) Coleco (Sega 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 30000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 30000.0
+      },
+      {
+        "budget_code": 27301,
+        "category": "(322) Bowser (Rally Speaker 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27302,
+        "category": "(323) Atari/Nintendo2",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27303,
+        "category": "(324) Swanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 30000.0,
+        "will_pr": 36648.52,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27304,
+        "category": "(324) Swanky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 20000.0
+      },
+      {
+        "budget_code": 27305,
+        "category": "(324) Swanky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27306,
+        "category": "(325) Arbok",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27307,
+        "category": "(327) Weedle",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 209.42,
+        "done_pr": 1457.54,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8333.04
+      },
+      {
+        "budget_code": 27308,
+        "category": "(330) Kiddo",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      }
+    ],
+    "txns": [
+      {
+        "id": 1,
+        "buyer_name": "Angela Chao",
+        "budget_code": 27291,
+        "item": "FY27 Q1 SLA J750 materials purchase
+(Total: NTD667440, Dept 5997: 12.63% NTD84267)",
+        "cost_usd": 2666.466261,
+        "currency": "TWD",
+        "project": "SLA",
+        "supplier": "GIT",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-03-15"
+      },
+      {
+        "id": 2,
+        "buyer_name": "Chris Huang",
+        "budget_code": 27290,
+        "item": "Goomba Cable cover CNC mockup ",
+        "cost_usd": 815.2003512,
+        "currency": "TWD",
+        "project": "Goomba",
+        "supplier": "Delin",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-04-07"
+      },
+      {
+        "id": 3,
+        "buyer_name": "Vincent Chen",
+        "budget_code": 27303,
+        "item": "Swanky vibration & noise simulation [Cadmen]",
+        "cost_usd": 25000.0,
+        "currency": "USD",
+        "project": "Swanky",
+        "supplier": "Cadman",
+        "purchase_plan": "Will PR",
+        "pr_expensify_date": null
+      },
+      {
+        "id": 4,
+        "buyer_name": "Jerry CW HUANG",
+        "budget_code": 27303,
+        "item": "Swanky teams acoustic pre-test",
+        "cost_usd": 5000.0,
+        "currency": "USD",
+        "project": "Swanky",
+        "supplier": "PAL",
+        "purchase_plan": "Will PR",
+        "pr_expensify_date": null
+      },
+      {
+        "id": 5,
+        "buyer_name": "Vincent Chen",
+        "budget_code": 27303,
+        "item": "Gen2 Mount thermal simulaiton [Flotrend]",
+        "cost_usd": 4748.944035,
+        "currency": "TWD",
+        "project": "Gen2 mount",
+        "supplier": "Flotrend",
+        "purchase_plan": "Will PR",
+        "pr_expensify_date": null
+      },
+      {
+        "id": 6,
+        "buyer_name": "Ron Lan",
+        "budget_code": 27295,
+        "item": "[Lanky] Plan B tool sample verification",
+        "cost_usd": 933.2376167,
+        "currency": "TWD",
+        "project": "Lanky",
+        "supplier": "Unitrion",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-03-30"
+      },
+      {
+        "id": 7,
+        "buyer_name": "Ron Lan",
+        "budget_code": 27295,
+        "item": "[Lanky] Low vibration grommet",
+        "cost_usd": 830.2381473,
+        "currency": "TWD",
+        "project": "Lanky",
+        "supplier": "Unitrion",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-03-30"
+      },
+      {
+        "id": 8,
+        "buyer_name": "Angela Chao",
+        "budget_code": 27307,
+        "item": "[Weedle] CNC Cable Clamp for Cable Retention",
+        "cost_usd": 1457.541191,
+        "currency": "TWD",
+        "project": "Weedle",
+        "supplier": "Delin",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-04-23"
+      },
+      {
+        "id": 9,
+        "buyer_name": "Chris Huang",
+        "budget_code": 27290,
+        "item": "Goomba Cable cover deflection improvement sample option 1-5 mockup",
+        "cost_usd": 950.5703422,
+        "currency": "TWD",
+        "project": "Goomba",
+        "supplier": "Delin",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-05-05"
+      },
+      {
+        "id": 10,
+        "buyer_name": "Vincent Chen",
+        "budget_code": 27303,
+        "item": "Swanky thermal mockup for heatpipe study",
+        "cost_usd": 1899.577614,
+        "currency": "TWD",
+        "project": "Swanky",
+        "supplier": "Tianmai",
+        "purchase_plan": "Will PR",
+        "pr_expensify_date": null
+      },
+      {
+        "id": 11,
+        "buyer_name": "Vincent Chen",
+        "budget_code": 27287,
+        "item": "Thermal data logger, YOKOGAWA GP10+GX90XA-10-U2N-CN",
+        "cost_usd": 8469.422519,
+        "currency": "TWD",
+        "project": null,
+        "supplier": "RADIOTEK",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-05-07"
+      },
+      {
+        "id": 12,
+        "buyer_name": "Vincent Chen",
+        "budget_code": 27287,
+        "item": "Portable temprature device, Fluke 54-2B",
+        "cost_usd": 557.1988499,
+        "currency": "TWD",
+        "project": null,
+        "supplier": "RADIOTEK",
+        "purchase_plan": "Done - PR",
+        "pr_expensify_date": "2026-05-07"
+      },
+      {
+        "id": 13,
+        "buyer_name": "Chris Huang",
+        "budget_code": 27290,
+        "item": "Bowser competitor tear down - Yealink MSpeaker",
+        "cost_usd": 284.9366421,
+        "currency": "TWD",
+        "project": "Bowser",
+        "supplier": "Fomica",
+        "purchase_plan": "Will Expensify",
+        "pr_expensify_date": null
+      },
+      {
+        "id": 14,
+        "buyer_name": "Angela Chao",
+        "budget_code": 27307,
+        "item": "Weedle Lid cover 3D printed mockup",
+        "cost_usd": 209.4234192,
+        "currency": "TWD",
+        "project": "Weedle",
+        "supplier": "Delin",
+        "purchase_plan": "Will PR",
+        "pr_expensify_date": "2026-05-12"
+      },
+      {
+        "id": 15,
+        "buyer_name": "Jerry CW HUANG",
+        "budget_code": 27286,
+        "item": "Parking Fee",
+        "cost_usd": 113.1909664,
+        "currency": "TWD",
+        "project": null,
+        "supplier": null,
+        "purchase_plan": "Done - Expensify",
+        "pr_expensify_date": "2026-05-07"
+      }
+    ]
   },
-  Q2: {
-    deadlines: {pr:"2026/09/11", po:"2026/09/23", expensify:"2026/09/24"},
-    summary: {total_budget:236000, total_remaining:236000, total_done_pr:0, total_done_exp:0, total_will_pr:0, total_will_exp:0},
-    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":6000},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":26000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":26000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":20000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":20000},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":30000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":30000},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000}],
-    txns: []
+  "Q2": {
+    "deadlines": {
+      "pr": "2026/09/11",
+      "po": "2026/09/23",
+      "expensify": "2026/09/24"
+    },
+    "summary": {
+      "total_budget": 236000.0,
+      "total_remaining": 236000.0,
+      "total_done_pr": 0,
+      "total_done_exp": 0,
+      "total_will_pr": 0,
+      "total_will_exp": 0
+    },
+    "overview": [
+      {
+        "budget_code": 27222,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27286,
+        "category": "(101) General - Personnel",
+        "category_content": "(109) Outsource Labor - SOW (Milestone/Deliverable Based)",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27287,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(102) Equipment",
+        "budget_usd": 6000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 6000.0
+      },
+      {
+        "budget_code": 27288,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 26000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 26000.0
+      },
+      {
+        "budget_code": 27289,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27290,
+        "category": "(206) HW Platform",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 15000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 15000.0
+      },
+      {
+        "budget_code": 27291,
+        "category": "(213) Hardware Sustaining (Compliance, etc)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 3000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 3000.0
+      },
+      {
+        "budget_code": 27292,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27293,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 20000.0
+      },
+      {
+        "budget_code": 27294,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27295,
+        "category": "(304) Lanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 20000.0
+      },
+      {
+        "budget_code": 27296,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27297,
+        "category": "(307) Cranky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 20000.0
+      },
+      {
+        "budget_code": 27298,
+        "category": "(307) Cranky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27299,
+        "category": "(318) Kiddy",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27300,
+        "category": "(320) Coleco (Sega 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 20000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 20000.0
+      },
+      {
+        "budget_code": 27301,
+        "category": "(322) Bowser (Rally Speaker 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27302,
+        "category": "(323) Atari/Nintendo2",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27303,
+        "category": "(324) Swanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 30000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 30000.0
+      },
+      {
+        "budget_code": 27304,
+        "category": "(324) Swanky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27305,
+        "category": "(324) Swanky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27306,
+        "category": "(325) Arbok",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27307,
+        "category": "(327) Weedle",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27308,
+        "category": "(330) Kiddo",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      }
+    ],
+    "txns": []
   },
-  Q3: {
-    deadlines: {pr:"2026/12/11", po:"2026/12/23", expensify:"2026/12/24"},
-    summary: {total_budget:113000, total_remaining:113000, total_done_pr:0, total_done_exp:0, total_will_pr:0, total_will_exp:0},
-    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":6000},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":5000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":5000},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null}],
-    txns: []
+  "Q3": {
+    "deadlines": {
+      "pr": "2026/12/11",
+      "po": "2026/12/23",
+      "expensify": "2026/12/24"
+    },
+    "summary": {
+      "total_budget": 113000.0,
+      "total_remaining": 113000.0,
+      "total_done_pr": 0,
+      "total_done_exp": 0,
+      "total_will_pr": 0,
+      "total_will_exp": 0
+    },
+    "overview": [
+      {
+        "budget_code": 27222,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27286,
+        "category": "(101) General - Personnel",
+        "category_content": "(109) Outsource Labor - SOW (Milestone/Deliverable Based)",
+        "budget_usd": 3000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 3000.0
+      },
+      {
+        "budget_code": 27287,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(102) Equipment",
+        "budget_usd": 6000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 6000.0
+      },
+      {
+        "budget_code": 27288,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27289,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27290,
+        "category": "(206) HW Platform",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 15000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 15000.0
+      },
+      {
+        "budget_code": 27291,
+        "category": "(213) Hardware Sustaining (Compliance, etc)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 3000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 3000.0
+      },
+      {
+        "budget_code": 27292,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27293,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27294,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 5000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 5000.0
+      },
+      {
+        "budget_code": 27295,
+        "category": "(304) Lanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27296,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 15000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 15000.0
+      },
+      {
+        "budget_code": 27297,
+        "category": "(307) Cranky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27298,
+        "category": "(307) Cranky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27299,
+        "category": "(318) Kiddy",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27300,
+        "category": "(320) Coleco (Sega 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27301,
+        "category": "(322) Bowser (Rally Speaker 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27302,
+        "category": "(323) Atari/Nintendo2",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27303,
+        "category": "(324) Swanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27304,
+        "category": "(324) Swanky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27305,
+        "category": "(324) Swanky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27306,
+        "category": "(325) Arbok",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27307,
+        "category": "(327) Weedle",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27308,
+        "category": "(330) Kiddo",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      }
+    ],
+    "txns": []
   },
-  Q4: {
-    deadlines: {pr:"2027/03/19", po:"2027/03/26", expensify:"2027/03/30"},
-    summary: {total_budget:98000, total_remaining:98000, total_done_pr:0, total_done_exp:0, total_will_pr:0, total_will_exp:0},
-    overview: [{"budget_code":27222,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27286,"category":"(101) General - Personnel","category_content":"(109) Outsource Labor - SOW","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27287,"category":"(102) General - Tool Updates and Fees","category_content":"(102) Equipment","budget_usd":6000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":6000},{"budget_code":27288,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":16000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":16000},{"budget_code":27289,"category":"(102) General - Tool Updates and Fees","category_content":"(114) Software","budget_usd":8000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":8000},{"budget_code":27290,"category":"(206) HW Platform","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27291,"category":"(213) Hardware Sustaining (Compliance)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":3000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":3000},{"budget_code":27292,"category":"(301) Dread (Rally System 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":5000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":5000},{"budget_code":27293,"category":"(301) Dread (Rally System 2)","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27294,"category":"(301) Dread (Rally System 2)","category_content":"(117) Travel and Entertainment","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27295,"category":"(304) Lanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27296,"category":"(307) Cranky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":15000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":15000},{"budget_code":27297,"category":"(307) Cranky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27298,"category":"(307) Cranky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27299,"category":"(318) Kiddy","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27300,"category":"(320) Coleco (Sega 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27301,"category":"(322) Bowser (Rally Speaker 2)","category_content":"(113) Product/NPI Samples and Materials","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27302,"category":"(323) Atari/Nintendo2","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27303,"category":"(324) Swanky","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27304,"category":"(324) Swanky","category_content":"(116) Tooling/Fixtures","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27305,"category":"(324) Swanky","category_content":"(117) Travel and Entertainment","budget_usd":10000,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":10000},{"budget_code":27306,"category":"(325) Arbok","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27307,"category":"(327) Weedle","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null},{"budget_code":27308,"category":"(330) Kiddo","category_content":"(113) Product/NPI Samples and Materials","budget_usd":null,"will_pr":0,"done_pr":0,"will_expensify":0,"done_expensify":0,"remaining":null}],
-    txns: []
+  "Q4": {
+    "deadlines": {
+      "pr": "2027/03/19",
+      "po": "2027/03/26",
+      "expensify": "2027/03/30"
+    },
+    "summary": {
+      "total_budget": 98000.0,
+      "total_remaining": 98000.0,
+      "total_done_pr": 0,
+      "total_done_exp": 0,
+      "total_will_pr": 0,
+      "total_will_exp": 0
+    },
+    "overview": [
+      {
+        "budget_code": 27222,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27286,
+        "category": "(101) General - Personnel",
+        "category_content": "(109) Outsource Labor - SOW (Milestone/Deliverable Based)",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27287,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(102) Equipment",
+        "budget_usd": 6000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 6000.0
+      },
+      {
+        "budget_code": 27288,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 16000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 16000.0
+      },
+      {
+        "budget_code": 27289,
+        "category": "(102) General - Tool Updates and Fees",
+        "category_content": "(114) Software",
+        "budget_usd": 8000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 8000.0
+      },
+      {
+        "budget_code": 27290,
+        "category": "(206) HW Platform",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 15000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 15000.0
+      },
+      {
+        "budget_code": 27291,
+        "category": "(213) Hardware Sustaining (Compliance, etc)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 3000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 3000.0
+      },
+      {
+        "budget_code": 27292,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 5000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 5000.0
+      },
+      {
+        "budget_code": 27293,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27294,
+        "category": "(301) Dread (Rally System 2)",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27295,
+        "category": "(304) Lanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27296,
+        "category": "(307) Cranky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 15000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 15000.0
+      },
+      {
+        "budget_code": 27297,
+        "category": "(307) Cranky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27298,
+        "category": "(307) Cranky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27299,
+        "category": "(318) Kiddy",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27300,
+        "category": "(320) Coleco (Sega 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27301,
+        "category": "(322) Bowser (Rally Speaker 2)",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27302,
+        "category": "(323) Atari/Nintendo2",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27303,
+        "category": "(324) Swanky",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27304,
+        "category": "(324) Swanky",
+        "category_content": "(116) Tooling/Fixtures",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27305,
+        "category": "(324) Swanky",
+        "category_content": "(117) Travel and Entertainment Expenses",
+        "budget_usd": 10000.0,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": 10000.0
+      },
+      {
+        "budget_code": 27306,
+        "category": "(325) Arbok",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27307,
+        "category": "(327) Weedle",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      },
+      {
+        "budget_code": 27308,
+        "category": "(330) Kiddo",
+        "category_content": "(113) Product/NPI Samples and Materials",
+        "budget_usd": null,
+        "will_pr": 0.0,
+        "done_pr": 0.0,
+        "will_expensify": 0.0,
+        "done_expensify": 0.0,
+        "remaining": null
+      }
+    ],
+    "txns": []
   }
 };
 
 // Overview tab drawer uses Q1 data (only Q1 has real spending)
 const OV = QUARTERS.Q1.overview;
+
+// Server mode: true when served by server.py (port 5173) → use API + SQLite
+// Static mode: false when opened as a local file → use localStorage
+const serverMode = window.location.port === '5173';
 
 // ── Helpers ──
 const usd   = n => n == null ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
@@ -683,6 +2152,25 @@ function filterOv() {
   renderOv(ovFiltered);
 }
 
+// ── Deadline helpers ──
+function daysLeft(dateStr) {
+  const [y,m,d] = dateStr.split(/[\/-]/).map(Number);
+  const target = new Date(y, m-1, d);
+  const today  = new Date(); today.setHours(0,0,0,0);
+  return Math.round((target - today) / 86400000);
+}
+function dlClass(days) {
+  if (days < 0)  return 'dl-past';
+  if (days <= 7) return 'dl-urgent';
+  if (days <= 21) return 'dl-warn';
+  return 'dl-ok';
+}
+function dlBadge(days) {
+  if (days < 0)  return `<span class="dl-days">${Math.abs(days)}d overdue</span>`;
+  if (days === 0) return `<span class="dl-days">Today!</span>`;
+  return `<span class="dl-days">${days}d left</span>`;
+}
+
 // ── Render Quarter Panel ──
 function renderQuarter(q) {
   activeQ = q;
@@ -703,11 +2191,15 @@ function renderQuarter(q) {
   // KPI sub text for remaining
   const remPct = budget ? (remaining/budget*100).toFixed(1) : 0;
 
+  const dlPr  = daysLeft(deadlines.pr);
+  const dlPo  = daysLeft(deadlines.po);
+  const dlExp = daysLeft(deadlines.expensify);
+
   document.getElementById('quarter-content').innerHTML = `
     <div class="deadline-bar">
-      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create PR Deadline</span><span class="dl-date">${deadlines.pr}</span></div>
-      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Received PO Deadline</span><span class="dl-date">${deadlines.po}</span></div>
-      <div class="dl-chip"><span class="dl-dot"></span><span class="dl-label">Create Expensify Deadline</span><span class="dl-date">${deadlines.expensify}</span></div>
+      <div class="dl-chip ${dlClass(dlPr)}"><span class="dl-dot"></span><span class="dl-label">Create PR</span><span class="dl-date">${deadlines.pr}</span>${dlBadge(dlPr)}</div>
+      <div class="dl-chip ${dlClass(dlPo)}"><span class="dl-dot"></span><span class="dl-label">Received PO</span><span class="dl-date">${deadlines.po}</span>${dlBadge(dlPo)}</div>
+      <div class="dl-chip ${dlClass(dlExp)}"><span class="dl-dot"></span><span class="dl-label">Create Expensify</span><span class="dl-date">${deadlines.expensify}</span>${dlBadge(dlExp)}</div>
     </div>
 
     <p class="sec-hd" style="margin-top:0">${q} Summary</p>
@@ -757,17 +2249,20 @@ function renderQuarter(q) {
         : `<table>
             <thead><tr>
               <th>Buyer</th><th>Budget Code</th><th>Item</th>
-              <th style="text-align:right">Cost USD</th><th>Project</th><th>Status</th><th>Date</th>
+              <th style="text-align:right">Cost</th><th>Project</th><th>Status</th><th>Date</th><th style="width:36px"></th>
             </tr></thead>
-            <tbody>${txns.map(t=>`
+            <tbody>${txns.map((t,idx)=>`
               <tr onclick="openDrawerQ(${t.budget_code})">
                 <td>${t.buyer_name}</td>
                 <td class="c-num c-accent" style="text-align:left">${t.budget_code}</td>
                 <td class="truncate" title="${t.item}">${t.item}</td>
-                <td class="c-num c-accent">${usd(t.cost_usd)}</td>
+                <td class="c-num c-accent" style="text-align:right">${usd(t.cost_usd)}${t.currency&&t.currency!=='USD'?` <span style="font-weight:400;font-size:.68rem;color:var(--text-muted)">${t.currency}</span>`:''}</td>
                 <td class="c-muted">${t.project||'—'}</td>
                 <td>${planBadge(t.purchase_plan)}</td>
                 <td class="c-muted">${t.pr_expensify_date||'—'}</td>
+                <td onclick="event.stopPropagation()" style="text-align:center;padding:6px 8px">
+                  <button class="del-btn" onclick="deleteTransaction('${q}',${idx})" title="Delete">✕</button>
+                </td>
               </tr>`).join('')}
             </tbody>
           </table>`}
@@ -905,6 +2400,172 @@ function toggleMode() {
   localStorage.setItem('vcb-mode', next);
 }
 
+// ── LocalStorage save/load (static-file mode only) ──
+function saveData() {
+  if (serverMode) return;
+  ['Q1','Q2','Q3','Q4'].forEach(q => {
+    localStorage.setItem(`meb-txns-${q}`, JSON.stringify(QUARTERS[q].txns));
+    localStorage.setItem(`meb-ov-${q}`,   JSON.stringify(QUARTERS[q].overview));
+    localStorage.setItem(`meb-sum-${q}`,  JSON.stringify(QUARTERS[q].summary));
+  });
+}
+function loadData() {
+  if (serverMode) return; // server always serves fresh HTML — no localStorage needed
+  ['Q1','Q2','Q3','Q4'].forEach(q => {
+    const t = localStorage.getItem(`meb-txns-${q}`);
+    const o = localStorage.getItem(`meb-ov-${q}`);
+    const s = localStorage.getItem(`meb-sum-${q}`);
+    if (t) QUARTERS[q].txns     = JSON.parse(t);
+    if (o) QUARTERS[q].overview = JSON.parse(o);
+    if (s) QUARTERS[q].summary  = JSON.parse(s);
+  });
+}
+
+// ── Recalc summary from txns ──
+function recalcSummary(q) {
+  const s = QUARTERS[q].summary;
+  const tx = QUARTERS[q].txns;
+  s.total_done_pr  = tx.filter(t=>t.purchase_plan==='Done - PR').reduce((a,t)=>a+(t.cost_usd||0),0);
+  s.total_done_exp = tx.filter(t=>t.purchase_plan==='Done - Expensify').reduce((a,t)=>a+(t.cost_usd||0),0);
+  s.total_will_pr  = tx.filter(t=>t.purchase_plan==='Will PR').reduce((a,t)=>a+(t.cost_usd||0),0);
+  s.total_will_exp = tx.filter(t=>t.purchase_plan==='Will Expensify').reduce((a,t)=>a+(t.cost_usd||0),0);
+  const spent = s.total_done_pr+s.total_done_exp+s.total_will_pr+s.total_will_exp;
+  s.total_remaining = Math.max((s.total_budget||0) - spent, 0);
+}
+
+// ── Update per-code overview entry (delta: +1 add / -1 delete) ──
+function updateOverviewForTx(q, tx, delta) {
+  const d = QUARTERS[q].overview.find(x => x.budget_code === tx.budget_code);
+  if (!d) return;
+  const amt = (tx.cost_usd||0) * delta;
+  if      (tx.purchase_plan==='Done - PR')        d.done_pr        = Math.max(0,(d.done_pr||0)+amt);
+  else if (tx.purchase_plan==='Done - Expensify') d.done_expensify = Math.max(0,(d.done_expensify||0)+amt);
+  else if (tx.purchase_plan==='Will PR')          d.will_pr        = Math.max(0,(d.will_pr||0)+amt);
+  else if (tx.purchase_plan==='Will Expensify')   d.will_expensify = Math.max(0,(d.will_expensify||0)+amt);
+  if (d.budget_usd) {
+    const spent = (d.done_pr||0)+(d.done_expensify||0)+(d.will_pr||0)+(d.will_expensify||0);
+    d.remaining = spent > d.budget_usd ? null : d.budget_usd - spent;
+  }
+}
+
+// ── Budget code suggestion ──
+function suggestBudgetCodes(text, q) {
+  const ov = QUARTERS[q].overview.filter(d => d.budget_usd);
+  const rules = [
+    { re: /equip|logger|device|thermal|fluke|yokogawa|instrum|sensor|meter|hardw/i, key: 'Equipment' },
+    { re: /software|license|subscr|saas/i,                                          key: 'Software' },
+    { re: /outsource|labor|sow|parking|fee|consult/i,                               key: 'Outsource' },
+    { re: /sample|material|mockup|cnc|3d|proto|npi|grommet|cable|cover|mount/i,     key: 'Samples' },
+    { re: /tooling|fixture|jig|mold/i,                                              key: 'Tooling' },
+    { re: /travel|flight|hotel|meal|entertain/i,                                    key: 'Travel' },
+  ];
+  const matched = [];
+  for (const r of rules) {
+    if (r.re.test(text)) {
+      ov.filter(d => d.category_content.includes(r.key))
+        .forEach(d => { if (!matched.includes(d.budget_code)) matched.push(d.budget_code); });
+    }
+  }
+  return matched;
+}
+
+// ── Collect all unique projects across quarters ──
+function getAllProjects() {
+  const p = new Set();
+  Object.values(QUARTERS).forEach(q => q.txns.forEach(t => { if (t.project) p.add(t.project); }));
+  return [...p].sort();
+}
+
+// ── Add Transaction Modal ──
+function openAddModal() {
+  document.getElementById('add-q').value = activeQ !== 'overview' ? activeQ : 'Q1';
+  const pSel = document.getElementById('add-project');
+  pSel.innerHTML = `<option value="">— None / General</option>` +
+    getAllProjects().map(p => `<option value="${p}">${p}</option>`).join('');
+  ['add-buyer','add-item','add-cost','add-date'].forEach(id => { document.getElementById(id).value = ''; });
+  document.getElementById('add-currency').value = 'TWD';
+  document.getElementById('add-plan').value = 'Will PR';
+  document.getElementById('add-code').value = '';
+  document.getElementById('suggest-row').innerHTML = '';
+  document.getElementById('addModal').classList.add('open');
+}
+function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+
+function onItemInput() {
+  const text = document.getElementById('add-item').value;
+  const q    = document.getElementById('add-q').value;
+  if (text.length < 3) { document.getElementById('suggest-row').innerHTML = ''; return; }
+  const codes = suggestBudgetCodes(text, q);
+  const ov    = QUARTERS[q].overview;
+  document.getElementById('suggest-row').innerHTML =
+    (codes.length ? '<span class="suggest-label">建議：</span>' : '') +
+    codes.map(c => {
+      const d = ov.find(x => x.budget_code === c);
+      const label = d ? `${c} – ${d.category_content.replace(/^\(\d+\) /,'')}` : c;
+      return `<span class="suggest-chip" onclick="pickCode(${c})">${label}</span>`;
+    }).join('');
+}
+function pickCode(code) { document.getElementById('add-code').value = code; }
+
+function submitTransaction() {
+  const q     = document.getElementById('add-q').value;
+  const buyer = document.getElementById('add-buyer').value.trim();
+  const item  = document.getElementById('add-item').value.trim();
+  const cost  = parseFloat(document.getElementById('add-cost').value);
+  const curr  = document.getElementById('add-currency').value;
+  const plan  = document.getElementById('add-plan').value;
+  const code  = parseInt(document.getElementById('add-code').value, 10);
+  const proj  = document.getElementById('add-project').value || null;
+  const date  = document.getElementById('add-date').value || null;
+  if (!buyer || !item || isNaN(cost) || !code) {
+    alert('請填寫 Buyer、Item、Cost、Budget Code'); return;
+  }
+
+  if (serverMode) {
+    fetch('/api/txn', {
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
+      body: JSON.stringify({quarter:q, buyer_name:buyer, budget_code:code, item,
+                            cost_usd:cost, currency:curr, project:proj,
+                            purchase_plan:plan, pr_expensify_date:date}),
+    })
+    .then(r => r.json())
+    .then(d => { if(d.ok) { closeAddModal(); location.reload(); } else alert(d.error); })
+    .catch(e => alert('Server error: ' + e));
+  } else {
+    const tx = { buyer_name:buyer, budget_code:code, item, cost_usd:cost, currency:curr,
+                 project:proj, supplier:null, purchase_plan:plan, pr_expensify_date:date };
+    QUARTERS[q].txns.push(tx);
+    updateOverviewForTx(q, tx, +1);
+    recalcSummary(q);
+    saveData();
+    closeAddModal();
+    if (activeQ === q) renderQuarter(q);
+    renderOverviewKpiAndChart(); renderOv(ovFiltered);
+  }
+}
+
+function deleteTransaction(q, idx) {
+  if (!confirm('確定要刪除這筆交易紀錄？')) return;
+
+  if (serverMode) {
+    const txId = QUARTERS[q].txns[idx].id;
+    if (!txId) { alert('此筆無 DB ID，請重整頁面後再試'); return; }
+    fetch(`/api/txn/${txId}`, {method: 'DELETE'})
+    .then(r => r.json())
+    .then(d => { if(d.ok) location.reload(); else alert(d.error); })
+    .catch(e => alert('Server error: ' + e));
+  } else {
+    const tx = QUARTERS[q].txns[idx];
+    updateOverviewForTx(q, tx, -1);
+    QUARTERS[q].txns.splice(idx, 1);
+    recalcSummary(q);
+    saveData();
+    renderQuarter(q);
+    renderOverviewKpiAndChart(); renderOv(ovFiltered);
+  }
+}
+
 // ── Init ──
 (function(){
   const savedMode = localStorage.getItem('vcb-mode');
@@ -912,6 +2573,7 @@ function toggleMode() {
     document.documentElement.setAttribute('data-theme', savedMode);
     document.getElementById('modeBtn').textContent = savedMode==='business-light'?'🌙 Dark':'☀️ Light';
   }
+  loadData();
   document.getElementById('today-date').textContent = new Date().toISOString().slice(0,10);
   renderOverviewKpiAndChart();
   renderOv(ALL_CODES);
