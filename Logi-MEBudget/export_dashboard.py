@@ -133,9 +133,9 @@ def export():
         print('[export] WARNING: QUARTERS block not found — dashboard.html unchanged')
         return False
     DASH_PATH.write_text(updated, encoding='utf-8')
-    print(f'[export] dashboard.html updated OK '
-          f'(Q1:{len(quarters["Q1"]["txns"])} Q2:{len(quarters["Q2"]["txns"])} '
-          f'Q3:{len(quarters["Q3"]["txns"])} Q4:{len(quarters["Q4"]["txns"])} txns)')
+    print(f'[export] dashboard.html updated OK'
+          f' (Q1:{len(quarters["Q1"]["txns"])} Q2:{len(quarters["Q2"]["txns"])}'
+          f' Q3:{len(quarters["Q3"]["txns"])} Q4:{len(quarters["Q4"]["txns"])} txns)')
     return True
 
 

@@ -9,7 +9,7 @@ Endpoints:
   POST /api/txn       → insert transaction → re-export dashboard
   DELETE /api/txn/<id>→ delete transaction → re-export dashboard
 """
-from flask import Flask, request, jsonify, send_file
+from flask import Flask, request, jsonify, Response
 import sqlite3
 from pathlib import Path
 import export_dashboard
@@ -29,7 +29,8 @@ def get_db():
 
 @app.route('/')
 def index():
-    return send_file(DASH)
+    content = DASH.read_text(encoding='utf-8')
+    return Response(content, content_type='text/html; charset=utf-8')
 
 
 @app.route('/api/ping')
@@ -87,6 +88,6 @@ def delete_txn(txn_id):
 
 
 if __name__ == '__main__':
-    print('ME Budget Server → http://localhost:5173')
+    print('ME Budget Server: http://localhost:5173')
     print('Press Ctrl+C to stop.')
     app.run(host='127.0.0.1', port=5173, debug=False)
