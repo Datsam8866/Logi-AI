@@ -124,10 +124,10 @@ def export():
     html   = DASH_PATH.read_text(encoding='utf-8')
     new_js = f'const QUARTERS = {json.dumps(quarters, ensure_ascii=False, indent=2)};'
     updated = re.sub(
-        r'// ── Quarter Data ──\nconst QUARTERS = \{.*?\n\};',
-        f'// ── Quarter Data ──\n{new_js}',
+        r'// ── Quarter Data ──\s*const QUARTERS = [\s\S]*?(?=\r?\nconst OV = QUARTERS\.Q1\.overview;)',
+        lambda _: f'// ── Quarter Data ──\n{new_js}\n',
         html,
-        flags=re.DOTALL,
+        count=1,
     )
     if updated == html:
         print('[export] WARNING: QUARTERS block not found — dashboard.html unchanged')

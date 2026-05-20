@@ -418,6 +418,30 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 .q-mini-fill.warn    { background: var(--warn-text); }
 .q-mini-fill.danger  { background: var(--danger-text); }
 
+/* ── Decision sections ── */
+.empty-state, .mode-note, .delete-summary {
+  background: var(--bg-card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  box-shadow: var(--shadow);
+}
+.empty-state {
+  padding: 22px;
+  color: var(--text-muted);
+  font-size: .82rem;
+  text-align: center;
+}
+.cost-cell { display: flex; flex-direction: column; align-items: flex-end; gap: 2px; }
+.cost-main { font-weight: 700; color: var(--accent); }
+.cost-sub { font-size: .68rem; color: var(--text-muted); font-weight: 400; white-space: nowrap; }
+.empty-state {
+  margin-bottom: 22px;
+  text-align: left;
+  padding: 24px 26px;
+}
+.empty-title { font-size: .95rem; color: var(--text-primary); font-weight: 700; margin-bottom: 6px; }
+.empty-next { margin-top: 10px; color: var(--text-secondary); }
+
 /* Responsive */
 @media (max-width: 960px) {
   .kpi-grid { grid-template-columns: repeat(2,1fr); }
@@ -439,6 +463,27 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
   z-index: 300; transition: background .18s, transform .15s;
 }
 .fab:hover { background: var(--accent-hover); transform: scale(1.08); }
+.fab.hidden { display: none; }
+.fab::after {
+  content: "Save to SQLite";
+  position: absolute;
+  right: 58px;
+  top: 50%;
+  transform: translateY(-50%);
+  background: var(--bg-card);
+  color: var(--text-secondary);
+  border: 1px solid var(--border);
+  border-radius: 5px;
+  padding: 5px 9px;
+  font-size: .7rem;
+  font-weight: 600;
+  white-space: nowrap;
+  box-shadow: var(--shadow);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .15s;
+}
+.fab:hover::after { opacity: 1; }
 
 /* ── Modal ── */
 .modal-overlay {
@@ -467,6 +512,20 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 .modal-close:hover { background: var(--row-hover); color: var(--text-primary); }
 .modal-body { padding: 18px 22px; max-height: 72vh; overflow-y: auto; }
 .modal-footer { padding: 12px 22px; border-top: 1px solid var(--border); display: flex; justify-content: flex-end; gap: 10px; }
+.mode-note {
+  margin-bottom: 14px;
+  padding: 10px 12px;
+  font-size: .76rem;
+  color: var(--text-secondary);
+  background: var(--ok-bg);
+  border-color: var(--ok-border);
+}
+.delete-summary {
+  padding: 14px;
+  margin-top: 8px;
+}
+.delete-summary .ds-item { font-weight: 700; color: var(--text-primary); margin-bottom: 8px; line-height: 1.4; }
+.delete-summary .ds-meta { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; font-size: .76rem; color: var(--text-secondary); }
 
 /* ── Form ── */
 .form-row { display: grid; grid-template-columns: 1fr 1fr; gap: 14px; margin-bottom: 14px; }
@@ -479,6 +538,7 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
   font-family: inherit; font-size: .83rem; outline: none; transition: border-color .15s;
 }
 .form-input:focus, .form-select:focus { border-color: var(--accent); }
+.form-help { font-size: .68rem; color: var(--text-muted); line-height: 1.35; }
 .suggest-row { display: flex; flex-wrap: wrap; gap: 6px; margin-top: 5px; min-height: 22px; }
 .suggest-label { font-size: .7rem; color: var(--text-muted); align-self: center; }
 .suggest-chip {
@@ -504,10 +564,11 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
 /* ── Delete button ── */
 .del-btn {
   background: none; border: none; color: var(--text-muted);
-  font-size: .78rem; cursor: pointer; padding: 2px 6px; border-radius: 3px;
+  font-size: .95rem; cursor: pointer; padding: 2px 6px; border-radius: 3px;
   opacity: .5; transition: color .13s, background .13s, opacity .13s;
 }
 .del-btn:hover { color: var(--danger-text); background: var(--danger-bg); opacity: 1; }
+body.viewer .del-btn { display: none; }
 </style>
 </head>
 <body>
@@ -597,6 +658,7 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
       <button class="modal-close" onclick="closeAddModal()">✕</button>
     </div>
     <div class="modal-body">
+      <div class="mode-note" id="add-mode-note">Server mode: changes save to SQLite and refresh the dashboard.</div>
       <div class="form-row">
         <div class="form-field">
           <label class="form-label">Quarter</label>
@@ -623,10 +685,11 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
         <div class="form-field">
           <label class="form-label">Cost</label>
           <input class="form-input" id="add-cost" type="number" min="0" step="0.01" placeholder="260000">
+          <div class="form-help" id="cost-help">TWD input auto-converts to USD budget impact. Rate: 1 USD = 31.6 TWD.</div>
         </div>
         <div class="form-field">
           <label class="form-label">Currency</label>
-          <select class="form-select" id="add-currency">
+          <select class="form-select" id="add-currency" onchange="updateCostHelp()">
             <option value="TWD">TWD</option>
             <option value="USD">USD</option>
           </select>
@@ -636,9 +699,9 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
         <div class="form-field">
           <label class="form-label">Purchase Plan</label>
           <select class="form-select" id="add-plan">
+            <option value="Will Expensify">Will Expensify</option>
             <option value="Will PR">Will PR</option>
             <option value="Done - PR">Done - PR</option>
-            <option value="Will Expensify">Will Expensify</option>
             <option value="Done - Expensify">Done - Expensify</option>
           </select>
         </div>
@@ -661,6 +724,24 @@ tbody td { padding: 9px 13px; vertical-align: middle; }
     <div class="modal-footer">
       <button class="btn-ghost" onclick="closeAddModal()">Cancel</button>
       <button class="btn-primary" onclick="submitTransaction()">Add Transaction</button>
+    </div>
+  </div>
+</div>
+
+<!-- Delete Transaction Modal -->
+<div class="modal-overlay" id="deleteModal" onclick="if(event.target===this)closeDeleteModal()">
+  <div class="modal-box">
+    <div class="modal-hd">
+      <h3>Delete Transaction</h3>
+      <button class="modal-close" onclick="closeDeleteModal()">✕</button>
+    </div>
+    <div class="modal-body">
+      <p style="font-size:.84rem;color:var(--text-secondary);line-height:1.5;margin-bottom:10px">Review the transaction before deleting it from this dashboard.</p>
+      <div class="delete-summary" id="deleteSummary"></div>
+    </div>
+    <div class="modal-footer">
+      <button class="btn-ghost" onclick="closeDeleteModal()">Cancel</button>
+      <button class="btn-primary" onclick="confirmDeleteTransaction()">Delete transaction</button>
     </div>
   </div>
 </div>
@@ -953,8 +1034,7 @@ const QUARTERS = {
         "id": 1,
         "buyer_name": "Angela Chao",
         "budget_code": 27291,
-        "item": "FY27 Q1 SLA J750 materials purchase
-(Total: NTD667440, Dept 5997: 12.63% NTD84267)",
+        "item": "FY27 Q1 SLA J750 materials purchase\n(Total: NTD667440, Dept 5997: 12.63% NTD84267)",
         "cost_usd": 2666.466261,
         "currency": "TWD",
         "project": "SLA",
@@ -1980,7 +2060,6 @@ const QUARTERS = {
   }
 };
 
-// Overview tab drawer uses Q1 data (only Q1 has real spending)
 const OV = QUARTERS.Q1.overview;
 
 // Server mode: true when served by server.py (port 5173) → use API + SQLite
@@ -1991,8 +2070,10 @@ const serverMode = window.location.port === '5173';
 const usd   = n => n == null ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
 const usdSm = n => (!n || n===0) ? '—' : '$'+Number(n).toLocaleString('en-US',{maximumFractionDigits:0});
 const pct   = (a,b) => b ? (a/b*100).toFixed(1)+'%' : '0%';
+const TWD_USD_RATE = 31.6;
 
 let activeQ = 'Q1';   // currently rendered quarter
+let currentUser = null;
 
 function statusBadge(d, noTx) {
   if (!d.budget_usd) return '<span class="badge b-neutral">No Budget</span>';
@@ -2010,6 +2091,66 @@ function statusBadge(d, noTx) {
 function planBadge(p) {
   const m = {'Done - PR':'<span class="badge b-ok">Done PR</span>','Done - Expensify':'<span class="badge b-exp">Done Exp</span>','Will PR':'<span class="badge b-pipe">Will PR</span>','Will Expensify':'<span class="badge b-warn">Will Exp</span>'};
   return m[p] || `<span class="badge b-neutral">${p}</span>`;
+}
+
+function costCell(t) {
+  const source = t.currency && t.currency !== 'USD'
+    ? `<span class="cost-sub">${t.currency} source</span>`
+    : `<span class="cost-sub">Original currency: USD</span>`;
+  return `<div class="cost-cell"><span class="cost-main">${usd(t.cost_usd)}</span><span class="cost-sub">USD budget impact</span>${source}</div>`;
+}
+
+function convertCostToUsd(amount, currency) {
+  if (currency === 'TWD') return +(amount / TWD_USD_RATE).toFixed(2);
+  return +amount.toFixed(2);
+}
+
+function statusSortRank(plan) {
+  return {
+    'Will Expensify': 0,
+    'Will PR': 1,
+    'Done - PR': 2,
+    'Done - Expensify': 3,
+  }[plan] ?? 9;
+}
+
+function sortedTransactions(txns) {
+  return [...txns].sort((a,b) =>
+    statusSortRank(a.purchase_plan) - statusSortRank(b.purchase_plan) ||
+    (a.pr_expensify_date || '9999-99-99').localeCompare(b.pr_expensify_date || '9999-99-99') ||
+    (a.id || 0) - (b.id || 0)
+  );
+}
+
+function renderQuarterEmptyState(q) {
+  return `
+    <div class="empty-state">
+      <div class="empty-title">${q} data not imported yet</div>
+      <div>Budget allocation exists, but no transactions have been imported for this quarter.</div>
+      <div class="empty-next">Next action: import ${q} budget / transaction data before using this tab for decisions.</div>
+    </div>`;
+}
+
+function applyUserPermissions() {
+  const role = currentUser?.role || 'viewer';
+  document.body.classList.toggle('viewer', role !== 'editor');
+  const fab = document.querySelector('.fab');
+  if (fab) fab.classList.toggle('hidden', role !== 'editor');
+}
+
+function loadCurrentUser() {
+  return fetch('/api/me')
+    .then(r => r.ok ? r.json() : null)
+    .then(user => {
+      currentUser = user;
+      applyUserPermissions();
+      return user;
+    })
+    .catch(() => {
+      currentUser = null;
+      applyUserPermissions();
+      return null;
+    });
 }
 
 // ── Overview KPI + Chart ──
@@ -2176,6 +2317,7 @@ function renderQuarter(q) {
   activeQ = q;
   const {deadlines, summary, overview, txns} = QUARTERS[q];
   const noTx = txns.length === 0;
+  const displayTxns = sortedTransactions(txns).map(t => ({...t, originalIndex: txns.indexOf(t)}));
   const budget = summary.total_budget;
   const donePr = summary.total_done_pr, doneExp = summary.total_done_exp;
   const willPr = summary.total_will_pr, willExp = summary.total_will_exp;
@@ -2245,23 +2387,23 @@ function renderQuarter(q) {
     <p class="sec-hd">${q} Transactions (${txns.length})</p>
     <div class="tbl-wrap">
       ${noTx
-        ? `<div style="padding:28px;text-align:center;color:var(--text-muted);font-size:.82rem">No transactions recorded for ${q} yet</div>`
+        ? renderQuarterEmptyState(q)
         : `<table>
             <thead><tr>
               <th>Buyer</th><th>Budget Code</th><th>Item</th>
               <th style="text-align:right">Cost</th><th>Project</th><th>Status</th><th>Date</th><th style="width:36px"></th>
             </tr></thead>
-            <tbody>${txns.map((t,idx)=>`
+            <tbody>${displayTxns.map(t=>`
               <tr onclick="openDrawerQ(${t.budget_code})">
                 <td>${t.buyer_name}</td>
                 <td class="c-num c-accent" style="text-align:left">${t.budget_code}</td>
                 <td class="truncate" title="${t.item}">${t.item}</td>
-                <td class="c-num c-accent" style="text-align:right">${usd(t.cost_usd)}${t.currency&&t.currency!=='USD'?` <span style="font-weight:400;font-size:.68rem;color:var(--text-muted)">${t.currency}</span>`:''}</td>
+                <td class="c-num" style="text-align:right">${costCell(t)}</td>
                 <td class="c-muted">${t.project||'—'}</td>
                 <td>${planBadge(t.purchase_plan)}</td>
                 <td class="c-muted">${t.pr_expensify_date||'—'}</td>
                 <td onclick="event.stopPropagation()" style="text-align:center;padding:6px 8px">
-                  <button class="del-btn" onclick="deleteTransaction('${q}',${idx})" title="Delete">✕</button>
+                  <button class="del-btn" onclick="deleteTransaction('${q}',${t.originalIndex})" title="Delete transaction" aria-label="Delete transaction">🗑</button>
                 </td>
               </tr>`).join('')}
             </tbody>
@@ -2479,17 +2621,28 @@ function getAllProjects() {
 // ── Add Transaction Modal ──
 function openAddModal() {
   document.getElementById('add-q').value = activeQ !== 'overview' ? activeQ : 'Q1';
+  document.getElementById('add-mode-note').textContent = serverMode
+    ? 'Server mode: changes save to SQLite and refresh the dashboard.'
+    : 'Offline mode: changes save in this browser only.';
   const pSel = document.getElementById('add-project');
   pSel.innerHTML = `<option value="">— None / General</option>` +
     getAllProjects().map(p => `<option value="${p}">${p}</option>`).join('');
   ['add-buyer','add-item','add-cost','add-date'].forEach(id => { document.getElementById(id).value = ''; });
   document.getElementById('add-currency').value = 'TWD';
-  document.getElementById('add-plan').value = 'Will PR';
+  document.getElementById('add-plan').value = 'Will Expensify';
   document.getElementById('add-code').value = '';
   document.getElementById('suggest-row').innerHTML = '';
+  updateCostHelp();
   document.getElementById('addModal').classList.add('open');
 }
 function closeAddModal() { document.getElementById('addModal').classList.remove('open'); }
+
+function updateCostHelp() {
+  const curr = document.getElementById('add-currency').value;
+  document.getElementById('cost-help').textContent = curr === 'TWD'
+    ? `TWD input auto-converts to USD budget impact. Rate: 1 USD = ${TWD_USD_RATE} TWD.`
+    : 'USD input is saved directly as USD budget impact.';
+}
 
 function onItemInput() {
   const text = document.getElementById('add-item').value;
@@ -2513,6 +2666,7 @@ function submitTransaction() {
   const item  = document.getElementById('add-item').value.trim();
   const cost  = parseFloat(document.getElementById('add-cost').value);
   const curr  = document.getElementById('add-currency').value;
+  const usdCost = convertCostToUsd(cost, curr);
   const plan  = document.getElementById('add-plan').value;
   const code  = parseInt(document.getElementById('add-code').value, 10);
   const proj  = document.getElementById('add-project').value || null;
@@ -2526,14 +2680,14 @@ function submitTransaction() {
       method: 'POST',
       headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({quarter:q, buyer_name:buyer, budget_code:code, item,
-                            cost_usd:cost, currency:curr, project:proj,
+                            cost_usd:usdCost, currency:curr, project:proj,
                             purchase_plan:plan, pr_expensify_date:date}),
     })
     .then(r => r.json())
     .then(d => { if(d.ok) { closeAddModal(); location.reload(); } else alert(d.error); })
     .catch(e => alert('Server error: ' + e));
   } else {
-    const tx = { buyer_name:buyer, budget_code:code, item, cost_usd:cost, currency:curr,
+    const tx = { buyer_name:buyer, budget_code:code, item, cost_usd:usdCost, currency:curr,
                  project:proj, supplier:null, purchase_plan:plan, pr_expensify_date:date };
     QUARTERS[q].txns.push(tx);
     updateOverviewForTx(q, tx, +1);
@@ -2545,9 +2699,32 @@ function submitTransaction() {
   }
 }
 
-function deleteTransaction(q, idx) {
-  if (!confirm('確定要刪除這筆交易紀錄？')) return;
+let pendingDelete = null;
 
+function deleteTransaction(q, idx) {
+  const tx = QUARTERS[q].txns[idx];
+  pendingDelete = { q, idx };
+  document.getElementById('deleteSummary').innerHTML = `
+    <div class="ds-item">${tx.item}</div>
+    <div class="ds-meta">
+      <span>Buyer: ${tx.buyer_name}</span>
+      <span>Budget code: ${tx.budget_code}</span>
+      <span>Cost: ${usd(tx.cost_usd)} USD budget impact</span>
+      <span>Status: ${tx.purchase_plan}</span>
+      <span>Project: ${tx.project || '—'}</span>
+      <span>Date: ${tx.pr_expensify_date || '—'}</span>
+    </div>`;
+  document.getElementById('deleteModal').classList.add('open');
+}
+
+function closeDeleteModal() {
+  pendingDelete = null;
+  document.getElementById('deleteModal').classList.remove('open');
+}
+
+function confirmDeleteTransaction() {
+  if (!pendingDelete) return;
+  const { q, idx } = pendingDelete;
   if (serverMode) {
     const txId = QUARTERS[q].txns[idx].id;
     if (!txId) { alert('此筆無 DB ID，請重整頁面後再試'); return; }
@@ -2561,6 +2738,7 @@ function deleteTransaction(q, idx) {
     QUARTERS[q].txns.splice(idx, 1);
     recalcSummary(q);
     saveData();
+    closeDeleteModal();
     renderQuarter(q);
     renderOverviewKpiAndChart(); renderOv(ovFiltered);
   }
@@ -2568,6 +2746,7 @@ function deleteTransaction(q, idx) {
 
 // ── Init ──
 (function(){
+  loadCurrentUser();
   const savedMode = localStorage.getItem('vcb-mode');
   if(savedMode) {
     document.documentElement.setAttribute('data-theme', savedMode);

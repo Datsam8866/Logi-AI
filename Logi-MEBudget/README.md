@@ -1,6 +1,6 @@
 # Logi-MEBudget — ME 部門 FY27 預算追蹤工具
 
-**最後更新：2026-05-20（修正 server.py charset 問題；dashboard 可正常在 http://localhost:5173 使用）**
+**最後更新：2026-05-20（改用 Google OAuth + viewer/editor 權限；server mode 可正常在 http://localhost:5173 使用）**
 
 ---
 
@@ -21,6 +21,11 @@ Logi-MEBudget 是 ME 部門 FY27 預算管理工具，將 Excel 原始預算表�
 
 ### 2026-05-20：CRUD + SQLite 雙模式架構
 
+- **Q tab 交易 UX**：新增 Q2-Q4 未匯入 empty state、Cost 顯示 USD budget impact、刪除摘要確認視窗、Add Transaction SQLite 儲存提示
+- **新增交易換算與排序**：Add Transaction 選 TWD 時自動以 `1 USD = 31.6 TWD` 換算為 USD budget impact；Q tab 交易表優先顯示 Will Expensify、Will PR
+- **區網瀏覽支援**：`server.py` 改為綁定 `0.0.0.0`，同一個 Wi-Fi / LAN 內其他裝置可用本機 IP 加 port 5173 開啟 dashboard
+- **Google OAuth 權限**：`server.py` 改用 Google 登入；`ALLOWED_VIEWERS` 可看 dashboard，`ALLOWED_EDITORS` 可新增/刪除，後端 API 會擋非 editor 操作
+- **Dashboard 互動修復**：修正 `export_dashboard.py` 使用 `re.sub()` 寫回 JSON 時把 `\n` 轉成實際換行，導致 `dashboard.html` 出現 JavaScript SyntaxError、Tab/FAB/Dark mode 無反應的問題
 - **Deadline 倒數示警**：每個 Quarter tab 的 Deadline chip 自動計算 days left，顏色分級（綠 >21d / 橘 8–21d / 紅 ≤7d / 暗紅 overdue）
 - **Add Transaction**：右下 FAB（＋）開 Modal，輸入 Item 自動建議 Budget Code，支援 Project 選擇
 - **Delete Transaction**：每筆交易右側 ✕ 按鈕，confirm 後刪除
@@ -52,10 +57,19 @@ Logi-MEBudget 是 ME 部門 FY27 預算管理工具，將 Excel 原始預算表�
 
 ```powershell
 cd "C:\Users\skuan1\Desktop\Logi AI\Logi-MEBudget"
+$env:GOOGLE_CLIENT_ID="Google OAuth Client ID"
+$env:GOOGLE_CLIENT_SECRET="Google OAuth Client Secret"
+$env:ALLOWED_VIEWERS="viewer1@example.com,viewer2@example.com"
+$env:ALLOWED_EDITORS="editor@example.com"
+$env:MEBUDGET_SECRET_KEY="任意長隨機字串，重啟後 session 才能穩定"
 python server.py
 # 開瀏覽器 → http://localhost:5173
+# 同一個 Wi-Fi / LAN 的其他裝置 → http://192.168.0.113:5173
 # 注意：PowerShell 視窗不能關，server 才會持續運作
 ```
+
+若其他裝置無法連線，先確認兩台裝置在同一個網路，並允許 Windows 防火牆讓 Python 使用私人網路。
+若使用 Cloudflare Tunnel，公開網址會先導到 Google 登入；quick tunnel 網址改變時，Google OAuth Client 的 redirect URI 也要同步新增。
 
 **Static mode（離線，僅 localStorage）：**
 ```
