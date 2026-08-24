@@ -1,0 +1,15 @@
+cc_binary {
+    name: "qcs8550_fan_controller",
+    vendor: true,
+    srcs: [
+        "src/main.cpp",
+        "src/fan_controller.cpp",
+    ],
+    local_include_dirs: ["include"],
+    cflags: [
+        "-Wall",
+        "-Wextra",
+        "-Werror",
+        "-std=c++17",
+    ],
+}

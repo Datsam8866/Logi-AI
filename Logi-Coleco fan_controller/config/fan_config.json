@@ -1,0 +1,52 @@
+{
+  "_comment": "Thermal policy only. Hardware device paths belong in the vendor backend/HAL.",
+
+  "ambient": {
+    "low_c": 25.0,
+    "high_c": 35.0
+  },
+
+  "curve_low_ambient": [
+    { "cpu_c": 35.0, "rpm": 1000.0 },
+    { "cpu_c": 40.0, "rpm": 1500.0 },
+    { "cpu_c": 46.0, "rpm": 2000.0 }
+  ],
+
+  "curve_high_ambient": [
+    { "cpu_c": 35.0, "rpm": 2000.0 },
+    { "cpu_c": 40.0, "rpm": 2500.0 },
+    { "cpu_c": 46.0, "rpm": 3000.0 }
+  ],
+
+  "control": {
+    "temperature_average_seconds": 10.0,
+    "temperature_hysteresis_c": 3.0,
+    "rpm_ramp_per_second": 100.0,
+    "minimum_start_duty": 0.20,
+    "maximum_duty": 1.0,
+    "maximum_rpm": 6000.0,
+    "control_period_seconds": 0.5
+  },
+
+  "fan_start": {
+    "timeout_seconds": 3.0,
+    "boost_duty": 0.50,
+    "running_threshold_rpm": 300.0
+  },
+
+  "sensor_protection": {
+    "max_temperature_step_c": 10.0,
+    "max_temperature_step_window_seconds": 0.5,
+    "min_valid_temperature_c": -40.0,
+    "max_valid_temperature_c": 125.0
+  },
+
+  "i2c": {
+    "reset_after_consecutive_failures": 5
+  },
+
+  "fg": {
+    "median_window": 5,
+    "pulses_per_revolution": 2
+  }
+}
