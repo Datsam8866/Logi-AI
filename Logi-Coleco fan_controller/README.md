@@ -1,6 +1,6 @@
 # Logi-Coleco fan_controller — QCS8550 Android 17 風扇控制器
 
-**最後更新：2026-08-24（專案初始化、建立 CLAUDE.md 與 Obsidian 工作筆記）**
+**最後更新：2026-08-25（首次提交上線，commit `90c09d9`）**
 
 ---
 
@@ -20,6 +20,11 @@ QCS8550 (Coleco) Android 17 會議系統的風扇控制器參考實作。C++17 v
 ---
 
 ## 最新進度
+
+### 2026-08-25：首次提交上線
+
+- 將本專案首次納入 `Datsam8866/Logi-AI` git 追蹤，commit `90c09d9`（7 檔案、+945 行）
+- 已推送至 GitHub `master`
 
 ### 2026-08-24：專案初始化
 
