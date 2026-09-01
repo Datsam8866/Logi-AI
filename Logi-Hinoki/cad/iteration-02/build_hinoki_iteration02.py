@@ -1,7 +1,8 @@
 """Build the Hinoki Iteration 02 preliminary review CAD.
 
 The model combines source-backed market envelopes with explicitly marked
-assumptions. It is a review baseline, not release geometry or a STEP source.
+assumptions. It is a review baseline, not release geometry. A simplified STEP
+may be exported for concept review only.
 Coordinate system: X left/right, Y front/rear (rear positive), Z upward.
 """
 
@@ -177,7 +178,7 @@ def build_document():
     metadata = doc.addObject("App::FeaturePython", "Iteration02_Metadata")
     metadata.Label = "Iteration 02 Preliminary Review Metadata"
     metadata.addProperty("App::PropertyString", "Status", "Iteration")
-    metadata.Status = "Preliminary CAD review baseline — no release geometry or STEP export"
+    metadata.Status = "Preliminary CAD review baseline — concept STEP allowed; not release geometry"
     metadata.addProperty("App::PropertyString", "Scope", "Iteration")
     metadata.Scope = "Panel/touch proxy, camera module, shutter assumption and stand/VESA benchmark"
     metadata.addProperty("App::PropertyString", "SourceAccessDate", "Iteration")

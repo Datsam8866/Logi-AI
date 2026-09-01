@@ -15,7 +15,7 @@ Hinoki 是一套 32-inch All-in-One Video Conferencing System 的概念機構與
 - 支架姿態：low / neutral / high
 - Display-bottom height：370 / 430 / 490 mm
 - Tilt：−5° / 0° / +20°
-- STEP：尚未匯出
+- STEP：已匯出概念審查版；非 release／製造幾何
 
 Iteration 02 preliminary review 顯示：display proxy 位於 head envelope 內，但左右各只剩 4.8 mm；上方 AV reserve 為 87.3 mm，深度 reserve 為 23.5 mm。Ergotron HX 對 14 kg display proxy 的理論剩餘載重為 5.1 kg，尚未計入 Hinoki AV、compute、thermal、cable 與結構重量。
 
@@ -48,6 +48,8 @@ Logi-Hinoki/
 | `docs/reviews/2026-09-01-hinoki-cad-iteration01-review.md` | Iteration 01 review 摘要 |
 | `outputs/hinoki-iteration02-review/Hinoki_Iteration02_Component_Candidates.xlsx` | 公式驅動候選矩陣、CAD 包絡與來源 |
 | `cad/iteration-02/Hinoki_Concept_CAD_Iteration02_Review.FCStd` | Iteration 02 初步 review CAD |
+| `cad/iteration-02/Hinoki_Concept_CAD_Iteration02_Concept.stp` | Iteration 02 概念審查用 STP |
+| `cad/iteration-02/export_iteration02_step.py` | 從 FCStd 匯出概念審查 STEP |
 | `cad/iteration-02/Hinoki_Iteration02_CAD_Review.json` | Iteration 02 自動 review 結果 |
 | `tests/test_hinoki_iteration02.py` | Iteration 02 acceptance checks |
 | `docs/reviews/2026-09-01-hinoki-iteration02-preliminary-review.md` | Iteration 02 初步 review 摘要 |
@@ -119,7 +121,7 @@ cad/iteration-01/Hinoki_Iteration01_CAD_Review.json
 - 尚未驗證 shutter 運動、connector mating、cable bend radius 與 service access。
 - 5.1 kg stand 載重餘量尚未計入完整 AV／compute／thermal／結構重量。
 - 重心、結構強度、傾倒穩定性與 thermal performance 尚未完成實測或高擬真分析。
-- 尚未建立正式 STEP deliverable。
+- 已建立概念審查用 STEP；尚未建立正式 release／製造 STEP deliverable。
 
 ## Next Action：Iteration 02 Review 02
 
@@ -127,7 +129,7 @@ cad/iteration-01/Hinoki_Iteration01_CAD_Review.json
 2. 選定或設計 captive privacy shutter，補做 travel、retention 與 optical obscuration review。
 3. 建立 Hinoki custom stand/base 的 load path、質量／重心、cable motion 與 tip-stability 模型。
 4. 加入 camera ISP/carrier、connector insertion、thermal 與 cable bend keep-out。
-5. 上述風險關閉或正式接受前，維持 STEP export blocked。
+5. 上述風險關閉或正式接受前，STEP 僅供概念審查，不作製造依據。
 
 ## Git 與資料注意事項
 

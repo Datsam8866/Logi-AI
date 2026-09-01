@@ -51,5 +51,5 @@
     "Custom stand geometry, centre of gravity, cable motion and tip stability remain open."
   ],
   "cad_review_status": "PassWithOpenRisks",
-  "step_export_status": "Blocked"
+  "step_export_status": "ConceptReviewOnly"
 }

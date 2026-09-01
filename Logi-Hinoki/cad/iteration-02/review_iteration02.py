@@ -125,7 +125,7 @@ def main():
         "source_status_result": "Pass" if source_status_pass else "Fail",
         "open_risks": OPEN_RISKS,
         "cad_review_status": status,
-        "step_export_status": "Blocked",
+        "step_export_status": "ConceptReviewOnly",
     }
     REPORT_FILE.write_text(json.dumps(review, indent=2), encoding="utf-8")
     print(json.dumps(review, indent=2))

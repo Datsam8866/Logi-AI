@@ -1,7 +1,7 @@
 # Hinoki Iteration 02 Preliminary Review
 
 **Review date:** 2026-09-01  
-**Decision:** `PassWithOpenRisks` for preliminary market-envelope review. The model is not release geometry, and STEP export remains blocked.
+**Decision:** `PassWithOpenRisks` for preliminary market-envelope review. A simplified STEP is available for concept review only; it is not release geometry.
 
 ## Review baseline
 
@@ -46,7 +46,7 @@ Machine-readable evidence is in `cad/iteration-02/Hinoki_Iteration02_CAD_Review.
 2. Select or design a manual captive shutter and verify travel, retention, optical obscuration and user access.
 3. Establish the Hinoki-specific stand/base load path, centre of gravity, cable motion and tip-stability model.
 4. Add camera ISP/carrier, connector insertion, thermal and cable keep-outs before treating the remaining 23.5 mm as usable depth.
-5. Keep STEP export blocked until these items are closed or explicitly accepted as controlled assumptions.
+5. Treat the STEP as concept-review geometry only until these items are closed or explicitly accepted as controlled assumptions.
 
 ## Deliverables
 
@@ -54,7 +54,7 @@ Machine-readable evidence is in `cad/iteration-02/Hinoki_Iteration02_CAD_Review.
 |---|---|
 | Candidate workbook | `outputs/hinoki-iteration02-review/Hinoki_Iteration02_Component_Candidates.xlsx` |
 | Preliminary FreeCAD review file | `cad/iteration-02/Hinoki_Concept_CAD_Iteration02_Review.FCStd` |
+| Concept-review STEP | `cad/iteration-02/Hinoki_Concept_CAD_Iteration02_Concept.stp` |
 | Preview image | `cad/iteration-02/Hinoki_Concept_CAD_Iteration02_Review_Preview.png` |
 | Machine-readable CAD review | `cad/iteration-02/Hinoki_Iteration02_CAD_Review.json` |
 | Candidate source data | `data/iteration-02/component_candidates.json` |
-
