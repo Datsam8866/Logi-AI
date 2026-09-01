@@ -1,14 +1,20 @@
 # Logi-Hinoki
 
-Hinoki 是一套 32-inch All-in-One Video Conferencing System 的概念機構與空間配置專案。目前已建立 **Concept CAD Iteration 02 Preliminary Review Baseline**：以可追溯市場候選取代部分 Iteration 01 假設，用來 review panel/touch、camera/shutter 與 stand/VESA 的初步包絡。
+Hinoki 是一套 32-inch All-in-One Video Conferencing System 的概念機構與空間配置專案。目前正以 **Calm Crown Concept CAD Iteration 03** 從外觀架構重新建模；Iteration 02 保留為被否決的 preliminary proxy baseline，不再作為產品外觀方向。
 
 > Iteration 02 仍是概念 review 模型，不是 release geometry，也不代表量產設計已完成。
 
-## 目前狀態
+## 目前狀態（2026-09-02）
 
-- 最新階段：Concept CAD Iteration 02 Preliminary Review Baseline
-- CAD review：PassWithOpenRisks
-- 顯示頭包絡：760 × 80 × 540 mm
+- 最新階段：Calm Crown Concept CAD Iteration 03，Task 2 品質修正待完成
+- 分支：`codex/hinoki-iteration02-review`
+- Iteration 03 頭部：742 × 492 × 62 mm，72 mm AV crown
+- 正面原生 CAD：已建立 13 個獨立可視零件與五個頂層 group
+- Agent review：Task 1 通過；Task 2 規格通過，但品質 gate 有 2 個 Important，尚未放行
+- Concept delivery gate：所有 hard gates 通過且加權分數至少 80/100
+- Release／製造 gate：至少 90/100；本階段不宣稱達成
+- Iteration 02 CAD review：PassWithOpenRisks，但只代表 proxy 空間配置
+- Iteration 02 顯示頭包絡：760 × 80 × 540 mm
 - 顯示器 review proxy：One World Touch LM-3237-26B-4K，750.4 × 452.7 × 56.5 mm
 - Camera baseline：Leopard Imaging LI-IMX477-MIPI-140H，140° HFOV
 - Stand benchmark：Ergotron HX 45-475-224；VESA 200 × 200 mm
@@ -25,6 +31,7 @@ Iteration 02 preliminary review 顯示：display proxy 位於 head envelope 內�
 Logi-Hinoki/
 ├─ cad/iteration-01/        # FreeCAD 模型、建模／預覽／review 腳本與 JSON 結果
 ├─ cad/iteration-02/        # 初步市場包絡 review CAD、預覽與 JSON 結果
+├─ cad/iteration-03/        # Calm Crown 受控參數、原生 CAD 與建模腳本
 ├─ data/iteration-02/       # 候選料號與來源資料
 ├─ docs/reviews/            # 架構映射、pre-CAD audit、checklist 與 CAD review
 ├─ docs/superpowers/        # 已核准的設計規格與執行計畫
@@ -53,6 +60,12 @@ Logi-Hinoki/
 | `cad/iteration-02/Hinoki_Iteration02_CAD_Review.json` | Iteration 02 自動 review 結果 |
 | `tests/test_hinoki_iteration02.py` | Iteration 02 acceptance checks |
 | `docs/reviews/2026-09-01-hinoki-iteration02-preliminary-review.md` | Iteration 02 初步 review 摘要 |
+| `docs/superpowers/specs/2026-09-01-hinoki-calm-crown-concept-design.md` | Calm Crown 設計凍結與交付 gate |
+| `docs/superpowers/plans/2026-09-01-hinoki-calm-crown-cad-plan.md` | Iteration 03 八階段實作與審核計畫 |
+| `cad/iteration-03/hinoki_calm_crown_parameters.py` | Iteration 03 受控尺寸、物件 manifest 與評分契約 |
+| `cad/iteration-03/build_hinoki_calm_crown.py` | Calm Crown FreeCAD 建模腳本 |
+| `cad/iteration-03/Hinoki_CalmCrown_Concept.FCStd` | Task 2 正面外觀原生 CAD；尚未通過品質 gate |
+| `tests/test_hinoki_iteration03.py` | Iteration 03 參數與原生 CAD 契約測試 |
 | `Hinoki_Master_Parameters_and_Assumption_Log.xlsx` | 主參數與假設追蹤表（目前未納入 Git） |
 
 ## 環境需求
@@ -123,13 +136,15 @@ cad/iteration-01/Hinoki_Iteration01_CAD_Review.json
 - 重心、結構強度、傾倒穩定性與 thermal performance 尚未完成實測或高擬真分析。
 - 已建立概念審查用 STEP；尚未建立正式 release／製造 STEP deliverable。
 
-## Next Action：Iteration 02 Review 02
+## Next Action：Calm Crown Iteration 03
 
-1. 取得 bare 32-inch 4K panel、touch sensor、cover lens 與 controller 的可驗證 drawing，取代完整 display proxy。
-2. 選定或設計 captive privacy shutter，補做 travel、retention 與 optical obscuration review。
-3. 建立 Hinoki custom stand/base 的 load path、質量／重心、cable motion 與 tip-stability 模型。
-4. 加入 camera ISP/carrier、connector insertion、thermal 與 cable bend keep-out。
-5. 上述風險關閉或正式接受前，STEP 僅供概念審查，不作製造依據。
+1. 修正 Task 2 的兩個 Important：builder 必須直接引用受控參數；測試改用 temporary FCStd，不得覆寫已追蹤 artifact。
+2. 重跑 Task 2 規格與品質雙重審核，兩者放行後才進入 Task 3。
+3. Task 3 建立 rear pillow、260 × 220 mm service cover、vent、I/O recess 與全部 internal space claims。
+4. Task 4 建立 stand、420 × 285 × 68 mm base、120 mm travel 與 −5°／0°／+20° motion states。
+5. 完成 machine review、碰撞／評分、出版級渲染、產品 STP 交叉驗證與五領域 Agent Team 最終審核。
+
+目前尚未輸出可交付的 Iteration 03 STP 或出版級渲染；Iteration 02 STEP 只供舊 proxy 概念審查。
 
 ## Git 與資料注意事項
 
