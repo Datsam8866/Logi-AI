@@ -1,30 +1,34 @@
 # Logi-Hinoki
 
-Hinoki 是一套 32-inch All-in-One Video Conferencing System 的概念機構與空間配置專案。目前進度為 **Concept CAD Iteration 01**：以 FreeCAD 建立可重建的參數化概念裝配，用來追蹤產品包絡、顯示器、AV 元件、支架姿態與內部硬體空間聲明。
+Hinoki 是一套 32-inch All-in-One Video Conferencing System 的概念機構與空間配置專案。目前已建立 **Concept CAD Iteration 02 Preliminary Review Baseline**：以可追溯市場候選取代部分 Iteration 01 假設，用來 review panel/touch、camera/shutter 與 stand/VESA 的初步包絡。
 
-> Iteration 01 是概念驗證模型，不是 release geometry，也不代表量產設計已完成。
+> Iteration 02 仍是概念 review 模型，不是 release geometry，也不代表量產設計已完成。
 
 ## 目前狀態
 
-- 最新階段：Concept CAD Iteration 01
-- CAD review：Pass
+- 最新階段：Concept CAD Iteration 02 Preliminary Review Baseline
+- CAD review：PassWithOpenRisks
 - 顯示頭包絡：760 × 80 × 540 mm
-- 顯示器：32-inch 4K panel 概念包絡
-- Camera horizontal FOV：137° nominal concept
+- 顯示器 review proxy：One World Touch LM-3237-26B-4K，750.4 × 452.7 × 56.5 mm
+- Camera baseline：Leopard Imaging LI-IMX477-MIPI-140H，140° HFOV
+- Stand benchmark：Ergotron HX 45-475-224；VESA 200 × 200 mm
 - 支架姿態：low / neutral / high
 - Display-bottom height：370 / 430 / 490 mm
 - Tilt：−5° / 0° / +20°
 - STEP：尚未匯出
 
-Iteration 01 已包含 display、上方 AV bar、camera 與手動快門、speakers、microphones、radar、ambient light sensor、front lights、I/O、VESA、compute／thermal module、USB-C PD、base、height column，以及 cable／motion keep-out。
+Iteration 02 preliminary review 顯示：display proxy 位於 head envelope 內，但左右各只剩 4.8 mm；上方 AV reserve 為 87.3 mm，深度 reserve 為 23.5 mm。Ergotron HX 對 14 kg display proxy 的理論剩餘載重為 5.1 kg，尚未計入 Hinoki AV、compute、thermal、cable 與結構重量。
 
 ## 專案結構
 
 ```text
 Logi-Hinoki/
 ├─ cad/iteration-01/        # FreeCAD 模型、建模／預覽／review 腳本與 JSON 結果
+├─ cad/iteration-02/        # 初步市場包絡 review CAD、預覽與 JSON 結果
+├─ data/iteration-02/       # 候選料號與來源資料
 ├─ docs/reviews/            # 架構映射、pre-CAD audit、checklist 與 CAD review
 ├─ docs/superpowers/        # 已核准的設計規格與執行計畫
+├─ outputs/hinoki-iteration02-review/ # Iteration 02 候選工作簿
 ├─ tests/                   # Iteration 01 acceptance tests
 ├─ Dixie/                   # Dixie 參考資料（目前未納入 Git）
 ├─ outputs/                 # 工作輸出
@@ -42,6 +46,11 @@ Logi-Hinoki/
 | `cad/iteration-01/Hinoki_Iteration01_CAD_Review.json` | CAD review 結果 |
 | `tests/test_hinoki_iteration01.py` | CAD 重建與必要物件／參數 acceptance checks |
 | `docs/reviews/2026-09-01-hinoki-cad-iteration01-review.md` | Iteration 01 review 摘要 |
+| `outputs/hinoki-iteration02-review/Hinoki_Iteration02_Component_Candidates.xlsx` | 公式驅動候選矩陣、CAD 包絡與來源 |
+| `cad/iteration-02/Hinoki_Concept_CAD_Iteration02_Review.FCStd` | Iteration 02 初步 review CAD |
+| `cad/iteration-02/Hinoki_Iteration02_CAD_Review.json` | Iteration 02 自動 review 結果 |
+| `tests/test_hinoki_iteration02.py` | Iteration 02 acceptance checks |
+| `docs/reviews/2026-09-01-hinoki-iteration02-preliminary-review.md` | Iteration 02 初步 review 摘要 |
 | `Hinoki_Master_Parameters_and_Assumption_Log.xlsx` | 主參數與假設追蹤表（目前未納入 Git） |
 
 ## 環境需求
@@ -67,7 +76,7 @@ $env:FREECAD_CMD = "C:\path\to\FreeCAD\bin\freecadcmd.exe"
 在 `Logi-Hinoki` 根目錄執行 acceptance test；測試會呼叫 FreeCAD、重建 FCStd，並驗證必要物件與主參數：
 
 ```powershell
-python -m unittest tests.test_hinoki_iteration01 -v
+python -m unittest tests.test_hinoki_iteration01 tests.test_hinoki_iteration02 -v
 ```
 
 執行幾何 review：
@@ -89,35 +98,36 @@ cad/iteration-01/Hinoki_Iteration01_CAD_Review.json
 2. 在 FreeCAD Python console 執行 `preview_hinoki_iteration01.py`。
 3. 確認輸出 `Hinoki_Concept_CAD_Iteration01_Preview.png`。
 
-## Review 通過範圍
+## Iteration 02 Review 通過範圍
 
 目前自動 review 確認：
 
-- 顯示頭內部硬體包絡位於 head envelope 內。
-- 沒有偵測到非預期的硬體 bounding-box collision。
-- Panel bezel 與 AV bar 幾何符合 Iteration 01 參數。
-- Camera horizontal FOV 位於 134°～140° 的概念允收範圍。
+- LM-3237 完整顯示器 proxy 與 LI-IMX477 camera 包絡位於 head envelope 內。
+- Panel/touch proxy、camera 與 stand benchmark 均保留來源料號、URL 與分類。
+- Camera 140° HFOV 位於 134°～140° 概念允收範圍。
+- VESA 200 × 200 mm 可同時對應 LM-3237 proxy 與 Ergotron HX benchmark。
+- Review 狀態為 `PassWithOpenRisks`，不是無條件通過。
 
 這些檢查只證明概念空間配置一致，不等同於光學、結構、熱、聲學、法規或量產驗證。
 
 ## 已知假設與限制
 
-- A-013 至 A-040 仍標示為 Assumed，需由實體零件資料取代。
-- 尚未選定或導入完整 panel、camera、speaker、PCB、heatsink 與 stand 實體模型。
+- Head envelope、privacy shutter、custom stand/base 與多數內部硬體仍為 Assumed。
+- LM-3237 是完整商用 display review proxy，不是 bare panel/touch stack。
+- LI-IMX477 尚未包含 ISP、carrier、connector、線材與 shutter。
 - FOV 目前是概念包絡，尚未完成真實光線淨空分析。
 - 尚未驗證 shutter 運動、connector mating、cable bend radius 與 service access。
-- 質量、重心、結構強度、傾倒穩定性與 thermal performance 尚未完成實測或高擬真分析。
+- 5.1 kg stand 載重餘量尚未計入完整 AV／compute／thermal／結構重量。
+- 重心、結構強度、傾倒穩定性與 thermal performance 尚未完成實測或高擬真分析。
 - 尚未建立正式 STEP deliverable。
 
-## Next Action：Iteration 02
+## Next Action：Iteration 02 Review 02
 
-1. 鎖定 panel、camera、speaker、PCB、heatsink 與 stand 候選零件。
-2. 用供應商或量測所得的實體尺寸替換假設包絡。
-3. 補做 FOV 光線淨空與 privacy shutter 運動驗證。
-4. 檢查 connector insertion、cable routing、bend radius 與維修空間。
-5. 建立真實質量與重心模型，確認 stand load 與 stability。
-6. 加入 thermal architecture 與 vent／heatsink 空間驗證。
-7. review 通過後再建立 STEP 匯出與交付規則。
+1. 取得 bare 32-inch 4K panel、touch sensor、cover lens 與 controller 的可驗證 drawing，取代完整 display proxy。
+2. 選定或設計 captive privacy shutter，補做 travel、retention 與 optical obscuration review。
+3. 建立 Hinoki custom stand/base 的 load path、質量／重心、cable motion 與 tip-stability 模型。
+4. 加入 camera ISP/carrier、connector insertion、thermal 與 cable bend keep-out。
+5. 上述風險關閉或正式接受前，維持 STEP export blocked。
 
 ## Git 與資料注意事項
 
