@@ -11,6 +11,7 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CAD_ROOT = PROJECT_ROOT / "cad" / "iteration-02"
 BUILD_SCRIPT = CAD_ROOT / "build_hinoki_iteration02.py"
 REVIEW_SCRIPT = CAD_ROOT / "review_iteration02.py"
+PREVIEW_SCRIPT = CAD_ROOT / "preview_hinoki_iteration02.py"
 CAD_FILE = CAD_ROOT / "Hinoki_Concept_CAD_Iteration02_Review.FCStd"
 REVIEW_FILE = CAD_ROOT / "Hinoki_Iteration02_CAD_Review.json"
 FREECAD_CMD = Path(
@@ -38,6 +39,7 @@ class HinokiIteration02Tests(unittest.TestCase):
     def test_iteration02_review_cad_contains_verified_baselines_and_open_risks(self):
         self.assertTrue(BUILD_SCRIPT.exists(), "Iteration 02 builder must exist")
         self.assertTrue(REVIEW_SCRIPT.exists(), "Iteration 02 review script must exist")
+        self.assertTrue(PREVIEW_SCRIPT.exists(), "Iteration 02 preview script must exist")
         self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
 
         run_freecad_script(BUILD_SCRIPT)
