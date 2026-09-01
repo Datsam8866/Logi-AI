@@ -2,12 +2,22 @@
 
 from pathlib import Path
 import importlib.util
+import os
+import subprocess
 import unittest
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 CAD_ROOT = PROJECT_ROOT / "cad" / "iteration-03"
 PARAMETERS_FILE = CAD_ROOT / "hinoki_calm_crown_parameters.py"
+BUILD_SCRIPT = CAD_ROOT / "build_hinoki_calm_crown.py"
+CAD_FILE = CAD_ROOT / "Hinoki_CalmCrown_Concept.FCStd"
+FREECAD_CMD = Path(
+    os.environ.get(
+        "FREECAD_CMD",
+        r"C:\Users\skuan1\AppData\Local\Programs\FreeCAD 1.1\bin\freecadcmd.exe",
+    )
+)
 
 
 def load_parameters():
@@ -17,6 +27,19 @@ def load_parameters():
     module = importlib.util.module_from_spec(spec)
     spec.loader.exec_module(module)
     return module
+
+
+def run_freecad_script(script_path):
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=PROJECT_ROOT,
+        check=True,
+        capture_output=True,
+        text=True,
+        input="exec(compile(open(r'{}', encoding='utf-8').read(), r'{}', 'exec'))\n".format(
+            script_path.as_posix(), script_path.as_posix()
+        ),
+    )
 
 
 class HinokiIteration03Tests(unittest.TestCase):
@@ -132,6 +155,67 @@ class HinokiIteration03Tests(unittest.TestCase):
                 "requirement_traceability": 4,
                 "risk_integrity": 3,
             },
+        )
+
+    def test_native_cad_contains_finished_head_and_visible_front_architecture(self):
+        self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
+        self.assertTrue(BUILD_SCRIPT.exists(), "Iteration 03 builder must exist")
+
+        CAD_FILE.unlink(missing_ok=True)
+        run_freecad_script(BUILD_SCRIPT)
+        self.assertTrue(CAD_FILE.exists(), "Iteration 03 native CAD must be created")
+
+        probe = """
+import FreeCAD as App
+doc = App.open(r'{cad_file}')
+required = [
+    'Visible_ID_Surfaces', 'Structure', 'Internal_Space_Claims',
+    'Datums_and_Motion', 'Review_Metadata', 'Front_Glass', 'Display_Mask',
+    'Crown_Shell', 'Speaker_Insert_Left', 'Speaker_Insert_Right',
+    'Camera_Pill', 'Camera_Lens_Window', 'Shutter_Rail', 'Shutter_Tab_Open',
+    'Fill_Light_Left', 'Fill_Light_Right', 'Radar_Window', 'ALS_Window'
+]
+missing = [name for name in required if doc.getObject(name) is None]
+assert not missing, 'Missing objects: ' + ', '.join(missing)
+
+front_glass = doc.getObject('Front_Glass')
+crown_shell = doc.getObject('Crown_Shell')
+assert front_glass.Shape.isValid(), 'Front glass must be a valid solid'
+assert crown_shell.Shape.isValid(), 'Crown shell must be a valid solid'
+assert abs(front_glass.Shape.BoundBox.XLength - 742.0) < 1e-6
+assert abs(front_glass.Shape.BoundBox.YLength - 492.0) < 1e-6
+assert abs(front_glass.Shape.BoundBox.YMin - 115.0) < 1e-6
+assert front_glass.Shape.Volume < 742.0 * 492.0 * front_glass.Shape.BoundBox.ZLength
+
+metadata = doc.getObject('Model_Parameters')
+assert metadata is not None, 'Model parameters must record datum conventions'
+assert abs(metadata.HeadBottomY - 115.0) < 1e-6
+assert metadata.CoordinateSystem == 'X left/right; Y vertical; Z rearward'
+
+for name in required[5:]:
+    obj = doc.getObject(name)
+    assert obj.Shape.isValid(), name + ' must have valid geometry'
+    assert obj.Classification, name + ' must declare Classification'
+    assert obj.RequirementIDs, name + ' must declare RequirementIDs'
+    assert 'AssumptionIDs' in obj.PropertiesList
+
+front_z_starts = {{
+    round(doc.getObject(name).Shape.BoundBox.ZMin, 3)
+    for name in ('Front_Glass', 'Display_Mask', 'Crown_Shell', 'Camera_Pill')
+}}
+assert len(front_z_starts) == 4, 'Front layers need controlled non-coplanar Z datums'
+print('Calm Crown native front architecture checks passed')
+""".format(cad_file=CAD_FILE.as_posix())
+        result = subprocess.run(
+            [str(FREECAD_CMD), "-c"],
+            cwd=PROJECT_ROOT,
+            check=True,
+            capture_output=True,
+            text=True,
+            input=probe,
+        )
+        self.assertIn(
+            "Calm Crown native front architecture checks passed", result.stdout
         )
 
 
