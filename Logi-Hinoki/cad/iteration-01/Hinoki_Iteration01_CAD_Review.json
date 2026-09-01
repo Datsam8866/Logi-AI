@@ -1,0 +1,40 @@
+{
+  "cad_file": "C:\\Users\\skuan1\\Desktop\\Logi AI\\Logi-Hinoki\\cad\\iteration-01\\Hinoki_Concept_CAD_Iteration01.FCStd",
+  "head_envelope_mm": [
+    760.0,
+    80.0,
+    540.0
+  ],
+  "motion_states": {
+    "low_forward": {
+      "pivot_mm": 370.0,
+      "tilt_deg": -5.0
+    },
+    "neutral": {
+      "pivot_mm": 430.0,
+      "tilt_deg": 0.0
+    },
+    "high_rearward": {
+      "pivot_mm": 490.0,
+      "tilt_deg": 20.0
+    }
+  },
+  "head_containment_failures": [],
+  "unintended_hard_package_collisions": [],
+  "panel_geometry_mm": {
+    "left_bezel_mm": 15.0,
+    "right_bezel_mm": 15.0,
+    "bottom_bezel_mm": 35.0,
+    "display_to_av_bar_gap_mm": 0.0
+  },
+  "camera_fov": {
+    "horizontal_fov_deg": 137.0,
+    "clearance_status": "Concept pass \u2014 front hardware remains behind camera front datum",
+    "result": "Pass"
+  },
+  "cad_review_status": "Pass",
+  "limitations": [
+    "FOV ray clearance, shutter motion, I/O insertion sweep, cable bend radius and real component mass properties remain CAD review items.",
+    "All A-013 through A-040 controlled concept values remain Assumed and are not release dimensions."
+  ]
+}
