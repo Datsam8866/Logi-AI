@@ -14,7 +14,10 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PARAMETERS_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "hinoki_thermal_parameters.py"
 BUILD_SCRIPT = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "build_hinoki_thermal_cht.py"
 REVIEW_SCRIPT = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "review_hinoki_thermal_cht.py"
+EXPORT_SCRIPT = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "export_hinoki_thermal_cht.py"
 CAD_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_CHT_Model.FCStd"
+SOLIDS_STEP_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_CHT_Solids.step"
+AIR_STEP_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_Internal_Air.step"
 SETUP_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_FLOEFD_Setup.json"
 REVIEW_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_CHT_Review.json"
 FREECAD_CMD = Path(
@@ -61,6 +64,100 @@ def run_freecad_review(script_path, env):
         cwd=Path(tempfile.gettempdir()),
         env=env,
         input=launcher,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+
+def run_freecad_export(script_path, env):
+    """Run the exporter source through FreeCAD from a non-project cwd."""
+    source = script_path.read_text(encoding="utf-8")
+    launcher = "source = {!r}\nexec(compile(source, {!r}, 'exec'))\n".format(
+        source, str(script_path)
+    )
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=Path(tempfile.gettempdir()),
+        env=env,
+        input=launcher,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+
+def step_reimport_probe(solids_path, air_path, p):
+    """Return a native STEP re-import check for the approved mm-scale handoff."""
+    return r'''
+import FreeCAD as App
+import Import
+
+def positive_features(document):
+    return [
+        obj for obj in document.Objects
+        if hasattr(obj, "Shape") and obj.Shape.isValid() and obj.Shape.Volume > 0.0
+    ]
+
+def semantic_body_features(document):
+    features = positive_features(document)
+    containers = [obj for obj in features if len(obj.Shape.Solids) > 1]
+    top_container = max(containers, key=lambda obj: obj.Shape.Volume, default=None)
+    body_containers = [obj for obj in containers if obj is not top_container]
+    def is_container_child(obj):
+        return any(
+            obj is not container
+            and abs(container.Shape.common(obj.Shape).Volume - obj.Shape.Volume) <= 0.01
+            for container in body_containers
+        )
+    return [
+        obj for obj in features
+        if obj is not top_container and not is_container_child(obj)
+    ]
+
+solids = App.newDocument("StepSolidsProbe")
+Import.insert(r"{solids_path}", solids.Name)
+solid_features = semantic_body_features(solids)
+assert len(solid_features) == {solid_count}, "solid STEP feature count: " + repr([
+    obj.Name for obj in solid_features
+])
+solid_box = solid_features[0].Shape.BoundBox
+for obj in solid_features[1:]:
+    solid_box.add(obj.Shape.BoundBox)
+assert 741.9 <= solid_box.XLength <= 742.1
+assert 491.9 <= solid_box.YLength <= 492.1
+assert 61.9 <= solid_box.ZLength <= 62.1
+assert not any("Opening" in obj.Name for obj in solids.Objects)
+App.closeDocument(solids.Name)
+
+air = App.newDocument("StepAirProbe")
+Import.insert(r"{air_path}", air.Name)
+air_features = positive_features(air)
+assert len(air_features) == 1, "air STEP feature count: " + repr([
+    obj.Name for obj in air_features
+])
+air_box = air_features[0].Shape.BoundBox
+assert air_box.XLength > 700.0 and air_box.YLength > 450.0 and air_box.ZLength > 40.0
+assert air_box.XLength < 1000.0 and air_box.YLength < 1000.0 and air_box.ZLength < 100.0
+App.closeDocument(air.Name)
+assert not App.listDocuments()
+print("HINOKI_THERMAL_STEP_REIMPORT_OK solids={{}} air={{}}".format(
+    len(solid_features), len(air_features)
+))
+'''.format(
+        solids_path=solids_path.as_posix(),
+        air_path=air_path.as_posix(),
+        solid_count=len(p.SOLID_BODIES),
+    )
+
+
+def run_step_reimport_probe(solids_path, air_path, p):
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=Path(tempfile.gettempdir()),
+        input="exec({!r})\n".format(step_reimport_probe(solids_path, air_path, p)),
         capture_output=True,
         text=True,
         check=False,
@@ -846,6 +943,120 @@ else:
       ))
 
       self.assertEqual(CAD_FILE.read_bytes(), original_cad_bytes)
+
+  def test_step_export_reimports_isolated_temporary_handoff_files(self):
+    """The exporter must atomically create mm-scale STEP solids and connected air."""
+    self.assertTrue(EXPORT_SCRIPT.exists(), "thermal STEP exporter must exist")
+    self.assertTrue(CAD_FILE.exists(), "formal thermal model must exist")
+    p = load_parameters()
+    original_model_bytes = CAD_FILE.read_bytes()
+    original_solids_bytes = (
+        SOLIDS_STEP_FILE.read_bytes() if SOLIDS_STEP_FILE.exists() else None
+    )
+    original_air_bytes = AIR_STEP_FILE.read_bytes() if AIR_STEP_FILE.exists() else None
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+      temp_root = Path(temp_dir)
+      temporary_model = temp_root / p.MODEL_FILE
+      temporary_solids = temp_root / p.SOLIDS_STEP
+      temporary_air = temp_root / p.AIR_STEP
+      builder_env = os.environ.copy()
+      builder_env["HINOKI_THERMAL_MODEL_PATH"] = str(temporary_model)
+      built = run_freecad_builder(BUILD_SCRIPT, builder_env)
+      self.assertEqual(built.returncode, 0, built.stdout + built.stderr)
+
+      export_env = os.environ.copy()
+      export_env["HINOKI_THERMAL_MODEL_PATH"] = str(temporary_model)
+      export_env["HINOKI_THERMAL_SOLIDS_STEP_PATH"] = str(temporary_solids)
+      export_env["HINOKI_THERMAL_AIR_STEP_PATH"] = str(temporary_air)
+      exported = run_freecad_export(EXPORT_SCRIPT, export_env)
+      combined = exported.stdout + exported.stderr
+      self.assertEqual(exported.returncode, 0, combined)
+      self.assertIn("HINOKI_THERMAL_EXPORT_OK", combined)
+      self.assertTrue(temporary_solids.exists())
+      self.assertTrue(temporary_air.exists())
+      self.assertGreater(temporary_solids.stat().st_size, 10_000)
+      self.assertGreater(temporary_air.stat().st_size, 1_000)
+
+      reimport = run_step_reimport_probe(temporary_solids, temporary_air, p)
+      self.assertEqual(reimport.returncode, 0, reimport.stdout + reimport.stderr)
+      self.assertIn(
+          "HINOKI_THERMAL_STEP_REIMPORT_OK solids=16 air=1",
+          reimport.stdout + reimport.stderr,
+      )
+
+    self.assertEqual(CAD_FILE.read_bytes(), original_model_bytes)
+    self.assertEqual(
+        SOLIDS_STEP_FILE.read_bytes() if SOLIDS_STEP_FILE.exists() else None,
+        original_solids_bytes,
+    )
+    self.assertEqual(
+        AIR_STEP_FILE.read_bytes() if AIR_STEP_FILE.exists() else None,
+        original_air_bytes,
+    )
+
+  def test_step_export_validation_failure_preserves_old_outputs_and_cleans_temps(self):
+    """A staged STEP validation failure cannot replace either existing handoff file."""
+    source = EXPORT_SCRIPT.read_text(encoding="utf-8")
+    p = load_parameters()
+    with tempfile.TemporaryDirectory() as temp_dir:
+      root = Path(temp_dir)
+      temporary_model = root / p.MODEL_FILE
+      built_env = os.environ.copy()
+      built_env["HINOKI_THERMAL_MODEL_PATH"] = str(temporary_model)
+      built = run_freecad_builder(BUILD_SCRIPT, built_env)
+      self.assertEqual(built.returncode, 0, built.stdout + built.stderr)
+
+      solids_path = root / p.SOLIDS_STEP
+      air_path = root / p.AIR_STEP
+      solids_path.write_bytes(b"old solids STEP survives")
+      air_path.write_bytes(b"old air STEP survives")
+      launcher = r'''
+from pathlib import Path
+import FreeCAD as App
+
+namespace = {{"__name__": "step_failure_regression", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+namespace["_validate_step_reimport"] = lambda *args: (_ for _ in ()).throw(
+    RuntimeError("forced STEP validation failure")
+)
+try:
+    namespace["export_handoff"](Path(r"{model_path}"))
+except RuntimeError as error:
+    assert "forced STEP validation failure" in str(error)
+else:
+    raise AssertionError("forced STEP validation failure must propagate")
+assert Path(r"{solids_path}").read_bytes() == b"old solids STEP survives"
+assert Path(r"{air_path}").read_bytes() == b"old air STEP survives"
+assert not list(Path(r"{root}").glob(".*.step"))
+assert not App.listDocuments()
+print("HINOKI_STEP_EXPORT_FAILURE_CLEANUP_OK")
+'''.format(
+          script_path=EXPORT_SCRIPT.as_posix(),
+          source=source,
+          model_path=temporary_model.as_posix(),
+          solids_path=solids_path.as_posix(),
+          air_path=air_path.as_posix(),
+          root=root.as_posix(),
+      )
+      export_env = os.environ.copy()
+      export_env["HINOKI_THERMAL_MODEL_PATH"] = str(temporary_model)
+      export_env["HINOKI_THERMAL_SOLIDS_STEP_PATH"] = str(solids_path)
+      export_env["HINOKI_THERMAL_AIR_STEP_PATH"] = str(air_path)
+      result = subprocess.run(
+          [str(FREECAD_CMD), "-c"],
+          cwd=Path(tempfile.gettempdir()),
+          env=export_env,
+          input="exec({!r})\n".format(launcher),
+          capture_output=True,
+          text=True,
+          check=False,
+          timeout=120,
+      )
+      self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+      self.assertIn(
+          "HINOKI_STEP_EXPORT_FAILURE_CLEANUP_OK", result.stdout + result.stderr
+      )
 
   def test_review_failure_signaling_never_emits_success_sentinel(self):
     """A failed review has a unique failure signal and no success signal."""
