@@ -1,6 +1,7 @@
 """Controlled parameters and object contracts for Hinoki Calm Crown Iteration 03."""
 
 HEAD = {"width": 742.0, "height": 492.0, "depth": 62.0, "corner_radius": 18.0}
+HEAD_BOTTOM_Y = 115.0
 CROWN_HEIGHT = 72.0
 ACTIVE_AREA = {"width": 708.4, "height": 398.5}
 VESA_PATTERN = 100.0
@@ -36,6 +37,8 @@ PRODUCT_EXPORT_OBJECTS = (
     "Foot_Left",
     "Foot_Right",
 )
+
+FRONT_ARCHITECTURE_OBJECTS = PRODUCT_EXPORT_OBJECTS[:13]
 
 REQUIRED_VISIBLE_OBJECTS = PRODUCT_EXPORT_OBJECTS + (
     "Mic_Aperture_Left_Outer",

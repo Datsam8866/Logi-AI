@@ -6,11 +6,11 @@ Hinoki 是一套 32-inch All-in-One Video Conferencing System 的概念機構與
 
 ## 目前狀態（2026-09-02）
 
-- 最新階段：Calm Crown Concept CAD Iteration 03，Task 2 品質修正待完成
+- 最新階段：Calm Crown Concept CAD Iteration 03，Task 2 品質修正已完成，待重新審核
 - 分支：`codex/hinoki-iteration02-review`
 - Iteration 03 頭部：742 × 492 × 62 mm，72 mm AV crown
 - 正面原生 CAD：已建立 13 個獨立可視零件與五個頂層 group
-- Agent review：Task 1 通過；Task 2 規格通過，但品質 gate 有 2 個 Important，尚未放行
+- Agent review：Task 1 通過；Task 2 規格通過，兩個 Important 品質修正已完成，待重新審核放行
 - Concept delivery gate：所有 hard gates 通過且加權分數至少 80/100
 - Release／製造 gate：至少 90/100；本階段不宣稱達成
 - Iteration 02 CAD review：PassWithOpenRisks，但只代表 proxy 空間配置
@@ -138,11 +138,10 @@ cad/iteration-01/Hinoki_Iteration01_CAD_Review.json
 
 ## Next Action：Calm Crown Iteration 03
 
-1. 修正 Task 2 的兩個 Important：builder 必須直接引用受控參數；測試改用 temporary FCStd，不得覆寫已追蹤 artifact。
-2. 重跑 Task 2 規格與品質雙重審核，兩者放行後才進入 Task 3。
-3. Task 3 建立 rear pillow、260 × 220 mm service cover、vent、I/O recess 與全部 internal space claims。
-4. Task 4 建立 stand、420 × 285 × 68 mm base、120 mm travel 與 −5°／0°／+20° motion states。
-5. 完成 machine review、碰撞／評分、出版級渲染、產品 STP 交叉驗證與五領域 Agent Team 最終審核。
+1. 重跑 Task 2 規格與品質雙重審核；確認受控參數引用與 temporary FCStd 測試品質 gate 放行後才進入 Task 3。
+2. Task 3 建立 rear pillow、260 × 220 mm service cover、vent、I/O recess 與全部 internal space claims。
+3. Task 4 建立 stand、420 × 285 × 68 mm base、120 mm travel 與 −5°／0°／+20° motion states。
+4. 完成 machine review、碰撞／評分、出版級渲染、產品 STP 交叉驗證與五領域 Agent Team 最終審核。
 
 目前尚未輸出可交付的 Iteration 03 STP 或出版級渲染；Iteration 02 STEP 只供舊 proxy 概念審查。
 

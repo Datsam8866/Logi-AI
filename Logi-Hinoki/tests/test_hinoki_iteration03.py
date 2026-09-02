@@ -4,6 +4,7 @@ from pathlib import Path
 import importlib.util
 import os
 import subprocess
+import tempfile
 import unittest
 
 
@@ -29,13 +30,14 @@ def load_parameters():
     return module
 
 
-def run_freecad_script(script_path):
+def run_freecad_script(script_path, env=None):
     return subprocess.run(
         [str(FREECAD_CMD), "-c"],
         cwd=PROJECT_ROOT,
         check=True,
         capture_output=True,
         text=True,
+        env=env,
         input="exec(compile(open(r'{}', encoding='utf-8').read(), r'{}', 'exec'))\n".format(
             script_path.as_posix(), script_path.as_posix()
         ),
@@ -43,6 +45,15 @@ def run_freecad_script(script_path):
 
 
 class HinokiIteration03Tests(unittest.TestCase):
+    def test_builder_uses_controlled_parameters_module(self):
+        builder_source = BUILD_SCRIPT.read_text(encoding="utf-8")
+
+        self.assertIn("hinoki_calm_crown_parameters", builder_source)
+        self.assertNotIn("HEAD_WIDTH = 742.0", builder_source)
+        self.assertNotIn("HEAD_HEIGHT = 492.0", builder_source)
+        self.assertNotIn("HEAD_DEPTH = 62.0", builder_source)
+        self.assertNotIn("CROWN_HEIGHT = 72.0", builder_source)
+
     def test_parameter_contract_matches_approved_design(self):
         self.assertTrue(PARAMETERS_FILE.exists())
         p = load_parameters()
@@ -57,6 +68,7 @@ class HinokiIteration03Tests(unittest.TestCase):
             },
         )
         self.assertEqual(p.CROWN_HEIGHT, 72.0)
+        self.assertEqual(p.HEAD_BOTTOM_Y, 115.0)
         self.assertEqual(p.ACTIVE_AREA, {"width": 708.4, "height": 398.5})
         self.assertEqual(p.VESA_PATTERN, 100.0)
         self.assertEqual(
@@ -111,6 +123,9 @@ class HinokiIteration03Tests(unittest.TestCase):
         self.assertIn("Rear_Service_Cover", p.PRODUCT_EXPORT_OBJECTS)
         self.assertNotIn("Camera_FOV_KeepOut", p.PRODUCT_EXPORT_OBJECTS)
         self.assertEqual(
+            p.FRONT_ARCHITECTURE_OBJECTS, expected_export_objects[:13]
+        )
+        self.assertEqual(
             p.REQUIRED_VISIBLE_OBJECTS,
             expected_export_objects + expected_mic_apertures,
         )
@@ -160,12 +175,24 @@ class HinokiIteration03Tests(unittest.TestCase):
     def test_native_cad_contains_finished_head_and_visible_front_architecture(self):
         self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
         self.assertTrue(BUILD_SCRIPT.exists(), "Iteration 03 builder must exist")
+        self.assertTrue(CAD_FILE.exists(), "Tracked Iteration 03 CAD must exist")
 
-        CAD_FILE.unlink(missing_ok=True)
-        run_freecad_script(BUILD_SCRIPT)
-        self.assertTrue(CAD_FILE.exists(), "Iteration 03 native CAD must be created")
+        original_cad_bytes = CAD_FILE.read_bytes()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temporary_cad_file = Path(temp_dir) / "Hinoki_CalmCrown_Concept.FCStd"
+            builder_env = os.environ.copy()
+            builder_env["HINOKI_CALM_CROWN_OUTPUT_PATH"] = str(temporary_cad_file)
+            run_freecad_script(BUILD_SCRIPT, env=builder_env)
+            self.assertTrue(
+                temporary_cad_file.exists(), "Iteration 03 native CAD must be created"
+            )
+            self.assertEqual(
+                CAD_FILE.read_bytes(),
+                original_cad_bytes,
+                "Builder test must not overwrite tracked Iteration 03 CAD",
+            )
 
-        probe = """
+            probe = """
 import FreeCAD as App
 doc = App.open(r'{cad_file}')
 required = [
@@ -177,6 +204,12 @@ required = [
 ]
 missing = [name for name in required if doc.getObject(name) is None]
 assert not missing, 'Missing objects: ' + ', '.join(missing)
+assert tuple(obj.Name for obj in doc.getObject('Visible_ID_Surfaces').Group) == (
+    'Front_Glass', 'Display_Mask', 'Crown_Shell', 'Speaker_Insert_Left',
+    'Speaker_Insert_Right', 'Camera_Pill', 'Camera_Lens_Window', 'Shutter_Rail',
+    'Shutter_Tab_Open', 'Fill_Light_Left', 'Fill_Light_Right', 'Radar_Window',
+    'ALS_Window'
+)
 
 front_glass = doc.getObject('Front_Glass')
 crown_shell = doc.getObject('Crown_Shell')
@@ -205,15 +238,15 @@ front_z_starts = {{
 }}
 assert len(front_z_starts) == 4, 'Front layers need controlled non-coplanar Z datums'
 print('Calm Crown native front architecture checks passed')
-""".format(cad_file=CAD_FILE.as_posix())
-        result = subprocess.run(
+""".format(cad_file=temporary_cad_file.as_posix())
+            result = subprocess.run(
             [str(FREECAD_CMD), "-c"],
             cwd=PROJECT_ROOT,
             check=True,
             capture_output=True,
             text=True,
             input=probe,
-        )
+            )
         self.assertIn(
             "Calm Crown native front architecture checks passed", result.stdout
         )

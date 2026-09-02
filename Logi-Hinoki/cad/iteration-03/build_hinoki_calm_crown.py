@@ -4,6 +4,8 @@ This is external concept-review geometry, not manufacturing geometry.
 Coordinate system: X left/right, Y vertical, Z rearward.
 """
 
+import os
+import sys
 from pathlib import Path
 
 import FreeCAD as App
@@ -16,14 +18,25 @@ SCRIPT_PATH = Path(
         Path.cwd() / "cad" / "iteration-03" / "build_hinoki_calm_crown.py",
     )
 )
-OUTPUT_PATH = SCRIPT_PATH.with_name("Hinoki_CalmCrown_Concept.FCStd")
+if str(SCRIPT_PATH.parent) not in sys.path:
+    sys.path.insert(0, str(SCRIPT_PATH.parent))
 
-HEAD_WIDTH = 742.0
-HEAD_HEIGHT = 492.0
-HEAD_DEPTH = 62.0
-HEAD_RADIUS = 18.0
-HEAD_BOTTOM_Y = 115.0
-CROWN_HEIGHT = 72.0
+import hinoki_calm_crown_parameters as parameters
+
+
+OUTPUT_PATH = Path(
+    os.environ.get(
+        "HINOKI_CALM_CROWN_OUTPUT_PATH",
+        SCRIPT_PATH.with_name("Hinoki_CalmCrown_Concept.FCStd"),
+    )
+)
+
+HEAD_WIDTH = parameters.HEAD["width"]
+HEAD_HEIGHT = parameters.HEAD["height"]
+HEAD_DEPTH = parameters.HEAD["depth"]
+HEAD_RADIUS = parameters.HEAD["corner_radius"]
+HEAD_BOTTOM_Y = parameters.HEAD_BOTTOM_Y
+CROWN_HEIGHT = parameters.CROWN_HEIGHT
 
 COLORS = {
     "glass": (0.055, 0.065, 0.075),
@@ -136,7 +149,7 @@ def build_document():
         doc,
         visible,
         "Front_Glass",
-        "Front Cover Glass — 742 × 492 mm",
+        "Front Cover Glass — {} × {} mm".format(HEAD_WIDTH, HEAD_HEIGHT),
         rounded_prism_xy(
             HEAD_WIDTH,
             HEAD_HEIGHT,
@@ -154,7 +167,11 @@ def build_document():
 
     mask_outer = rounded_prism_xy(722.0, 407.0, 0.45, 12.0, (-361.0, 122.0, 2.10))
     active_opening = rounded_prism_xy(
-        708.4, 398.5, 0.45, 8.0, (-354.2, 126.25, 2.10)
+        parameters.ACTIVE_AREA["width"],
+        parameters.ACTIVE_AREA["height"],
+        0.45,
+        8.0,
+        (-354.2, 126.25, 2.10),
     )
     add_feature(
         doc,
@@ -286,6 +303,14 @@ def build_document():
         "Ambient-light-sensor provision",
         "A-007; A-043",
     )
+
+    built_front_object_names = tuple(obj.Name for obj in visible.Group)
+    if built_front_object_names != parameters.FRONT_ARCHITECTURE_OBJECTS:
+        raise RuntimeError(
+            "Front architecture does not match controlled manifest: {}".format(
+                ", ".join(parameters.FRONT_ARCHITECTURE_OBJECTS)
+            )
+        )
 
     doc.recompute()
     if OUTPUT_PATH.exists():
