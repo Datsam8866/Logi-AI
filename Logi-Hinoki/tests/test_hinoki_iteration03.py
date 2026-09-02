@@ -331,6 +331,88 @@ print('Calm Crown native front architecture checks passed')
             "Calm Crown native front architecture checks passed", result.stdout
         )
 
+    def test_native_cad_contains_rear_architecture_and_internal_claims(self):
+        """Task 3 rear parts and reference-only claims are machine traceable."""
+        self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
+
+        original_cad_bytes = CAD_FILE.read_bytes()
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temporary_cad_file = Path(temp_dir) / "Hinoki_CalmCrown_Concept.FCStd"
+            builder_env = os.environ.copy()
+            builder_env["HINOKI_CALM_CROWN_OUTPUT_PATH"] = str(temporary_cad_file)
+            run_freecad_script(BUILD_SCRIPT, env=builder_env)
+            self.assertEqual(
+                CAD_FILE.read_bytes(),
+                original_cad_bytes,
+                "Builder test must not overwrite tracked Iteration 03 CAD",
+            )
+
+            probe = """
+import FreeCAD as App
+doc = App.open(r'{cad_file}')
+visible_names = ('Rear_Shell', 'Rear_Service_Cover', 'Vent_Insert_Lower', 'IO_Recess')
+claim_names = {claim_names!r}
+required = visible_names + claim_names
+missing = [name for name in required if doc.getObject(name) is None]
+assert not missing, 'Missing Task 3 objects: ' + ', '.join(missing)
+
+for name in required:
+    obj = doc.getObject(name)
+    assert obj.TypeId == 'Part::Feature', name + ' must be a Part::Feature'
+    assert obj.Shape.isValid(), name + ' must have valid geometry'
+    assert obj.Shape.Volume > 0.0, name + ' must have positive volume'
+    for property_name in ('Classification', 'RequirementIDs', 'AssumptionIDs',
+                          'ExportPolicy', 'Source', 'ReviewStatus'):
+        assert property_name in obj.PropertiesList, name + ' missing ' + property_name
+        assert getattr(obj, property_name), name + ' must set ' + property_name
+
+rear_shell = doc.getObject('Rear_Shell')
+service_cover = doc.getObject('Rear_Service_Cover')
+vent = doc.getObject('Vent_Insert_Lower')
+io_recess = doc.getObject('IO_Recess')
+product_parts = [
+    obj for obj in doc.Objects
+    if obj.TypeId == 'Part::Feature'
+    and getattr(obj, 'ExportPolicy', '') == 'ProductGeometry'
+]
+assert product_parts, 'CAD must contain product solids'
+for obj in product_parts:
+    assert obj.Shape.isValid(), obj.Name + ' product solid must be valid'
+    assert obj.Shape.Volume > 0.0, obj.Name + ' product solid must have positive volume'
+assert rear_shell.Shape.BoundBox.ZMax > 0.0
+assert rear_shell.Shape.BoundBox.ZLength > service_cover.Shape.BoundBox.ZLength
+assert abs(service_cover.Shape.BoundBox.XLength - 260.0) < 1e-6
+assert abs(service_cover.Shape.BoundBox.YLength - 220.0) < 1e-6
+assert vent.Shape.BoundBox.YMin < service_cover.Shape.BoundBox.YMin
+assert io_recess.Shape.BoundBox.ZMin >= rear_shell.Shape.BoundBox.ZMin
+
+for name in claim_names:
+    obj = doc.getObject(name)
+    assert obj.ExportPolicy == 'ReferenceOnly', name + ' must be reference-only'
+    assert 'DefaultVisibility' in obj.PropertiesList
+    assert not obj.DefaultVisibility, name + ' must be hidden by default'
+
+vesa = doc.getObject('VESA_Reinforcement_Claim')
+assert 'VESAPattern' in vesa.PropertiesList
+assert abs(vesa.VESAPattern.Value - 100.0) < 1e-6
+print('Calm Crown native rear and internal architecture checks passed')
+""".format(
+                cad_file=temporary_cad_file.as_posix(),
+                claim_names=load_parameters().REQUIRED_INTERNAL_CLAIMS,
+            )
+            result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=PROJECT_ROOT,
+                check=True,
+                capture_output=True,
+                text=True,
+                input="exec({!r})\n".format(probe),
+            )
+        self.assertIn(
+            "Calm Crown native rear and internal architecture checks passed",
+            result.stdout + result.stderr,
+        )
+
     def test_builder_runs_from_non_project_cwd_with_absolute_paths(self):
         self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
         non_project_cwd = Path(os.environ.get("WINDIR", r"C:\\Windows")) / "Temp"
@@ -344,7 +426,7 @@ print('Calm Crown native front architecture checks passed')
                 BUILD_SCRIPT, env=builder_env, cwd=non_project_cwd
             )
             self.assertIn(
-                "Hinoki Calm Crown front architecture generated:", result.stdout
+                "Hinoki Calm Crown architecture generated:", result.stdout
             )
             self.assertTrue(temporary_cad_file.exists())
 
