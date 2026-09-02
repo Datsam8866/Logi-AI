@@ -1,6 +1,7 @@
 """Contract checks for the approved Hinoki FLOEFD thermal CHT case."""
 
 from importlib.util import module_from_spec, spec_from_file_location
+import ast
 import os
 from pathlib import Path
 import subprocess
@@ -50,6 +51,7 @@ def thermal_validation_probe(cad_file, p):
     return r'''
 import FreeCAD as App
 import Part
+import hashlib
 import itertools
 
 doc = App.open(r"{cad_file}")
@@ -90,6 +92,12 @@ air = doc.getObject("Internal_Air_Volume")
 assert air is not None and air.Shape.isValid() and air.Shape.Volume > 0.0
 assert len(air.Shape.Solids) == 1, "internal air must be one connected solid"
 assert air.MaterialIntent == "Air" and air.Units == "mm"
+air_solid_overlaps = [
+    (air.Shape.common(doc.getObject(name).Shape).Volume, name)
+    for name in solid_names
+]
+max_air_solid_overlap, max_air_solid_name = max(air_solid_overlaps)
+assert max_air_solid_overlap <= 0.01, "Internal air overlaps " + max_air_solid_name
 
 head_width = {head_width!r}
 head_height = {head_height!r}
@@ -191,6 +199,48 @@ signature = "air_solids={{}};vents={{}};heat={{:.3f}};max_overlap={{:.6f}};bbox=
 )
 print("HINOKI_THERMAL_REOPEN_OK")
 print("HINOKI_THERMAL_SIGNATURE " + signature)
+print(
+    "HINOKI_THERMAL_AIR_SOLID_MAX name={{}} volume={{:.6f}}".format(
+        max_air_solid_name, max_air_solid_overlap
+    )
+)
+fingerprint_names = solid_names + ("Internal_Air_Volume",) + boundary_names
+def shape_center_of_mass(shape):
+    leaves = shape.Solids
+    if leaves:
+        total_volume = sum(leaf.Volume for leaf in leaves)
+        return App.Vector(
+            sum(leaf.CenterOfMass.x * leaf.Volume for leaf in leaves) / total_volume,
+            sum(leaf.CenterOfMass.y * leaf.Volume for leaf in leaves) / total_volume,
+            sum(leaf.CenterOfMass.z * leaf.Volume for leaf in leaves) / total_volume,
+        )
+    faces = shape.Faces
+    total_area = sum(face.Area for face in faces)
+    return App.Vector(
+        sum(face.CenterOfMass.x * face.Area for face in faces) / total_area,
+        sum(face.CenterOfMass.y * face.Area for face in faces) / total_area,
+        sum(face.CenterOfMass.z * face.Area for face in faces) / total_area,
+    )
+for name in fingerprint_names:
+    shape = doc.getObject(name).Shape
+    bounds = shape.BoundBox
+    centre = shape_center_of_mass(shape)
+    fingerprint = (
+        name,
+        shape.ShapeType,
+        len(shape.Solids),
+        tuple(round(value, 6) for value in (
+            bounds.XMin, bounds.YMin, bounds.ZMin,
+            bounds.XMax, bounds.YMax, bounds.ZMax,
+        )),
+        round(shape.Volume, 6),
+        tuple(round(value, 6) for value in (centre.x, centre.y, centre.z)),
+        len(shape.Faces),
+        len(shape.Edges),
+        hashlib.sha256(shape.exportBrepToString().encode("utf-8")).hexdigest(),
+    )
+    print("HINOKI_THERMAL_FINGERPRINT " + repr(fingerprint))
+print("HINOKI_THERMAL_FINGERPRINTS_OK")
 '''.format(
         cad_file=cad_file.as_posix(),
         solid_names=p.SOLID_BODIES,
@@ -224,6 +274,26 @@ def signature_from(result):
         if line.startswith("HINOKI_THERMAL_SIGNATURE "):
             return line.partition(" ")[2]
     return ""
+
+
+def fingerprints_from(result):
+    fingerprints = {}
+    for line in (result.stdout + result.stderr).splitlines():
+        if line.startswith("HINOKI_THERMAL_FINGERPRINT "):
+            fingerprint = ast.literal_eval(line.partition(" ")[2])
+            fingerprints[fingerprint[0]] = fingerprint
+    return fingerprints
+
+
+def assert_matching_fingerprints(test_case, temporary, formal, expected_names):
+    test_case.assertEqual(set(temporary), set(expected_names))
+    test_case.assertEqual(set(formal), set(expected_names))
+    for name in expected_names:
+        test_case.assertEqual(
+            temporary[name],
+            formal[name],
+            "formal/temp geometry fingerprint differs for " + name,
+        )
 
 
 class HinokiThermalCHTTests(unittest.TestCase):
@@ -321,9 +391,20 @@ class HinokiThermalCHTTests(unittest.TestCase):
       reopen = run_freecad_probe(temporary_cad, p)
       self.assertEqual(reopen.returncode, 0, reopen.stdout + reopen.stderr)
       self.assertIn("HINOKI_THERMAL_REOPEN_OK", reopen.stdout + reopen.stderr)
+      self.assertIn("HINOKI_THERMAL_FINGERPRINTS_OK", reopen.stdout + reopen.stderr)
       formal_reopen = run_freecad_probe(CAD_FILE, p)
       self.assertEqual(formal_reopen.returncode, 0, formal_reopen.stdout + formal_reopen.stderr)
+      self.assertIn("HINOKI_THERMAL_FINGERPRINTS_OK", formal_reopen.stdout + formal_reopen.stderr)
       self.assertEqual(signature_from(reopen), signature_from(formal_reopen))
+      expected_fingerprint_names = (
+          p.SOLID_BODIES + p.FLUID_BODIES + p.BOUNDARY_FACES
+      )
+      assert_matching_fingerprints(
+          self,
+          fingerprints_from(reopen),
+          fingerprints_from(formal_reopen),
+          expected_fingerprint_names,
+      )
       self.assertEqual(
           CAD_FILE.read_bytes(),
           original_cad_bytes,
@@ -378,3 +459,70 @@ print("HINOKI_ATOMIC_INDEPENDENT_REOPEN_OK")
       )
       self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
       self.assertIn("HINOKI_ATOMIC_INDEPENDENT_REOPEN_OK", result.stdout + result.stderr)
+
+  def test_aggregate_signature_cannot_detect_a_single_legal_body_move(self):
+    """A product-wide summary may stay equal while one named body changes position."""
+    def aggregate_signature(objects):
+      boxes = [object_data["bbox"] for object_data in objects.values()]
+      return (
+          1,
+          (6000.0, 6000.0),
+          57.0,
+          0.0,
+          (
+              min(box[0] for box in boxes), min(box[1] for box in boxes),
+              min(box[2] for box in boxes), max(box[3] for box in boxes),
+              max(box[4] for box in boxes), max(box[5] for box in boxes),
+          ),
+      )
+
+    baseline = {
+        "Cover_Glass": {"bbox": (-371.0, 0.0, 0.0, 371.0, 492.0, 3.0)},
+        "Rear_Enclosure": {"bbox": (-371.0, 0.0, 17.0, 371.0, 492.0, 62.0)},
+        "Heat_IO": {"bbox": (230.0, 50.0, 38.0, 275.0, 80.0, 43.0)},
+    }
+    moved = {
+        **baseline,
+        "Heat_IO": {"bbox": (260.0, 90.0, 38.0, 305.0, 120.0, 43.0)},
+    }
+    self.assertEqual(aggregate_signature(baseline), aggregate_signature(moved))
+    self.assertNotEqual(baseline["Heat_IO"], moved["Heat_IO"])
+
+  def test_verify_document_rejects_air_overlapping_a_named_solid(self):
+    """Air filled back into a component void must fail the native builder gate."""
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as temp_dir:
+      launcher = r'''
+from pathlib import Path
+
+namespace = {{"__name__": "air_disjoint_regression", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+namespace["publish_atomically"] = lambda doc, output_path: doc
+doc = namespace["build_document"](Path(r"{temp_dir}") / "unused.FCStd")
+air = doc.getObject("Internal_Air_Volume")
+solid = doc.getObject("Heat_IO")
+air.Shape = air.Shape.fuse(solid.Shape).removeSplitter()
+doc.recompute()
+try:
+    namespace["verify_document"](doc)
+except RuntimeError as error:
+    assert "Internal air overlaps Heat_IO" in str(error)
+    print("HINOKI_AIR_DISJOINT_REJECTION_OK")
+else:
+    print("HINOKI_AIR_DISJOINT_GATE_LEAKED")
+'''.format(
+          script_path=BUILD_SCRIPT.as_posix(),
+          source=source,
+          temp_dir=Path(temp_dir).as_posix(),
+      )
+      result = subprocess.run(
+          [str(FREECAD_CMD), "-c"],
+          cwd=Path(tempfile.gettempdir()),
+          input="exec({!r})\n".format(launcher),
+          capture_output=True,
+          text=True,
+          check=False,
+          timeout=120,
+      )
+      self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+      self.assertIn("HINOKI_AIR_DISJOINT_REJECTION_OK", result.stdout + result.stderr)

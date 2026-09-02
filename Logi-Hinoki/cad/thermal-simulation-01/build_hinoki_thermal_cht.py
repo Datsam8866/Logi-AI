@@ -175,6 +175,15 @@ def verify_document(doc):
     if len(doc.getObject("Internal_Air_Volume").Shape.Solids) != 1:
         raise RuntimeError("Internal air must be a single connected solid")
     air = doc.getObject("Internal_Air_Volume").Shape
+    max_air_solid_overlap, max_air_solid_name = max(
+        (
+            air.common(doc.getObject(name).Shape).Volume,
+            name,
+        )
+        for name in parameters.SOLID_BODIES
+    )
+    if max_air_solid_overlap > 0.01:
+        raise RuntimeError("Internal air overlaps " + max_air_solid_name)
     rear = doc.getObject("Rear_Enclosure").Shape
     vent_channels = tuple(
         box(
@@ -285,7 +294,12 @@ def build_document(output_path=OUTPUT_PATH):
 
     rear_outer = box(HEAD_WIDTH, HEAD_HEIGHT, REAR_DEPTH, (-HEAD_WIDTH / 2.0, 0.0, REAR_START_Z))
     rear_cavity = box(CAVITY_WIDTH, CAVITY_HEIGHT, CAVITY_DEPTH, (-CAVITY_WIDTH / 2.0, MIDFRAME_Y, REAR_START_Z))
-    lower_vent = box(VENT_WIDTH, VENT_HEIGHT, REAR_WALL, (-VENT_WIDTH / 2.0, 20.0, VENT_Z))
+    lower_vent = box(
+        VENT_WIDTH,
+        VENT_HEIGHT,
+        REAR_WALL,
+        (-VENT_WIDTH / 2.0, LOWER_VENT_Y, VENT_Z),
+    )
     upper_vent = box(VENT_WIDTH, VENT_HEIGHT, REAR_WALL, (-VENT_WIDTH / 2.0, UPPER_VENT_Y, VENT_Z))
     physical["Rear_Enclosure"] = add_physical_feature(
         doc,
