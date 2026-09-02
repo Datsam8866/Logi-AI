@@ -43,19 +43,53 @@ EXPECTED_BBOX = (-parameters.HEAD["width"] / 2.0, 0.0, 0.0,
                 parameters.HEAD["height"], parameters.HEAD["depth"])
 
 
-def _atomic_write_json(path, payload):
-    """Publish JSON only after the complete document is written."""
+def _write_json_temp(path, payload):
+    """Write one complete JSON payload to a same-directory temporary file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(".{}.{}.tmp".format(path.name, uuid.uuid4().hex))
+    temporary.write_text(
+        json.dumps(payload, indent=2, sort_keys=True) + "\n",
+        encoding="utf-8",
+    )
+    return temporary
+
+
+def _restore_path(path, original_bytes):
+    """Restore a pre-existing path during a two-file publish rollback."""
+    if original_bytes is None:
+        if path.exists():
+            path.unlink()
+        return
+    temporary = path.with_name(".{}.{}.rollback".format(path.name, uuid.uuid4().hex))
     try:
-        temporary.write_text(
-            json.dumps(payload, indent=2, sort_keys=True) + "\n",
-            encoding="utf-8",
-        )
+        temporary.write_bytes(original_bytes)
         os.replace(str(temporary), str(path))
     finally:
         if temporary.exists():
             temporary.unlink()
+
+
+def _publish_evidence_pair(setup_payload, review_payload):
+    """Stage both evidence files, then publish them as a rollback-safe pair."""
+    original_setup = SETUP_PATH.read_bytes() if SETUP_PATH.exists() else None
+    original_review = REVIEW_PATH.read_bytes() if REVIEW_PATH.exists() else None
+    setup_temp = _write_json_temp(SETUP_PATH, setup_payload)
+    review_temp = None
+    try:
+        review_temp = _write_json_temp(REVIEW_PATH, review_payload)
+        if review_payload.get("status") != "Pass":
+            raise RuntimeError("review status is not Pass")
+        os.replace(str(setup_temp), str(SETUP_PATH))
+        try:
+            os.replace(str(review_temp), str(REVIEW_PATH))
+        except Exception:
+            _restore_path(SETUP_PATH, original_setup)
+            raise
+    finally:
+        if setup_temp.exists():
+            setup_temp.unlink()
+        if review_temp is not None and review_temp.exists():
+            review_temp.unlink()
 
 
 def build_setup_payload():
@@ -387,15 +421,28 @@ def review_document(model_path):
 
 
 def generate_evidence():
-    """Write setup and review evidence and return the review payload."""
-    _atomic_write_json(SETUP_PATH, build_setup_payload())
+    """Review first, then atomically publish setup and review evidence together."""
+    setup = build_setup_payload()
     review = review_document(MODEL_PATH)
-    _atomic_write_json(REVIEW_PATH, review)
+    if review["status"] != "Pass":
+        raise RuntimeError("review status is not Pass")
+    _publish_evidence_pair(setup, review)
     return review
 
 
-if __name__ == "__main__":
-    evidence = generate_evidence()
-    print("HINOKI_THERMAL_REVIEW_OK {}".format(REVIEW_PATH))
+def main():
+    """Run review generation with an unambiguous success/failure sentinel."""
+    try:
+        evidence = generate_evidence()
+    except Exception as error:
+        print("HINOKI_THERMAL_REVIEW_FAIL {}".format(error))
+        return 1
     if evidence["status"] != "Pass":
-        raise SystemExit("HINOKI_THERMAL_REVIEW_FAILED")
+        print("HINOKI_THERMAL_REVIEW_FAIL review status is not Pass")
+        return 1
+    print("HINOKI_THERMAL_REVIEW_OK {}".format(REVIEW_PATH))
+    return 0
+
+
+if __name__ == "__main__":
+    raise SystemExit(main())

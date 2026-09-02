@@ -846,3 +846,70 @@ else:
       ))
 
       self.assertEqual(CAD_FILE.read_bytes(), original_cad_bytes)
+
+  def test_review_failure_signaling_never_emits_success_sentinel(self):
+    """A failed review has a unique failure signal and no success signal."""
+    self.assertTrue(REVIEW_SCRIPT.exists(), "thermal review script must exist")
+    source = REVIEW_SCRIPT.read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as temp_dir:
+      setup_path = Path(temp_dir) / "setup.json"
+      review_path = Path(temp_dir) / "review.json"
+      launcher = r'''
+namespace = {{"__name__": "review_failure_signal", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+namespace["SETUP_PATH"] = __import__("pathlib").Path(r"{setup_path}")
+namespace["REVIEW_PATH"] = __import__("pathlib").Path(r"{review_path}")
+namespace["review_document"] = lambda model_path: {{
+    "status": "Fail",
+    "hard_gates": {{"forced_failure": False}},
+    "unauthorized_overlaps": [],
+}}
+assert namespace["main"]() != 0
+print("HINOKI_FAILURE_SIGNAL_TEST_DONE")
+'''.format(
+          script_path=REVIEW_SCRIPT.as_posix(),
+          source=source,
+          setup_path=setup_path.as_posix(),
+          review_path=review_path.as_posix(),
+      )
+      result = subprocess.run(
+          [str(FREECAD_CMD), "-c"],
+          cwd=Path(tempfile.gettempdir()),
+          input="exec({!r})\n".format(launcher),
+          capture_output=True,
+          text=True,
+          check=False,
+          timeout=120,
+      )
+      combined = result.stdout + result.stderr
+      self.assertEqual(result.returncode, 0, combined)
+      self.assertIn("HINOKI_THERMAL_REVIEW_FAIL", combined)
+      self.assertNotIn("HINOKI_THERMAL_REVIEW_OK", combined)
+      self.assertIn("HINOKI_FAILURE_SIGNAL_TEST_DONE", combined)
+
+  def test_missing_or_broken_model_preserves_review_pair_and_cleans_temps(self):
+    """Model-open failures must leave both formal evidence files byte-identical."""
+    self.assertTrue(REVIEW_SCRIPT.exists(), "thermal review script must exist")
+    for model_kind in ("missing", "broken"):
+      with self.subTest(model_kind=model_kind), tempfile.TemporaryDirectory() as temp_dir:
+        temp_root = Path(temp_dir)
+        model_path = temp_root / "model.FCStd"
+        setup_path = SETUP_FILE
+        review_path = REVIEW_FILE
+        setup_original = setup_path.read_bytes()
+        review_original = review_path.read_bytes()
+        formal_temps_before = set(setup_path.parent.glob(".*.tmp"))
+        if model_kind == "broken":
+          model_path.write_bytes(b"not a FreeCAD document")
+
+        review_env = os.environ.copy()
+        review_env["HINOKI_THERMAL_MODEL_PATH"] = str(model_path)
+        review_env["HINOKI_THERMAL_SETUP_PATH"] = str(setup_path)
+        review_env["HINOKI_THERMAL_REVIEW_PATH"] = str(review_path)
+        result = run_freecad_review(REVIEW_SCRIPT, review_env)
+        combined = result.stdout + result.stderr
+        self.assertIn("HINOKI_THERMAL_REVIEW_FAIL", combined)
+        self.assertNotIn("HINOKI_THERMAL_REVIEW_OK", combined)
+        self.assertEqual(setup_path.read_bytes(), setup_original)
+        self.assertEqual(review_path.read_bytes(), review_original)
+        self.assertEqual(set(setup_path.parent.glob(".*.tmp")), formal_temps_before)
