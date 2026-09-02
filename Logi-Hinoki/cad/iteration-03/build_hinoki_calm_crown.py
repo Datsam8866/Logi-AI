@@ -12,12 +12,11 @@ import FreeCAD as App
 import Part
 
 
+# `freecadcmd -c` does not set __file__, but compile() retains the absolute script
+# filename supplied by the caller.
 SCRIPT_PATH = Path(
-    globals().get(
-        "__file__",
-        Path.cwd() / "cad" / "iteration-03" / "build_hinoki_calm_crown.py",
-    )
-)
+    globals().get("__file__", sys._getframe().f_code.co_filename)
+).resolve()
 if str(SCRIPT_PATH.parent) not in sys.path:
     sys.path.insert(0, str(SCRIPT_PATH.parent))
 
@@ -171,7 +170,7 @@ def build_document():
         parameters.ACTIVE_AREA["height"],
         0.45,
         8.0,
-        (-354.2, 126.25, 2.10),
+        (-parameters.ACTIVE_AREA["width"] / 2.0, 126.25, 2.10),
     )
     add_feature(
         doc,
@@ -193,7 +192,7 @@ def build_document():
         rounded_prism_xy(728.0, 62.0, 3.0, 15.0, (-364.0, crown_y + 5.0, 4.60)),
         COLORS["crown"],
         "Proposed visible product part",
-        "Integrated 72 mm upper AV/acoustic crown",
+        "Integrated {} mm upper AV/acoustic crown".format(CROWN_HEIGHT),
         "A-043",
     )
 

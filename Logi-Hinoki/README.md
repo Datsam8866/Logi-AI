@@ -91,7 +91,7 @@ $env:FREECAD_CMD = "C:\path\to\FreeCAD\bin\freecadcmd.exe"
 在 `Logi-Hinoki` 根目錄執行 acceptance test；測試會呼叫 FreeCAD、重建 FCStd，並驗證必要物件與主參數：
 
 ```powershell
-python -m unittest tests.test_hinoki_iteration01 tests.test_hinoki_iteration02 -v
+python -m unittest tests.test_hinoki_iteration01 tests.test_hinoki_iteration02 tests.test_hinoki_iteration03 -v
 ```
 
 執行幾何 review：

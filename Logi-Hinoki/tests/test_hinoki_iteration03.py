@@ -1,6 +1,7 @@
 """Contract checks for the Hinoki Calm Crown Iteration 03 CAD."""
 
 from pathlib import Path
+import ast
 import importlib.util
 import os
 import subprocess
@@ -30,10 +31,10 @@ def load_parameters():
     return module
 
 
-def run_freecad_script(script_path, env=None):
+def run_freecad_script(script_path, env=None, cwd=PROJECT_ROOT):
     return subprocess.run(
         [str(FREECAD_CMD), "-c"],
-        cwd=PROJECT_ROOT,
+        cwd=cwd,
         check=True,
         capture_output=True,
         text=True,
@@ -46,13 +47,92 @@ def run_freecad_script(script_path, env=None):
 
 class HinokiIteration03Tests(unittest.TestCase):
     def test_builder_uses_controlled_parameters_module(self):
-        builder_source = BUILD_SCRIPT.read_text(encoding="utf-8")
+        builder_tree = ast.parse(BUILD_SCRIPT.read_text(encoding="utf-8"))
+        assignments = {
+            target.id: node.value
+            for node in builder_tree.body
+            if isinstance(node, ast.Assign)
+            for target in node.targets
+            if isinstance(target, ast.Name)
+        }
+        expected_head_dimensions = {
+            "HEAD_WIDTH": "width",
+            "HEAD_HEIGHT": "height",
+            "HEAD_DEPTH": "depth",
+            "HEAD_RADIUS": "corner_radius",
+        }
 
-        self.assertIn("hinoki_calm_crown_parameters", builder_source)
-        self.assertNotIn("HEAD_WIDTH = 742.0", builder_source)
-        self.assertNotIn("HEAD_HEIGHT = 492.0", builder_source)
-        self.assertNotIn("HEAD_DEPTH = 62.0", builder_source)
-        self.assertNotIn("CROWN_HEIGHT = 72.0", builder_source)
+        for name, dimension in expected_head_dimensions.items():
+            controlled_dimension = assignments[name]
+            self.assertIsInstance(controlled_dimension, ast.Subscript)
+            self.assertIsInstance(controlled_dimension.value, ast.Attribute)
+            self.assertIsInstance(controlled_dimension.value.value, ast.Name)
+            self.assertEqual(controlled_dimension.value.value.id, "parameters")
+            self.assertEqual(controlled_dimension.value.attr, "HEAD")
+            self.assertEqual(controlled_dimension.slice.value, dimension)
+
+        for name in ("HEAD_BOTTOM_Y", "CROWN_HEIGHT"):
+            controlled_dimension = assignments[name]
+            self.assertIsInstance(controlled_dimension, ast.Attribute)
+            self.assertIsInstance(controlled_dimension.value, ast.Name)
+            self.assertEqual(controlled_dimension.value.id, "parameters")
+            self.assertEqual(controlled_dimension.attr, name)
+
+    def test_builder_derives_active_area_x_origin_from_controlled_width(self):
+        builder_tree = ast.parse(BUILD_SCRIPT.read_text(encoding="utf-8"))
+        active_opening = next(
+            node
+            for node in ast.walk(builder_tree)
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "active_opening"
+                for target in node.targets
+            )
+        )
+
+        origin_x = active_opening.value.args[4].elts[0]
+        self.assertIsInstance(origin_x, ast.BinOp)
+        self.assertIsInstance(origin_x.op, ast.Div)
+        self.assertIsInstance(origin_x.left, ast.UnaryOp)
+        self.assertIsInstance(origin_x.left.op, ast.USub)
+        controlled_width = origin_x.left.operand
+        self.assertIsInstance(controlled_width, ast.Subscript)
+        self.assertIsInstance(controlled_width.value, ast.Attribute)
+        self.assertEqual(controlled_width.value.attr, "ACTIVE_AREA")
+        self.assertEqual(controlled_width.slice.value, "width")
+
+    def test_builder_derives_crown_traceability_text_from_controlled_height(self):
+        builder_tree = ast.parse(BUILD_SCRIPT.read_text(encoding="utf-8"))
+        controlled_height = next(
+            node
+            for node in ast.walk(builder_tree)
+            if isinstance(node, ast.Assign)
+            and any(
+                isinstance(target, ast.Name) and target.id == "CROWN_HEIGHT"
+                for target in node.targets
+            )
+        )
+        self.assertIsInstance(controlled_height.value, ast.Attribute)
+        self.assertIsInstance(controlled_height.value.value, ast.Name)
+        self.assertEqual(controlled_height.value.value.id, "parameters")
+        self.assertEqual(controlled_height.value.attr, "CROWN_HEIGHT")
+
+        crown_feature = next(
+            node
+            for node in ast.walk(builder_tree)
+            if isinstance(node, ast.Call)
+            and isinstance(node.func, ast.Name)
+            and node.func.id == "add_feature"
+            and isinstance(node.args[2], ast.Constant)
+            and node.args[2].value == "Crown_Shell"
+        )
+
+        requirement_text = crown_feature.args[7]
+        self.assertIsInstance(requirement_text, ast.Call)
+        self.assertIsInstance(requirement_text.func, ast.Attribute)
+        self.assertEqual(requirement_text.func.attr, "format")
+        self.assertIsInstance(requirement_text.args[0], ast.Name)
+        self.assertEqual(requirement_text.args[0].id, "CROWN_HEIGHT")
 
     def test_parameter_contract_matches_approved_design(self):
         self.assertTrue(PARAMETERS_FILE.exists())
@@ -250,6 +330,40 @@ print('Calm Crown native front architecture checks passed')
         self.assertIn(
             "Calm Crown native front architecture checks passed", result.stdout
         )
+
+    def test_builder_runs_from_non_project_cwd_with_absolute_paths(self):
+        self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
+        non_project_cwd = Path(os.environ.get("WINDIR", r"C:\\Windows")) / "Temp"
+        self.assertTrue(non_project_cwd.exists(), "Windows temporary directory must exist")
+
+        with tempfile.TemporaryDirectory() as temp_dir:
+            temporary_cad_file = Path(temp_dir) / "Hinoki_CalmCrown_Concept.FCStd"
+            builder_env = os.environ.copy()
+            builder_env["HINOKI_CALM_CROWN_OUTPUT_PATH"] = str(temporary_cad_file)
+            result = run_freecad_script(
+                BUILD_SCRIPT, env=builder_env, cwd=non_project_cwd
+            )
+            self.assertIn(
+                "Hinoki Calm Crown front architecture generated:", result.stdout
+            )
+            self.assertTrue(temporary_cad_file.exists())
+
+            probe = """
+import FreeCAD as App
+doc = App.open(r'{cad_file}')
+assert doc.getObject('Front_Glass') is not None
+assert doc.getObject('Front_Glass').Shape.isValid()
+print('Calm Crown non-project cwd build checks passed')
+""".format(cad_file=temporary_cad_file.as_posix())
+            result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=non_project_cwd,
+                check=True,
+                capture_output=True,
+                text=True,
+                input=probe,
+            )
+        self.assertIn("Calm Crown non-project cwd build checks passed", result.stdout)
 
 
 if __name__ == "__main__":
