@@ -2,6 +2,12 @@
 
 這是 Hinoki 32-inch 視訊協作系統的概念級 FLOEFD conjugate heat-transfer (CHT) handoff，不是量產設計、製造幾何或溫度性能承諾。
 
+## LOD 3 inferred engineering prototype
+
+LOD 3 master 正在 cad/lod3-inferred-prototype-01/ 建立。第一個 checkpoint 已包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners 與八個 assembly groups，共 36 個 semantic parts。Hinoki_LOD3_Inferred_Master.FCStd 目前是建模中 checkpoint，尚未達到最終 80–120 parts、stand/base、完整 electronics/thermal 與 FLOEFD derivative 的交付 gate。
+
+這一版明確是 LOD 3 inferred engineering prototype; not manufacturing release，不可用於 tooling、GD&T、supplier release、certification 或 production temperature claim。
+
 ## FLOEFD handoff
 
 下列五個檔案構成目前的最小 FLOEFD 匯入交付：
