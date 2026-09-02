@@ -367,11 +367,16 @@ print('Calm Crown native front architecture checks passed')
                     claim_name + " must have a persisted GUI view provider",
                 )
                 gui_properties = {
-                    prop.attrib["name"]: next(iter(prop)).attrib["value"]
+                    prop.attrib["name"]: prop
                     for prop in claim_provider.findall("./Properties/Property")
                 }
-                self.assertEqual(gui_properties.get("Visibility"), "false")
-                self.assertEqual(gui_properties.get("Transparency"), "82")
+                self.assertEqual(
+                    next(iter(gui_properties["Visibility"])).attrib["value"], "false"
+                )
+                transparency = gui_properties["Transparency"]
+                self.assertEqual(transparency.attrib["type"], "App::PropertyPercent")
+                self.assertEqual(transparency.attrib["status"], "1")
+                self.assertEqual(next(iter(transparency)).attrib["value"], "82")
 
             probe = """
 import FreeCAD as App
@@ -431,6 +436,9 @@ for face in rear_shell.Shape.Faces:
     ):
         rear_rounding.append(surface)
 assert rear_rounding, 'Rear depth transition requires a non-planar, non-Z-axis fillet surface'
+assert rear_shell.Shape.ShapeType == 'Solid' or len(rear_shell.Shape.Solids) == 1, (
+    'Rear shell must be one continuous solid rather than a compound of islands'
+)
 
 assert io_recess.Shape.BoundBox.ZMax < rear_shell.Shape.BoundBox.ZMax - 0.5, (
     'I/O feature must remain below its surrounding rear surface'
@@ -459,6 +467,66 @@ print('Calm Crown native rear and internal architecture checks passed')
             "Calm Crown native rear and internal architecture checks passed",
             result.stdout + result.stderr,
         )
+
+    def test_freecad_gui_reopens_claim_view_state(self):
+        """Run only through FreeCAD.exe with HINOKI_RUN_GUI_PROBE=1."""
+        if os.environ.get("HINOKI_RUN_GUI_PROBE") != "1":
+            self.skipTest("FreeCAD GUI reopen probe is executed separately")
+
+        import FreeCAD as App
+        import FreeCADGui as Gui
+
+        self.assertTrue(App.GuiUp, "GUI probe must run with App.GuiUp=1")
+        if hasattr(Gui, "showMainWindow"):
+            Gui.showMainWindow()
+        doc = App.open(str(CAD_FILE))
+        result_path = os.environ.get("HINOKI_GUI_PROBE_RESULT")
+        try:
+            observed_states = []
+            for claim_name in load_parameters().REQUIRED_INTERNAL_CLAIMS:
+                view = doc.getObject(claim_name).ViewObject
+                observed_states.append(
+                    "{} visibility={} transparency={}".format(
+                        claim_name, view.Visibility, view.Transparency
+                    )
+                )
+            if result_path:
+                Path(result_path).write_text(
+                    "\n".join(observed_states) + "\n", encoding="utf-8"
+                )
+            for claim_name in load_parameters().REQUIRED_INTERNAL_CLAIMS:
+                view = doc.getObject(claim_name).ViewObject
+                self.assertFalse(view.Visibility, claim_name + " must reopen hidden")
+                self.assertEqual(
+                    view.Transparency,
+                    82,
+                    claim_name + " must reopen with 82 percent transparency",
+                )
+        finally:
+            App.closeDocument(doc.Name)
+
+        if result_path:
+            Path(result_path).write_text("FreeCAD GUI reopen probe passed\n", encoding="utf-8")
+
+    def test_freecad_gui_saves_transparency_reference(self):
+        """Run only through FreeCAD.exe to capture its native GUI XML format."""
+        if os.environ.get("HINOKI_RUN_GUI_REFERENCE") != "1":
+            self.skipTest("FreeCAD GUI reference save is executed separately")
+
+        import FreeCAD as App
+        import Part
+
+        reference_path = Path(os.environ["HINOKI_GUI_REFERENCE_PATH"])
+        doc = App.newDocument("HinokiGuiTransparencyReference")
+        try:
+            claim = doc.addObject("Part::Feature", "Claim")
+            claim.Shape = Part.makeBox(10.0, 10.0, 10.0)
+            claim.ViewObject.Visibility = False
+            claim.ViewObject.Transparency = 82
+            doc.recompute()
+            doc.saveAs(str(reference_path))
+        finally:
+            App.closeDocument(doc.Name)
 
     def test_builder_runs_from_non_project_cwd_with_absolute_paths(self):
         self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")

@@ -172,13 +172,13 @@ def persist_gui_view_state(doc, output_path):
     for obj in doc.Objects:
         hidden = obj.Name in claim_names
         properties = [
-            '<Property name="Visibility" type="App::PropertyBool">'
+            '<Property name="Visibility" type="App::PropertyBool" status="1">'
             '<Bool value="{}"/></Property>'.format(str(not hidden).lower())
         ]
         if hidden:
             properties.insert(
                 0,
-                '<Property name="Transparency" type="App::PropertyInteger">'
+                '<Property name="Transparency" type="App::PropertyPercent" status="1">'
                 '<Integer value="82"/></Property>',
             )
         providers.append(
@@ -406,7 +406,7 @@ def build_document():
         HEAD_WIDTH, HEAD_HEIGHT, 42.0, HEAD_RADIUS, (head_x, HEAD_BOTTOM_Y, 9.0)
     )
     rear_island_raw = rounded_prism_xy(
-        460.0, 330.0, 8.0, 42.0, (-230.0, 196.0, 54.0)
+        460.0, 330.0, 13.0, 42.0, (-230.0, 196.0, 49.0)
     )
     rear_island_top_edges = [
         edge
