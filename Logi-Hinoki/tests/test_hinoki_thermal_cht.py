@@ -406,22 +406,12 @@ def assert_matching_fingerprints(
 ):
     test_case.assertEqual(set(temporary), set(expected_names))
     test_case.assertEqual(set(formal), set(expected_names))
-    hash_mismatches = []
-    for name in expected_names:
-        test_case.assertEqual(
-            temporary[name][:-1],
-            formal[name][:-1],
-            "formal/temp geometry fingerprint differs for " + name,
-        )
-        if temporary[name][-1] != formal[name][-1]:
-            hash_mismatches.append(name)
-    if hash_mismatches:
-        result = run_geometry_equivalence_probe(
-            formal_path, temporary_path, hash_mismatches
-        )
-        combined = result.stdout + result.stderr
-        test_case.assertEqual(result.returncode, 0, combined)
-        test_case.assertIn("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK", combined)
+    result = run_geometry_equivalence_probe(
+        formal_path, temporary_path, expected_names
+    )
+    combined = result.stdout + result.stderr
+    test_case.assertEqual(result.returncode, 0, combined)
+    test_case.assertIn("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK", combined)
 
 
 class HinokiThermalCHTTests(unittest.TestCase):
@@ -539,6 +529,52 @@ class HinokiThermalCHTTests(unittest.TestCase):
           CAD_FILE.read_bytes(),
           original_cad_bytes,
           "temporary builder test must not alter the tracked formal FCStd",
+      )
+
+  def test_pre_publish_verification_failure_closes_documents_and_preserves_output(self):
+    """A failed builder verification must not leak a document or touch prior output."""
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as temp_dir:
+      output_path = Path(temp_dir) / "existing.FCStd"
+      launcher = r'''
+from pathlib import Path
+import FreeCAD as App
+
+namespace = {{"__name__": "pre_publish_failure_regression", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+output = Path(r"{output_path}")
+original = b"pre-publish output must survive"
+output.write_bytes(original)
+def fail_verify(doc):
+    raise RuntimeError("forced pre-publish verification failure")
+namespace["verify_document"] = fail_verify
+try:
+    namespace["build_document"](output)
+except RuntimeError as error:
+    assert "forced pre-publish verification failure" in str(error)
+else:
+    raise AssertionError("forced verification failure must propagate")
+assert output.read_bytes() == original
+assert not App.listDocuments()
+assert not list(output.parent.glob("." + output.stem + ".*.FCStd"))
+print("HINOKI_PRE_PUBLISH_FAILURE_CLEANUP_OK")
+'''.format(
+          script_path=BUILD_SCRIPT.as_posix(),
+          source=source,
+          output_path=output_path.as_posix(),
+      )
+      result = subprocess.run(
+          [str(FREECAD_CMD), "-c"],
+          cwd=Path(tempfile.gettempdir()),
+          input="exec({!r})\n".format(launcher),
+          capture_output=True,
+          text=True,
+          check=False,
+          timeout=120,
+      )
+      self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+      self.assertIn(
+          "HINOKI_PRE_PUBLISH_FAILURE_CLEANUP_OK", result.stdout + result.stderr
       )
 
   def test_atomic_publish_closes_source_and_returns_output_path(self):
@@ -669,6 +705,26 @@ alternate = Part.Face(wire).extrude(App.Vector(0.0, 0.0, 30.0))
       )
       self.assertNotIn("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK", combined)
 
+  def test_geometry_equivalence_accepts_microshift_within_tolerance(self):
+    """A symmetric difference below 0.01 mm³ is accepted by the minimum gate."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+      formal_path = Path(temp_dir) / "box.FCStd"
+      temporary_path = Path(temp_dir) / "microshift.FCStd"
+      created = create_geometry_pair(
+          formal_path,
+          temporary_path,
+          "alternate = Part.makeBox(10.0, 20.0, 30.0, App.Vector(0.000001, 0.0, 0.0))",
+      )
+      self.assertEqual(created.returncode, 0, created.stdout + created.stderr)
+      equivalent = run_geometry_equivalence_probe(
+          formal_path, temporary_path, ("ProbeShape",)
+      )
+      self.assertEqual(equivalent.returncode, 0, equivalent.stdout + equivalent.stderr)
+      self.assertIn(
+          "HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK",
+          equivalent.stdout + equivalent.stderr,
+      )
+
   def test_verify_document_rejects_air_overlapping_a_named_solid(self):
     """Air filled back into a component void must fail the native builder gate."""
     source = BUILD_SCRIPT.read_text(encoding="utf-8")
@@ -679,7 +735,7 @@ from pathlib import Path
 namespace = {{"__name__": "air_disjoint_regression", "__file__": r"{script_path}"}}
 exec(compile({source!r}, r"{script_path}", "exec"), namespace)
 namespace["publish_atomically"] = lambda doc, output_path: doc
-doc = namespace["build_document"](Path(r"{temp_dir}") / "unused.FCStd")
+doc = namespace["_build_document"](Path(r"{temp_dir}") / "unused.FCStd")
 air = doc.getObject("Internal_Air_Volume")
 solid = doc.getObject("Heat_IO")
 air.Shape = air.Shape.fuse(solid.Shape).removeSplitter()

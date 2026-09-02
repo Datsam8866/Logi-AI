@@ -264,7 +264,7 @@ def publish_atomically(doc, output_path):
             temporary_path.unlink()
 
 
-def build_document(output_path=OUTPUT_PATH):
+def _build_document(output_path):
     doc = App.newDocument("Hinoki_Thermal_CHT_Model")
     thermal_solids = add_group(doc, "Thermal_Solids")
     heat_sources = add_group(doc, "Heat_Sources")
@@ -397,6 +397,16 @@ def build_document(output_path=OUTPUT_PATH):
     doc.recompute()
     verify_document(doc)
     return publish_atomically(doc, Path(output_path))
+
+
+def build_document(output_path=OUTPUT_PATH):
+    """Build and publish, always closing documents created by this builder."""
+    try:
+        return _build_document(output_path)
+    finally:
+        for document_name in tuple(App.listDocuments()):
+            if document_name.startswith("Hinoki_Thermal_CHT_Model"):
+                App.closeDocument(document_name)
 
 
 if __name__ == "__main__":
