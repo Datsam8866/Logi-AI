@@ -233,5 +233,102 @@ print("HINOKI_LOD3_HEAD_PROBE_OK parts={{}}".format(len(head_parts)))
             )
 
 
+class TestElectronicsThermalGeometry(unittest.TestCase):
+    def test_builder_adds_boards_heat_sources_and_passive_path(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_et_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_ET_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            combined_output = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, combined_output)
+            self.assertIn("HINOKI_LOD3_BUILD_OK", combined_output)
+
+            probe = r"""
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+expected_boards = {{
+    "Carrier_PCB": (250.0, 140.0, 1.6),
+    "Compute_SOM_PCB": (90.0, 70.0, 1.6),
+    "Power_PCB": (160.0, 100.0, 1.6),
+    "IO_PCB": (180.0, 30.0, 1.6),
+    "WiFi_BLE_Module": (30.0, 20.0, 3.0),
+}}
+for name, expected in expected_boards.items():
+    obj = doc.getObject(name)
+    assert obj is not None and obj.Shape.isValid() and obj.Shape.Volume > 0.0, name
+    actual = (obj.Shape.BoundBox.XLength, obj.Shape.BoundBox.YLength, obj.Shape.BoundBox.ZLength)
+    assert all(abs(a - b) <= 0.01 for a, b in zip(actual, expected)), (name, actual)
+    assert len(obj.Shape.Edges) > 12, name + " must include mounting-hole evidence"
+
+expected_thermal = {{
+    "Heat_QC7790": (35.0, 35.0, 2.0),
+    "TIM_QC7790": (35.0, 35.0, 1.0),
+    "Copper_Spreader": (100.0, 80.0, 2.0),
+    "Aluminum_Interface": (220.0, 120.0, 2.5),
+    "Rear_Hatch_TIM": (80.0, 40.0, 1.5),
+}}
+for name, expected in expected_thermal.items():
+    obj = doc.getObject(name)
+    assert obj is not None and obj.Shape.isValid() and obj.Shape.Volume > 0.0, name
+    actual = (obj.Shape.BoundBox.XLength, obj.Shape.BoundBox.YLength, obj.Shape.BoundBox.ZLength)
+    assert all(abs(a - b) <= 0.01 for a, b in zip(actual, expected)), (name, actual)
+
+for name in ("Heat_Pipe_Left", "Heat_Pipe_Right"):
+    obj = doc.getObject(name)
+    assert obj.Shape.isValid() and obj.Shape.Volume > 0.0
+    assert abs(obj.Diameter.Value - 6.0) <= 0.001
+
+heat_parts = [
+    obj for obj in doc.Objects
+    if getattr(obj, "IsSemanticPart", False) and obj.HeatLoadW > 0.0
+]
+assert len(heat_parts) == 10, [(obj.Name, obj.HeatLoadW) for obj in heat_parts]
+assert abs(sum(obj.HeatLoadW for obj in heat_parts) - 57.0) <= 1e-9
+assert {{obj.HeatSourceID for obj in heat_parts}} == {heat_names!r}
+
+for obj in doc.Objects:
+    if getattr(obj, "IsSemanticPart", False):
+        assert obj.MaterialIntent and obj.SourceReference
+        assert obj.ManufacturingAuthority is False
+
+App.closeDocument(doc.Name)
+assert not App.listDocuments()
+print("HINOKI_LOD3_ELECTRONICS_THERMAL_PROBE_OK heat_parts={{}}".format(len(heat_parts)))
+""".format(
+                model_path=model_path.as_posix(),
+                heat_names=set(
+                    (
+                        "Heat_Panel_Backlight",
+                        "Heat_QC7790",
+                        "Heat_Memory",
+                        "Heat_Carrier_PMIC",
+                        "Heat_IO",
+                        "Heat_WiFi_BLE",
+                        "Heat_Camera",
+                        "Heat_Audio",
+                        "Heat_Radar_ALS",
+                        "Heat_Front_Lighting",
+                    )
+                ),
+            )
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn(
+                "HINOKI_LOD3_ELECTRONICS_THERMAL_PROBE_OK",
+                combined_probe,
+            )
+
+
 if __name__ == "__main__":
     unittest.main()

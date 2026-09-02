@@ -17,6 +17,7 @@ if str(PACKAGE_DIR) not in sys.path:
 import hinoki_lod3_parameters as p
 from hinoki_lod3_common import make_groups
 from hinoki_lod3_display_housing import build_display_housing
+from hinoki_lod3_electronics_thermal import build_electronics_thermal
 
 
 def output_path():
@@ -32,6 +33,7 @@ def build_document():
     doc = App.newDocument("Hinoki_LOD3_Inferred_Master")
     groups = make_groups(doc, p.REQUIRED_TOP_GROUPS)
     build_display_housing(doc, groups)
+    build_electronics_thermal(doc, groups)
     doc.recompute()
     return doc
 

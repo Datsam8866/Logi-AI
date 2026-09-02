@@ -4,7 +4,7 @@
 
 ## LOD 3 inferred engineering prototype
 
-LOD 3 master 正在 cad/lod3-inferred-prototype-01/ 建立。第一個 checkpoint 已包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners 與八個 assembly groups，共 36 個 semantic parts。Hinoki_LOD3_Inferred_Master.FCStd 目前是建模中 checkpoint，尚未達到最終 80–120 parts、stand/base、完整 electronics/thermal 與 FLOEFD derivative 的交付 gate。
+LOD 3 master 正在 cad/lod3-inferred-prototype-01/ 建立。目前 checkpoint 已包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources，以及 QC7790 到 rear hatch 的被動 thermal path，共 62 個 semantic parts。Hinoki_LOD3_Inferred_Master.FCStd 目前是建模中 checkpoint，尚未達到最終 80–120 parts、AV/I/O、stand/base 與 FLOEFD derivative 的交付 gate。
 
 這一版明確是 LOD 3 inferred engineering prototype; not manufacturing release，不可用於 tooling、GD&T、supplier release、certification 或 production temperature claim。
 
