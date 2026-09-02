@@ -41,7 +41,189 @@ def run_freecad_builder(script_path, env):
         capture_output=True,
         text=True,
         check=False,
+        timeout=120,
     )
+
+
+def thermal_validation_probe(cad_file, p):
+    """Return one native FreeCAD probe shared by temporary and formal FCStds."""
+    return r'''
+import FreeCAD as App
+import Part
+import itertools
+
+doc = App.open(r"{cad_file}")
+required_groups = (
+    "Thermal_Solids", "Heat_Sources", "Fluid_Regions",
+    "Boundary_References", "Thermal_Metadata",
+)
+group_names = tuple(
+    obj.Name for obj in doc.Objects if obj.TypeId == "App::DocumentObjectGroup"
+)
+assert group_names == required_groups, "top groups: " + repr(group_names)
+
+solid_names = {solid_names!r}
+heat_loads = {loads!r}
+boundary_names = {boundary_names!r}
+expected_group_members = {{
+    "Thermal_Solids": set(solid_names) - set(heat_loads),
+    "Heat_Sources": set(heat_loads),
+    "Fluid_Regions": {{"Internal_Air_Volume"}},
+    "Boundary_References": set(boundary_names),
+    "Thermal_Metadata": {{"Thermal_Model_Metadata"}},
+}}
+for group_name, expected_members in expected_group_members.items():
+    actual_members = {{obj.Name for obj in doc.getObject(group_name).Group}}
+    assert actual_members == expected_members, group_name + " membership: " + repr(actual_members)
+
+for name in solid_names:
+    obj = doc.getObject(name)
+    assert obj is not None, "missing solid " + name
+    assert obj.TypeId == "Part::Feature", name + " must be a Part::Feature"
+    assert obj.Shape.isValid() and obj.Shape.Volume > 0.0, name + " must be valid"
+    assert obj.Shape.Solids, name + " must contain leaf solids"
+    for leaf in obj.Shape.Solids:
+        assert leaf.isValid() and leaf.isClosed() and leaf.Volume > 0.0, name + " leaf must be closed"
+    assert obj.Classification and obj.MaterialIntent and obj.Units == "mm"
+
+air = doc.getObject("Internal_Air_Volume")
+assert air is not None and air.Shape.isValid() and air.Shape.Volume > 0.0
+assert len(air.Shape.Solids) == 1, "internal air must be one connected solid"
+assert air.MaterialIntent == "Air" and air.Units == "mm"
+
+head_width = {head_width!r}
+head_height = {head_height!r}
+head_depth = {head_depth!r}
+rear_wall = {rear_wall!r}
+vent_width = {vent_width!r}
+vent_height = {vent_height!r}
+vent_area = {vent_area!r}
+lower_vent_y = 20.0
+upper_vent_y = head_height - lower_vent_y - vent_height
+vent_channels = [
+    Part.makeBox(
+        vent_width, vent_height, rear_wall,
+        App.Vector(-vent_width / 2.0, y_origin, head_depth - rear_wall),
+    )
+    for y_origin in (lower_vent_y, upper_vent_y)
+]
+rear = doc.getObject("Rear_Enclosure").Shape
+for name in boundary_names:
+    boundary = doc.getObject(name)
+    assert boundary is not None and boundary.Shape.isValid(), "missing boundary " + name
+    assert boundary.Shape.ShapeType == "Face", name + " must be a face"
+    assert boundary.Classification == "ReferenceOnly"
+    assert boundary.ExportPolicy == "ReferenceOnly"
+    assert abs(boundary.Shape.Area - vent_area) < 0.1
+    normal = boundary.Shape.normalAt(0.0, 0.0)
+    assert normal.z > 0.999, name + " normal must face +Z"
+    assert abs(boundary.Shape.BoundBox.ZMin - head_depth) < 1e-6
+    assert rear.common(boundary.Shape).Area <= 0.01, name + " must be cut through rear enclosure"
+    assert air.Shape.common(boundary.Shape).Area > vent_area - 0.1, name + " must open to air"
+
+for heat_name in heat_loads:
+    heat = doc.getObject(heat_name)
+    bbox = heat.Shape.BoundBox
+    assert bbox.XMin >= -head_width / 2.0 - 0.01 and bbox.XMax <= head_width / 2.0 + 0.01
+    assert bbox.YMin >= -0.01 and bbox.YMax <= head_height + 0.01
+    assert bbox.ZMin >= -0.01 and bbox.ZMax <= head_depth + 0.01
+    for channel in vent_channels:
+        assert heat.Shape.common(channel).Volume <= 0.01, heat_name + " intersects a rear vent channel"
+
+pairwise_overlaps = [
+    doc.getObject(left).Shape.common(doc.getObject(right).Shape).Volume
+    for left, right in itertools.combinations(solid_names, 2)
+]
+assert max(pairwise_overlaps) <= 0.01, "physical solids overlap"
+
+glass = doc.getObject("Cover_Glass").Shape.BoundBox
+panel = doc.getObject("Heat_Panel_Backlight").Shape.BoundBox
+mid = doc.getObject("Mid_Frame").Shape.BoundBox
+assert (glass.XMin, glass.YMin, glass.ZMin) == (-371.0, 0.0, 0.0)
+assert (glass.XLength, glass.YLength, glass.ZLength) == (742.0, 492.0, 3.0)
+assert abs(panel.XMin + 354.2) < 1e-6 and abs(panel.YMin - 28.0) < 1e-6
+assert (panel.XLength, panel.YLength, panel.ZLength) == (708.4, 398.5, 12.0)
+assert (mid.XMin, mid.YMin, mid.ZMin) == (-368.5, 2.5, 15.0)
+assert (mid.XLength, mid.YLength, mid.ZLength) == (737.0, 487.0, 2.0)
+
+stack = ("Mid_Frame", "Heat_Spreader", "TIM_QC7790", "Heat_QC7790", "Carrier_PCB")
+for lower, upper in zip(stack, stack[1:]):
+    lower_shape = doc.getObject(lower).Shape
+    upper_shape = doc.getObject(upper).Shape
+    assert lower_shape.common(upper_shape).Volume < 1e-7
+    assert abs(lower_shape.BoundBox.ZMax - upper_shape.BoundBox.ZMin) < 1e-6
+for name in ("Heat_Memory", "Heat_Carrier_PMIC"):
+    shape = doc.getObject(name).Shape
+    assert abs(shape.BoundBox.ZMin - 21.0) < 1e-6
+    assert abs(shape.BoundBox.ZMax - 23.0) < 1e-6
+    assert shape.common(doc.getObject("Heat_QC7790").Shape).Volume < 1e-7
+    assert abs(shape.BoundBox.ZMax - doc.getObject("Carrier_PCB").Shape.BoundBox.ZMin) < 1e-6
+
+observed_heat = 0.0
+for name, expected in heat_loads.items():
+    obj = doc.getObject(name)
+    assert "HeatLoadW" in obj.PropertiesList, name + " needs a heat load"
+    assert abs(obj.HeatLoadW - expected) < 1e-6
+    observed_heat += obj.HeatLoadW
+assert abs(observed_heat - 57.0) < 1e-6
+
+materials = {materials!r}
+for name, expected in materials.items():
+    assert doc.getObject(name).MaterialIntent == expected
+
+metadata = doc.getObject("Thermal_Model_Metadata")
+assert metadata is not None
+assert abs(metadata.AmbientC - 35.0) < 1e-6
+assert tuple(metadata.GravityMmS2) == (0.0, -9810.0, 0.0)
+assert abs(metadata.TotalHeatW - 57.0) < 1e-6
+assert metadata.CoolingMode == "NaturalConvection"
+signature = "air_solids={{}};vents={{}};heat={{:.3f}};max_overlap={{:.6f}};bbox={{:.3f}},{{:.3f}},{{:.3f}},{{:.3f}},{{:.3f}},{{:.3f}}".format(
+    len(air.Shape.Solids),
+    ",".join("{{:.3f}}".format(doc.getObject(name).Shape.Area) for name in boundary_names),
+    observed_heat,
+    max(pairwise_overlaps),
+    min(doc.getObject(name).Shape.BoundBox.XMin for name in solid_names),
+    min(doc.getObject(name).Shape.BoundBox.YMin for name in solid_names),
+    min(doc.getObject(name).Shape.BoundBox.ZMin for name in solid_names),
+    max(doc.getObject(name).Shape.BoundBox.XMax for name in solid_names),
+    max(doc.getObject(name).Shape.BoundBox.YMax for name in solid_names),
+    max(doc.getObject(name).Shape.BoundBox.ZMax for name in solid_names),
+)
+print("HINOKI_THERMAL_REOPEN_OK")
+print("HINOKI_THERMAL_SIGNATURE " + signature)
+'''.format(
+        cad_file=cad_file.as_posix(),
+        solid_names=p.SOLID_BODIES,
+        loads=dict(p.HEAT_LOADS_W),
+        boundary_names=p.BOUNDARY_FACES,
+        head_width=p.HEAD["width"],
+        head_height=p.HEAD["height"],
+        head_depth=p.HEAD["depth"],
+        rear_wall=p.REAR_WALL,
+        vent_width=p.VENT["width"],
+        vent_height=p.VENT["height"],
+        vent_area=p.VENT["area"],
+        materials=dict(p.MATERIAL_INTENT),
+    )
+
+
+def run_freecad_probe(cad_file, p):
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=Path(tempfile.gettempdir()),
+        input="exec({!r})\n".format(thermal_validation_probe(cad_file, p)),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+
+def signature_from(result):
+    for line in (result.stdout + result.stderr).splitlines():
+        if line.startswith("HINOKI_THERMAL_SIGNATURE "):
+            return line.partition(" ")[2]
+    return ""
 
 
 class HinokiThermalCHTTests(unittest.TestCase):
@@ -136,113 +318,63 @@ class HinokiThermalCHTTests(unittest.TestCase):
       self.assertIn("HINOKI_THERMAL_BUILD_OK", combined_output)
       self.assertTrue(temporary_cad.exists(), "builder must create the requested FCStd")
 
-      probe = r'''
-import FreeCAD as App
-
-doc = App.open(r"{cad_file}")
-required_groups = (
-    "Thermal_Solids", "Heat_Sources", "Fluid_Regions",
-    "Boundary_References", "Thermal_Metadata",
-)
-group_names = tuple(
-    obj.Name for obj in doc.Objects if obj.TypeId == "App::DocumentObjectGroup"
-)
-assert group_names == required_groups, "top groups: " + repr(group_names)
-
-solid_names = {solid_names!r}
-for name in solid_names:
-    obj = doc.getObject(name)
-    assert obj is not None, "missing solid " + name
-    assert obj.TypeId == "Part::Feature", name + " must be a Part::Feature"
-    assert obj.Shape.isValid() and obj.Shape.Volume > 0.0, name + " must be valid"
-    assert obj.Shape.Solids, name + " must contain leaf solids"
-    for leaf in obj.Shape.Solids:
-        assert leaf.isValid() and leaf.isClosed(), name + " leaf must be closed"
-    assert obj.Classification and obj.MaterialIntent and obj.Units == "mm"
-
-air = doc.getObject("Internal_Air_Volume")
-assert air is not None and air.Shape.isValid() and air.Shape.Volume > 0.0
-assert len(air.Shape.Solids) == 1, "internal air must be one connected solid"
-assert air.MaterialIntent == "Air" and air.Units == "mm"
-
-for name in {boundary_names!r}:
-    boundary = doc.getObject(name)
-    assert boundary is not None and boundary.Shape.isValid(), "missing boundary " + name
-    assert boundary.Classification == "ReferenceOnly"
-    assert boundary.ExportPolicy == "ReferenceOnly"
-    assert abs(boundary.Shape.Area - {vent_area!r}) < 0.1
-    normal = boundary.Shape.normalAt(0.0, 0.0)
-    assert normal.z > 0.999, name + " normal must face +Z"
-    assert abs(boundary.Shape.BoundBox.ZMin - {head_depth!r}) < 1e-6
-    assert air.Shape.common(boundary.Shape).Area > 5999.9, name + " must open to air"
-
-glass = doc.getObject("Cover_Glass").Shape.BoundBox
-panel = doc.getObject("Heat_Panel_Backlight").Shape.BoundBox
-mid = doc.getObject("Mid_Frame").Shape.BoundBox
-rear = doc.getObject("Rear_Enclosure").Shape
-assert (glass.XMin, glass.YMin, glass.ZMin) == (-371.0, 0.0, 0.0)
-assert (glass.XLength, glass.YLength, glass.ZLength) == (742.0, 492.0, 3.0)
-assert abs(panel.XMin + 354.2) < 1e-6 and abs(panel.YMin - 28.0) < 1e-6
-assert (panel.XLength, panel.YLength, panel.ZLength) == (708.4, 398.5, 12.0)
-assert (mid.XMin, mid.YMin, mid.ZMin) == (-368.5, 2.5, 15.0)
-assert (mid.XLength, mid.YLength, mid.ZLength) == (737.0, 487.0, 2.0)
-assert rear.isValid() and rear.Volume > 0.0
-assert abs(rear.BoundBox.ZMax - 62.0) < 1e-6
-
-stack = ("Mid_Frame", "Heat_Spreader", "TIM_QC7790", "Heat_QC7790", "Carrier_PCB")
-for lower, upper in zip(stack, stack[1:]):
-    lower_shape = doc.getObject(lower).Shape
-    upper_shape = doc.getObject(upper).Shape
-    assert lower_shape.common(upper_shape).Volume < 1e-7
-    assert abs(lower_shape.BoundBox.ZMax - upper_shape.BoundBox.ZMin) < 1e-6
-for name in ("Heat_Memory", "Heat_Carrier_PMIC"):
-    shape = doc.getObject(name).Shape
-    assert abs(shape.BoundBox.ZMin - 21.0) < 1e-6
-    assert abs(shape.BoundBox.ZMax - 23.0) < 1e-6
-    assert shape.common(doc.getObject("Heat_QC7790").Shape).Volume < 1e-7
-    assert abs(shape.BoundBox.ZMax - doc.getObject("Carrier_PCB").Shape.BoundBox.ZMin) < 1e-6
-
-loads = {loads!r}
-observed_heat = 0.0
-for name, expected in loads.items():
-    obj = doc.getObject(name)
-    assert "HeatLoadW" in obj.PropertiesList, name + " needs a heat load"
-    assert abs(obj.HeatLoadW - expected) < 1e-6
-    observed_heat += obj.HeatLoadW
-assert abs(observed_heat - 57.0) < 1e-6
-
-materials = {materials!r}
-for name, expected in materials.items():
-    assert doc.getObject(name).MaterialIntent == expected
-
-metadata = doc.getObject("Thermal_Model_Metadata")
-assert metadata is not None
-assert abs(metadata.AmbientC - 35.0) < 1e-6
-assert tuple(metadata.GravityMmS2) == (0.0, -9810.0, 0.0)
-assert abs(metadata.TotalHeatW - 57.0) < 1e-6
-assert metadata.CoolingMode == "NaturalConvection"
-print("HINOKI_THERMAL_REOPEN_OK")
-'''.format(
-          cad_file=temporary_cad.as_posix(),
-          solid_names=p.SOLID_BODIES,
-          boundary_names=p.BOUNDARY_FACES,
-          vent_area=p.VENT["area"],
-          head_depth=p.HEAD["depth"],
-          loads=dict(p.HEAT_LOADS_W),
-          materials=dict(p.MATERIAL_INTENT),
-      )
-      reopen = subprocess.run(
-          [str(FREECAD_CMD), "-c"],
-          cwd=Path(tempfile.gettempdir()),
-          input="exec({!r})\n".format(probe),
-          capture_output=True,
-          text=True,
-          check=False,
-      )
+      reopen = run_freecad_probe(temporary_cad, p)
       self.assertEqual(reopen.returncode, 0, reopen.stdout + reopen.stderr)
       self.assertIn("HINOKI_THERMAL_REOPEN_OK", reopen.stdout + reopen.stderr)
+      formal_reopen = run_freecad_probe(CAD_FILE, p)
+      self.assertEqual(formal_reopen.returncode, 0, formal_reopen.stdout + formal_reopen.stderr)
+      self.assertEqual(signature_from(reopen), signature_from(formal_reopen))
       self.assertEqual(
           CAD_FILE.read_bytes(),
           original_cad_bytes,
           "temporary builder test must not alter the tracked formal FCStd",
       )
+
+  def test_atomic_publish_closes_source_and_returns_output_path(self):
+    """Atomic save must verify a separately reopened document and preserve old output on failure."""
+    self.assertTrue(FREECAD_CMD.exists(), "FreeCAD command-line executable must exist")
+    source = BUILD_SCRIPT.read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as temp_dir:
+      output_path = Path(temp_dir) / "atomic-output.FCStd"
+      forced_failure_path = Path(temp_dir) / "existing-output.FCStd"
+      launcher = r'''
+from pathlib import Path
+import FreeCAD as App
+
+namespace = {{"__name__": "thermal_atomic_regression", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+result = namespace["build_document"](Path(r"{output_path}"))
+assert isinstance(result, Path), "builder must return its published path, not a closed document"
+assert result == Path(r"{output_path}") and result.exists()
+assert not any(name.startswith("Hinoki_Thermal_CHT_Model") for name in App.listDocuments()), "source document remained open"
+
+forced_failure = Path(r"{forced_failure_path}")
+original_bytes = b"existing formal output survives failed validation"
+forced_failure.write_bytes(original_bytes)
+bad = App.newDocument("AtomicFailure")
+try:
+    namespace["publish_atomically"](bad, forced_failure)
+except RuntimeError:
+    pass
+else:
+    raise AssertionError("invalid document must fail atomic validation")
+assert forced_failure.read_bytes() == original_bytes
+assert not list(forced_failure.parent.glob("." + forced_failure.stem + ".*.FCStd"))
+print("HINOKI_ATOMIC_INDEPENDENT_REOPEN_OK")
+'''.format(
+          script_path=BUILD_SCRIPT.as_posix(),
+          source=source,
+          output_path=output_path.as_posix(),
+          forced_failure_path=forced_failure_path.as_posix(),
+      )
+      result = subprocess.run(
+          [str(FREECAD_CMD), "-c"],
+          cwd=Path(tempfile.gettempdir()),
+          input="exec({!r})\n".format(launcher),
+          capture_output=True,
+          text=True,
+          check=False,
+          timeout=120,
+      )
+      self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
+      self.assertIn("HINOKI_ATOMIC_INDEPENDENT_REOPEN_OK", result.stdout + result.stderr)
