@@ -47,10 +47,17 @@ def _write_json_temp(path, payload):
     """Write one complete JSON payload to a same-directory temporary file."""
     path.parent.mkdir(parents=True, exist_ok=True)
     temporary = path.with_name(".{}.{}.tmp".format(path.name, uuid.uuid4().hex))
-    temporary.write_text(
-        json.dumps(payload, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    try:
+        temporary.write_text(
+            json.dumps(payload, indent=2, sort_keys=True) + "\n",
+            encoding="utf-8",
+        )
+    except Exception:
+        try:
+            if temporary.exists():
+                temporary.unlink()
+        finally:
+            raise
     return temporary
 
 

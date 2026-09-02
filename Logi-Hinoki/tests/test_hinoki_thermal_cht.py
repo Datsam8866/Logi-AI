@@ -913,3 +913,57 @@ print("HINOKI_FAILURE_SIGNAL_TEST_DONE")
         self.assertEqual(setup_path.read_bytes(), setup_original)
         self.assertEqual(review_path.read_bytes(), review_original)
         self.assertEqual(set(setup_path.parent.glob(".*.tmp")), formal_temps_before)
+
+  def test_json_temp_writer_cleans_partial_file_when_write_fails(self):
+    """A writer exception after partial output must remove its temporary file."""
+    self.assertTrue(REVIEW_SCRIPT.exists(), "thermal review script must exist")
+    source = REVIEW_SCRIPT.read_text(encoding="utf-8")
+    with tempfile.TemporaryDirectory() as temp_dir:
+      launcher = r'''
+from pathlib import Path
+
+namespace = {{"__name__": "partial_json_temp_failure", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+root = Path(r"{temp_dir}")
+partial = root / ".review.json.partial.tmp"
+
+class FailingTemporary:
+    def write_text(self, content, encoding=None):
+        partial.write_text("partial", encoding="utf-8")
+        raise OSError("forced JSON writer failure")
+    def exists(self):
+        return partial.exists()
+    def unlink(self):
+        partial.unlink()
+
+class FakeTarget:
+    parent = root
+    name = "review.json"
+    def with_name(self, name):
+        return FailingTemporary()
+
+try:
+    namespace["_write_json_temp"](FakeTarget(), {{"forced": True}})
+except OSError as error:
+    assert "forced JSON writer failure" in str(error)
+else:
+    raise AssertionError("writer failure must propagate")
+assert not partial.exists()
+print("HINOKI_PARTIAL_JSON_TEMP_CLEANUP_OK")
+'''.format(
+          script_path=REVIEW_SCRIPT.as_posix(),
+          source=source,
+          temp_dir=Path(temp_dir).as_posix(),
+      )
+      result = subprocess.run(
+          [str(FREECAD_CMD), "-c"],
+          cwd=Path(tempfile.gettempdir()),
+          input="exec({!r})\n".format(launcher),
+          capture_output=True,
+          text=True,
+          check=False,
+          timeout=120,
+      )
+      combined = result.stdout + result.stderr
+      self.assertEqual(result.returncode, 0, combined)
+      self.assertIn("HINOKI_PARTIAL_JSON_TEMP_CLEANUP_OK", combined)
