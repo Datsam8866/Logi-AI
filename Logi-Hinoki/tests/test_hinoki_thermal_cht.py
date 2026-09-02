@@ -285,15 +285,143 @@ def fingerprints_from(result):
     return fingerprints
 
 
-def assert_matching_fingerprints(test_case, temporary, formal, expected_names):
+def geometry_equivalence_probe(formal_path, temporary_path, names):
+    return r'''
+import FreeCAD as App
+
+formal = App.open(r"{formal_path}")
+formal_shapes = {{name: formal.getObject(name).Shape.copy() for name in {names!r}}}
+App.closeDocument(formal.Name)
+temporary = App.open(r"{temporary_path}")
+errors = []
+for name in {names!r}:
+    first = formal_shapes[name]
+    second = temporary.getObject(name).Shape.copy()
+    if not first.isValid() or not second.isValid():
+        errors.append(name + " has an invalid shape")
+        continue
+    if first.Solids or second.Solids:
+        symmetric_difference = first.cut(second).Volume + second.cut(first).Volume
+        common_volume = first.common(second).Volume
+        if (
+            symmetric_difference > 0.01
+            or abs(common_volume - first.Volume) > 0.01
+            or abs(common_volume - second.Volume) > 0.01
+        ):
+            errors.append(
+                "{{}} volumetric symdiff={{:.6f}} common={{:.6f}} volumes={{:.6f}},{{:.6f}}".format(
+                    name, symmetric_difference, common_volume, first.Volume, second.Volume
+                )
+            )
+    else:
+        symmetric_difference = first.cut(second).Area + second.cut(first).Area
+        common_area = first.common(second).Area
+        if (
+            symmetric_difference > 0.01
+            or abs(common_area - first.Area) > 0.01
+            or abs(common_area - second.Area) > 0.01
+        ):
+            errors.append(
+                "{{}} face symdiff={{:.6f}} common={{:.6f}} areas={{:.6f}},{{:.6f}}".format(
+                    name, symmetric_difference, common_area, first.Area, second.Area
+                )
+            )
+    print("HINOKI_THERMAL_GEOMETRY_EQUIVALENT " + name)
+if errors:
+    print("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_FAILED " + " | ".join(errors))
+else:
+    print("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK")
+'''.format(
+        formal_path=formal_path.as_posix(),
+        temporary_path=temporary_path.as_posix(),
+        names=tuple(names),
+    )
+
+
+def run_geometry_equivalence_probe(formal_path, temporary_path, names):
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=Path(tempfile.gettempdir()),
+        input="exec({!r})\n".format(
+            geometry_equivalence_probe(formal_path, temporary_path, names)
+        ),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+
+def create_geometry_pair(formal_path, temporary_path, temporary_shape):
+    """Create two native FCStds with one named shape for equivalence regressions."""
+    launcher = r'''
+import FreeCAD as App
+import Part
+
+def save_document(path, shape):
+    doc = App.newDocument("GeometryPair")
+    obj = doc.addObject("Part::Feature", "ProbeShape")
+    obj.Shape = shape
+    doc.recompute()
+    doc.saveAs(r"{{}}".format(path))
+    App.closeDocument(doc.Name)
+
+box = Part.makeBox(10.0, 20.0, 30.0)
+save_document(r"{formal_path}", box)
+{temporary_shape}
+save_document(r"{temporary_path}", alternate)
+formal_hash = box.exportBrepToString()
+alternate_hash = alternate.exportBrepToString()
+formal_bbox = box.BoundBox
+alternate_bbox = alternate.BoundBox
+formal_numeric = tuple(round(value, 3) for value in (
+    formal_bbox.XMin, formal_bbox.YMin, formal_bbox.ZMin,
+    formal_bbox.XMax, formal_bbox.YMax, formal_bbox.ZMax, box.Volume,
+))
+alternate_numeric = tuple(round(value, 3) for value in (
+    alternate_bbox.XMin, alternate_bbox.YMin, alternate_bbox.ZMin,
+    alternate_bbox.XMax, alternate_bbox.YMax, alternate_bbox.ZMax, alternate.Volume,
+))
+print("HINOKI_GEOMETRY_PAIR numeric_equal={{}} hash_equal={{}}".format(
+    formal_numeric == alternate_numeric, formal_hash == alternate_hash
+))
+'''.format(
+        formal_path=formal_path.as_posix(),
+        temporary_path=temporary_path.as_posix(),
+        temporary_shape=temporary_shape,
+    )
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=Path(tempfile.gettempdir()),
+        input="exec({!r})\n".format(launcher),
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+
+def assert_matching_fingerprints(
+    test_case, temporary, formal, expected_names, temporary_path, formal_path
+):
     test_case.assertEqual(set(temporary), set(expected_names))
     test_case.assertEqual(set(formal), set(expected_names))
+    hash_mismatches = []
     for name in expected_names:
         test_case.assertEqual(
-            temporary[name],
-            formal[name],
+            temporary[name][:-1],
+            formal[name][:-1],
             "formal/temp geometry fingerprint differs for " + name,
         )
+        if temporary[name][-1] != formal[name][-1]:
+            hash_mismatches.append(name)
+    if hash_mismatches:
+        result = run_geometry_equivalence_probe(
+            formal_path, temporary_path, hash_mismatches
+        )
+        combined = result.stdout + result.stderr
+        test_case.assertEqual(result.returncode, 0, combined)
+        test_case.assertIn("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK", combined)
 
 
 class HinokiThermalCHTTests(unittest.TestCase):
@@ -404,6 +532,8 @@ class HinokiThermalCHTTests(unittest.TestCase):
           fingerprints_from(reopen),
           fingerprints_from(formal_reopen),
           expected_fingerprint_names,
+          temporary_cad,
+          CAD_FILE,
       )
       self.assertEqual(
           CAD_FILE.read_bytes(),
@@ -487,6 +617,57 @@ print("HINOKI_ATOMIC_INDEPENDENT_REOPEN_OK")
     }
     self.assertEqual(aggregate_signature(baseline), aggregate_signature(moved))
     self.assertNotEqual(baseline["Heat_IO"], moved["Heat_IO"])
+
+  def test_geometry_equivalence_accepts_hash_mismatched_equivalent_boxes(self):
+    """A polygon-face extrusion matching a box must pass the boolean fallback."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+      formal_path = Path(temp_dir) / "box.FCStd"
+      temporary_path = Path(temp_dir) / "polygon.FCStd"
+      polygon_box = """
+wire = Part.makePolygon((
+    App.Vector(0.0, 0.0, 0.0), App.Vector(10.0, 0.0, 0.0),
+    App.Vector(10.0, 20.0, 0.0), App.Vector(0.0, 20.0, 0.0),
+    App.Vector(0.0, 0.0, 0.0),
+))
+alternate = Part.Face(wire).extrude(App.Vector(0.0, 0.0, 30.0))
+"""
+      created = create_geometry_pair(formal_path, temporary_path, polygon_box)
+      self.assertEqual(created.returncode, 0, created.stdout + created.stderr)
+      self.assertIn(
+          "HINOKI_GEOMETRY_PAIR numeric_equal=True hash_equal=False",
+          created.stdout + created.stderr,
+      )
+      equivalent = run_geometry_equivalence_probe(
+          formal_path, temporary_path, ("ProbeShape",)
+      )
+      self.assertEqual(equivalent.returncode, 0, equivalent.stdout + equivalent.stderr)
+      self.assertIn(
+          "HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK",
+          equivalent.stdout + equivalent.stderr,
+      )
+
+  def test_geometry_equivalence_rejects_nearly_summarized_but_shifted_box(self):
+    """Boolean comparison must reject a real shift even if coarse numeric fields match."""
+    with tempfile.TemporaryDirectory() as temp_dir:
+      formal_path = Path(temp_dir) / "box.FCStd"
+      temporary_path = Path(temp_dir) / "shifted.FCStd"
+      shifted_box = "alternate = Part.makeBox(10.0, 20.0, 30.0, App.Vector(0.00001, 0.0, 0.0))"
+      created = create_geometry_pair(formal_path, temporary_path, shifted_box)
+      self.assertEqual(created.returncode, 0, created.stdout + created.stderr)
+      self.assertIn(
+          "HINOKI_GEOMETRY_PAIR numeric_equal=True hash_equal=False",
+          created.stdout + created.stderr,
+      )
+      rejected = run_geometry_equivalence_probe(
+          formal_path, temporary_path, ("ProbeShape",)
+      )
+      combined = rejected.stdout + rejected.stderr
+      self.assertEqual(rejected.returncode, 0, combined)
+      self.assertIn(
+          "HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_FAILED ProbeShape volumetric",
+          combined,
+      )
+      self.assertNotIn("HINOKI_THERMAL_GEOMETRY_EQUIVALENCE_OK", combined)
 
   def test_verify_document_rejects_air_overlapping_a_named_solid(self):
     """Air filled back into a component void must fail the native builder gate."""
