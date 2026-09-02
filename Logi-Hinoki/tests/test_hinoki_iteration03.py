@@ -7,6 +7,8 @@ import os
 import subprocess
 import tempfile
 import unittest
+import xml.etree.ElementTree as ET
+import zipfile
 
 
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
@@ -347,11 +349,36 @@ print('Calm Crown native front architecture checks passed')
                 "Builder test must not overwrite tracked Iteration 03 CAD",
             )
 
+            with zipfile.ZipFile(temporary_cad_file) as archive:
+                self.assertIn(
+                    "GuiDocument.xml",
+                    archive.namelist(),
+                    "FCStd must persist actual GUI view-provider state",
+                )
+                gui_root = ET.fromstring(archive.read("GuiDocument.xml"))
+            providers = {
+                provider.attrib["name"]: provider
+                for provider in gui_root.findall("./ViewProviderData/ViewProvider")
+            }
+            for claim_name in load_parameters().REQUIRED_INTERNAL_CLAIMS:
+                claim_provider = providers.get(claim_name)
+                self.assertIsNotNone(
+                    claim_provider,
+                    claim_name + " must have a persisted GUI view provider",
+                )
+                gui_properties = {
+                    prop.attrib["name"]: next(iter(prop)).attrib["value"]
+                    for prop in claim_provider.findall("./Properties/Property")
+                }
+                self.assertEqual(gui_properties.get("Visibility"), "false")
+                self.assertEqual(gui_properties.get("Transparency"), "82")
+
             probe = """
 import FreeCAD as App
 doc = App.open(r'{cad_file}')
 visible_names = ('Rear_Shell', 'Rear_Service_Cover', 'Vent_Insert_Lower', 'IO_Recess')
 claim_names = {claim_names!r}
+head_depth = {head_depth!r}
 required = visible_names + claim_names
 missing = [name for name in required if doc.getObject(name) is None]
 assert not missing, 'Missing Task 3 objects: ' + ', '.join(missing)
@@ -389,16 +416,36 @@ assert io_recess.Shape.BoundBox.ZMin >= rear_shell.Shape.BoundBox.ZMin
 for name in claim_names:
     obj = doc.getObject(name)
     assert obj.ExportPolicy == 'ReferenceOnly', name + ' must be reference-only'
-    assert 'DefaultVisibility' in obj.PropertiesList
-    assert not obj.DefaultVisibility, name + ' must be hidden by default'
+    assert not obj.Visibility, name + ' must persist as hidden after reopening'
 
 vesa = doc.getObject('VESA_Reinforcement_Claim')
 assert 'VESAPattern' in vesa.PropertiesList
 assert abs(vesa.VESAPattern.Value - 100.0) < 1e-6
+
+rear_rounding = []
+for face in rear_shell.Shape.Faces:
+    surface = face.Surface
+    axis = getattr(surface, 'Axis', None)
+    if surface.__class__.__name__ != 'Plane' and (
+        axis is None or abs(axis.z) < 0.99
+    ):
+        rear_rounding.append(surface)
+assert rear_rounding, 'Rear depth transition requires a non-planar, non-Z-axis fillet surface'
+
+assert io_recess.Shape.BoundBox.ZMax < rear_shell.Shape.BoundBox.ZMax - 0.5, (
+    'I/O feature must remain below its surrounding rear surface'
+)
+assert rear_shell.Shape.common(io_recess.Shape).Volume < 1e-6, (
+    'I/O feature must sit in the rear-shell pocket rather than protrude through it'
+)
+assert max(obj.Shape.BoundBox.ZMax for obj in product_parts) <= head_depth + 1e-6, (
+    'Product head solids must not exceed controlled head depth'
+)
 print('Calm Crown native rear and internal architecture checks passed')
 """.format(
                 cad_file=temporary_cad_file.as_posix(),
                 claim_names=load_parameters().REQUIRED_INTERNAL_CLAIMS,
+                head_depth=load_parameters().HEAD["depth"],
             )
             result = subprocess.run(
                 [str(FREECAD_CMD), "-c"],

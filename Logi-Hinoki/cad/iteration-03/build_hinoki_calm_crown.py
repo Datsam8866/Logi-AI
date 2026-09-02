@@ -6,6 +6,8 @@ Coordinate system: X left/right, Y vertical, Z rearward.
 
 import os
 import sys
+import zipfile
+from html import escape
 from pathlib import Path
 
 import FreeCAD as App
@@ -149,12 +151,57 @@ def add_reference_claim(
     claim.ExportPolicy = "ReferenceOnly"
     claim.Source = "Calm Crown Iteration 03 internal architecture allocation"
     claim.ReviewStatus = "Assumed reference space; not manufacturing geometry"
-    claim.addProperty("App::PropertyBool", "DefaultVisibility", "Traceability")
-    claim.DefaultVisibility = False
+    # FreeCADCmd has no GUI view provider. Persist the native visibility state;
+    # persist_gui_view_state() writes the GUI transparency counterpart.
+    claim.Visibility = False
     if claim.ViewObject is not None:
         claim.ViewObject.Transparency = 82
         claim.ViewObject.Visibility = False
     return claim
+
+
+def persist_gui_view_state(doc, output_path):
+    """Add the GUI view-provider states omitted by FreeCADCmd saves.
+
+    FreeCADCmd writes Document.xml only. The GUI restores visual properties from
+    GuiDocument.xml, so this formal FCStd entry keeps reference claims hidden and
+    transparent when the native file is subsequently opened in FreeCAD GUI.
+    """
+    claim_names = set(parameters.REQUIRED_INTERNAL_CLAIMS)
+    providers = []
+    for obj in doc.Objects:
+        hidden = obj.Name in claim_names
+        properties = [
+            '<Property name="Visibility" type="App::PropertyBool">'
+            '<Bool value="{}"/></Property>'.format(str(not hidden).lower())
+        ]
+        if hidden:
+            properties.insert(
+                0,
+                '<Property name="Transparency" type="App::PropertyInteger">'
+                '<Integer value="82"/></Property>',
+            )
+        providers.append(
+            '<ViewProvider name="{}" expanded="0" treeRank="0">'
+            '<Properties Count="{}">{}</Properties></ViewProvider>'.format(
+                escape(obj.Name), len(properties), "".join(properties)
+            )
+        )
+    gui_document = (
+        "<?xml version='1.0' encoding='utf-8'?>"
+        "<Document SchemaVersion=\"1\"><ViewProviderData Count=\"{}\">{}"
+        "</ViewProviderData><Camera settings=\"\"/></Document>"
+    ).format(len(providers), "".join(providers))
+
+    temporary_path = output_path.with_suffix(output_path.suffix + ".gui.tmp")
+    with zipfile.ZipFile(output_path, "r") as source, zipfile.ZipFile(
+        temporary_path, "w", zipfile.ZIP_DEFLATED
+    ) as target:
+        for entry in source.infolist():
+            if entry.filename != "GuiDocument.xml":
+                target.writestr(entry, source.read(entry.filename))
+        target.writestr("GuiDocument.xml", gui_document.encode("utf-8"))
+    os.replace(str(temporary_path), str(output_path))
 
 
 def build_document():
@@ -358,23 +405,34 @@ def build_document():
     rear_perimeter = rounded_prism_xy(
         HEAD_WIDTH, HEAD_HEIGHT, 42.0, HEAD_RADIUS, (head_x, HEAD_BOTTOM_Y, 9.0)
     )
-    rear_island = rounded_prism_xy(
-        460.0, 330.0, 12.0, 42.0, (-230.0, 196.0, 49.0)
+    rear_island_raw = rounded_prism_xy(
+        460.0, 330.0, 8.0, 42.0, (-230.0, 196.0, 54.0)
     )
+    rear_island_top_edges = [
+        edge
+        for edge in rear_island_raw.Edges
+        if abs(edge.BoundBox.ZMin - HEAD_DEPTH) < 1e-6
+        and abs(edge.BoundBox.ZMax - HEAD_DEPTH) < 1e-6
+    ]
+    rear_island = rear_island_raw.makeFillet(5.0, rear_island_top_edges)
     service_well = rounded_prism_xy(
         276.0, 236.0, 8.0, 16.0, (-138.0, 243.0, 55.0)
     )
     vent_well = rounded_prism_xy(
-        486.0, 38.0, 8.0, 12.0, (-243.0, 128.0, 47.0)
+        486.0, 38.0, 7.0, 12.0, (-243.0, 128.0, 45.0)
     )
     io_well = rounded_prism_xy(
-        142.0, 70.0, 8.0, 10.0, (96.0, 180.0, 55.0)
+        142.0, 70.0, 9.0, 10.0, (96.0, 180.0, 54.0)
+    )
+    cable_well = rounded_prism_xy(
+        68.0, 30.0, 7.0, 10.0, (-34.0, 155.0, 45.0)
     )
     rear_shell_shape = (
         rear_perimeter.fuse(rear_island)
         .cut(service_well)
         .cut(vent_well)
         .cut(io_well)
+        .cut(cable_well)
         .removeSplitter()
     )
     add_feature(
@@ -394,7 +452,7 @@ def build_document():
         structure,
         "Rear_Service_Cover",
         "Rear Service Cover — 260 × 220 mm",
-        rounded_prism_xy(260.0, 220.0, 3.0, 12.0, (-130.0, 251.0, 61.0)),
+        rounded_prism_xy(260.0, 220.0, 3.0, 12.0, (-130.0, 251.0, 58.0)),
         COLORS["service"],
         "Proposed visible product part",
         "Central rear service access cover; 260 × 220 mm controlled envelope",
@@ -405,7 +463,7 @@ def build_document():
         structure,
         "Vent_Insert_Lower",
         "Lower Rear Vent Insert",
-        rounded_prism_xy(470.0, 26.0, 3.0, 10.0, (-235.0, 134.0, 52.0)),
+        rounded_prism_xy(470.0, 26.0, 3.0, 10.0, (-235.0, 134.0, 47.0)),
         COLORS["vent"],
         "Proposed visible product part",
         "Lower rear thermal exhaust/intake insert",
@@ -416,7 +474,7 @@ def build_document():
         structure,
         "IO_Recess",
         "Recessed Rear I/O Bay",
-        rounded_prism_xy(126.0, 54.0, 3.0, 8.0, (104.0, 188.0, 60.0)),
+        rounded_prism_xy(126.0, 54.0, 3.0, 8.0, (104.0, 188.0, 56.0)),
         COLORS["io"],
         "Proposed visible product part",
         "Recessed rear service I/O bay",
@@ -427,7 +485,7 @@ def build_document():
         structure,
         "Cable_Exit_Feature",
         "Rear Cable Exit Feature",
-        rounded_prism_xy(52.0, 20.0, 3.0, 8.0, (-26.0, 160.0, 52.0)),
+        rounded_prism_xy(52.0, 20.0, 3.0, 8.0, (-26.0, 160.0, 47.0)),
         COLORS["io"],
         "Proposed service feature",
         "Cable exit provision below rear service island",
@@ -499,6 +557,7 @@ def build_document():
     if OUTPUT_PATH.exists():
         OUTPUT_PATH.unlink()
     doc.saveAs(str(OUTPUT_PATH))
+    persist_gui_view_state(doc, OUTPUT_PATH)
     return doc
 
 
