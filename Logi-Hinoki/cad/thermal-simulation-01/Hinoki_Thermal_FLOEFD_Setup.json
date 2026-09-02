@@ -1,0 +1,86 @@
+{
+  "ambient_c": 35.0,
+  "analysis_type": "ConjugateHeatTransfer",
+  "assumption_status": "Preliminary concept inputs",
+  "boundary_faces": [
+    "Inlet_Opening_Lower_Rear",
+    "Outlet_Opening_Upper_Rear"
+  ],
+  "cooling_mode": "NaturalConvection",
+  "external_domain": "Create in FLOEFD",
+  "fan_present": false,
+  "fluid_bodies": [
+    "Internal_Air_Volume"
+  ],
+  "gravity_mm_s2": [
+    0.0,
+    -9810.0,
+    0.0
+  ],
+  "heat_loads_w": {
+    "Heat_Audio": 4.0,
+    "Heat_Camera": 3.0,
+    "Heat_Carrier_PMIC": 5.0,
+    "Heat_Front_Lighting": 4.0,
+    "Heat_IO": 5.0,
+    "Heat_Memory": 2.0,
+    "Heat_Panel_Backlight": 20.0,
+    "Heat_QC7790": 12.0,
+    "Heat_Radar_ALS": 0.5,
+    "Heat_WiFi_BLE": 1.5
+  },
+  "material_intent": {
+    "Carrier_PCB": "FLOEFD equivalent PCB",
+    "Cover_Glass": "Generic glass",
+    "Heat_Audio": "Audio package, effective isotropic solid",
+    "Heat_Camera": "Camera package, effective isotropic solid",
+    "Heat_Carrier_PMIC": "PMIC package, effective isotropic solid",
+    "Heat_Front_Lighting": "Front lighting package, effective isotropic solid",
+    "Heat_IO": "I/O package, effective isotropic solid",
+    "Heat_Memory": "Memory package, effective isotropic solid",
+    "Heat_Panel_Backlight": "FLOEFD equivalent display stack",
+    "Heat_QC7790": "QC7790 package, effective isotropic solid",
+    "Heat_Radar_ALS": "Radar/ALS package, effective isotropic solid",
+    "Heat_Spreader": "Aluminum 6061",
+    "Heat_WiFi_BLE": "Wi-Fi/BLE package, effective isotropic solid",
+    "Internal_Air_Volume": "Air",
+    "Mid_Frame": "Aluminum 6061",
+    "Rear_Enclosure": "PC/ABS",
+    "TIM_QC7790": "Isotropic TIM; k=3 W/m-K"
+  },
+  "model_file": "Hinoki_Thermal_CHT_Model.FCStd",
+  "solid_bodies": [
+    "Cover_Glass",
+    "Mid_Frame",
+    "Rear_Enclosure",
+    "Heat_Panel_Backlight",
+    "Carrier_PCB",
+    "Heat_Spreader",
+    "TIM_QC7790",
+    "Heat_QC7790",
+    "Heat_Memory",
+    "Heat_Carrier_PMIC",
+    "Heat_IO",
+    "Heat_WiFi_BLE",
+    "Heat_Camera",
+    "Heat_Audio",
+    "Heat_Radar_ALS",
+    "Heat_Front_Lighting"
+  ],
+  "solver": "Simcenter FLOEFD",
+  "units": "mm, W, degC",
+  "vent_openings": {
+    "Inlet_Opening_Lower_Rear": {
+      "area_mm2": 6000.0,
+      "height_mm": 15.0,
+      "role": "inlet",
+      "width_mm": 400.0
+    },
+    "Outlet_Opening_Upper_Rear": {
+      "area_mm2": 6000.0,
+      "height_mm": 15.0,
+      "role": "outlet",
+      "width_mm": 400.0
+    }
+  }
+}

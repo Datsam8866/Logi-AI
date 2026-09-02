@@ -2,6 +2,7 @@
 
 from importlib.util import module_from_spec, spec_from_file_location
 import ast
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -12,7 +13,10 @@ import unittest
 PROJECT_ROOT = Path(__file__).resolve().parents[1]
 PARAMETERS_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "hinoki_thermal_parameters.py"
 BUILD_SCRIPT = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "build_hinoki_thermal_cht.py"
+REVIEW_SCRIPT = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "review_hinoki_thermal_cht.py"
 CAD_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_CHT_Model.FCStd"
+SETUP_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_FLOEFD_Setup.json"
+REVIEW_FILE = PROJECT_ROOT / "cad" / "thermal-simulation-01" / "Hinoki_Thermal_CHT_Review.json"
 FREECAD_CMD = Path(
     os.environ.get(
         "FREECAD_CMD",
@@ -30,6 +34,24 @@ def load_parameters():
 
 def run_freecad_builder(script_path, env):
     """Run source as an absolute compiled script from the system temp directory."""
+    source = script_path.read_text(encoding="utf-8")
+    launcher = "source = {!r}\nexec(compile(source, {!r}, 'exec'))\n".format(
+        source, str(script_path)
+    )
+    return subprocess.run(
+        [str(FREECAD_CMD), "-c"],
+        cwd=Path(tempfile.gettempdir()),
+        env=env,
+        input=launcher,
+        capture_output=True,
+        text=True,
+        check=False,
+        timeout=120,
+    )
+
+
+def run_freecad_review(script_path, env):
+    """Run the review source through FreeCAD from a non-project cwd."""
     source = script_path.read_text(encoding="utf-8")
     launcher = "source = {!r}\nexec(compile(source, {!r}, 'exec'))\n".format(
         source, str(script_path)
@@ -763,3 +785,64 @@ else:
       )
       self.assertEqual(result.returncode, 0, result.stdout + result.stderr)
       self.assertIn("HINOKI_AIR_DISJOINT_REJECTION_OK", result.stdout + result.stderr)
+
+  def test_review_and_setup_evidence_are_generated_in_temporary_outputs(self):
+    """Review generation records all minimum FLOEFD gates without formal writes."""
+    self.assertTrue(REVIEW_SCRIPT.exists(), "thermal review script must exist")
+    self.assertTrue(CAD_FILE.exists(), "formal thermal model must exist")
+    p = load_parameters()
+    original_cad_bytes = CAD_FILE.read_bytes()
+
+    with tempfile.TemporaryDirectory() as temp_dir:
+      temp_root = Path(temp_dir)
+      temporary_cad = temp_root / p.MODEL_FILE
+      temporary_setup = temp_root / p.SETUP_JSON
+      temporary_review = temp_root / p.REVIEW_JSON
+
+      builder_env = os.environ.copy()
+      builder_env["HINOKI_THERMAL_MODEL_PATH"] = str(temporary_cad)
+      built = run_freecad_builder(BUILD_SCRIPT, builder_env)
+      self.assertEqual(built.returncode, 0, built.stdout + built.stderr)
+
+      review_env = os.environ.copy()
+      review_env["HINOKI_THERMAL_MODEL_PATH"] = str(temporary_cad)
+      review_env["HINOKI_THERMAL_SETUP_PATH"] = str(temporary_setup)
+      review_env["HINOKI_THERMAL_REVIEW_PATH"] = str(temporary_review)
+      reviewed = run_freecad_review(REVIEW_SCRIPT, review_env)
+      combined = reviewed.stdout + reviewed.stderr
+      self.assertEqual(reviewed.returncode, 0, combined)
+      self.assertIn("HINOKI_THERMAL_REVIEW_OK", combined)
+      self.assertTrue(temporary_setup.exists())
+      self.assertTrue(temporary_review.exists())
+
+      setup = json.loads(temporary_setup.read_text(encoding="utf-8"))
+      self.assertEqual(setup["solver"], "Simcenter FLOEFD")
+      self.assertEqual(setup["analysis_type"], "ConjugateHeatTransfer")
+      self.assertEqual(setup["units"], "mm, W, degC")
+      self.assertEqual(setup["ambient_c"], 35.0)
+      self.assertEqual(setup["cooling_mode"], "NaturalConvection")
+      self.assertFalse(setup["fan_present"])
+      self.assertEqual(setup["gravity_mm_s2"], [0.0, -9810.0, 0.0])
+      self.assertEqual(setup["heat_loads_w"], dict(p.HEAT_LOADS_W))
+      self.assertEqual(setup["material_intent"], dict(p.MATERIAL_INTENT))
+      self.assertEqual(setup["external_domain"], "Create in FLOEFD")
+      self.assertEqual(setup["assumption_status"], "Preliminary concept inputs")
+      self.assertEqual(
+          set(setup["vent_openings"]), set(p.BOUNDARY_FACES)
+      )
+      self.assertEqual(
+          {item["area_mm2"] for item in setup["vent_openings"].values()},
+          {6000.0},
+      )
+
+      review = json.loads(temporary_review.read_text(encoding="utf-8"))
+      self.assertEqual(review["status"], "Pass")
+      self.assertTrue(review["hard_gates"])
+      self.assertTrue(all(review["hard_gates"].values()))
+      self.assertEqual(review["unauthorized_overlaps"], [])
+      self.assertEqual(review["total_heat_w"], 57.0)
+      self.assertEqual(review["required_objects"], list(
+          p.SOLID_BODIES + p.FLUID_BODIES + p.BOUNDARY_FACES
+      ))
+
+      self.assertEqual(CAD_FILE.read_bytes(), original_cad_bytes)
