@@ -84,8 +84,8 @@ class HinokiThermalCHTTests(unittest.TestCase):
         self.assertEqual(p.MATERIAL_INTENT[body], material)
     self.assertEqual(set(p.SOLID_BODIES) | set(p.FLUID_BODIES), set(p.MATERIAL_INTENT))
 
-    self.assertEqual(p.MODEL_FILE, "Hinoki_Thermal_CHT_Iteration01.FCStd")
-    self.assertEqual(p.SOLIDS_STEP, "Hinoki_Thermal_Solids_Iteration01.step")
-    self.assertEqual(p.AIR_STEP, "Hinoki_Thermal_Air_Iteration01.step")
-    self.assertEqual(p.SETUP_JSON, "Hinoki_FLOEFD_CHT_Setup_Iteration01.json")
-    self.assertEqual(p.REVIEW_JSON, "Hinoki_FLOEFD_CHT_Review_Iteration01.json")
+    self.assertEqual(p.MODEL_FILE, "Hinoki_Thermal_CHT_Model.FCStd")
+    self.assertEqual(p.SOLIDS_STEP, "Hinoki_Thermal_CHT_Solids.step")
+    self.assertEqual(p.AIR_STEP, "Hinoki_Thermal_Internal_Air.step")
+    self.assertEqual(p.SETUP_JSON, "Hinoki_Thermal_FLOEFD_Setup.json")
+    self.assertEqual(p.REVIEW_JSON, "Hinoki_Thermal_CHT_Review.json")

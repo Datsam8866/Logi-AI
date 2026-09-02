@@ -77,8 +77,8 @@ MATERIAL_INTENT = MappingProxyType(
     }
 )
 
-MODEL_FILE = "Hinoki_Thermal_CHT_Iteration01.FCStd"
-SOLIDS_STEP = "Hinoki_Thermal_Solids_Iteration01.step"
-AIR_STEP = "Hinoki_Thermal_Air_Iteration01.step"
-SETUP_JSON = "Hinoki_FLOEFD_CHT_Setup_Iteration01.json"
-REVIEW_JSON = "Hinoki_FLOEFD_CHT_Review_Iteration01.json"
+MODEL_FILE = "Hinoki_Thermal_CHT_Model.FCStd"
+SOLIDS_STEP = "Hinoki_Thermal_CHT_Solids.step"
+AIR_STEP = "Hinoki_Thermal_Internal_Air.step"
+SETUP_JSON = "Hinoki_Thermal_FLOEFD_Setup.json"
+REVIEW_JSON = "Hinoki_Thermal_CHT_Review.json"
