@@ -69,6 +69,48 @@ CAMERA_LIGHT_SENSOR = MappingProxyType(
     }
 )
 
+CAMERA_OPTICS = frozen(
+    hfov_deg=140.0,
+    forward_axis_z=-1.0,
+    optical_origin_z=0.0,
+    validation_distance=100.0,
+    lens_to_window_distance=3.2,
+    lens_aperture_diameter=6.0,
+    assumption_id="A-LOD3-AV-001",
+    source_reference="Design section 6.3; LI-IMX477-MIPI-140H 140 degree HFOV",
+)
+AV_CAVITY = frozen(
+    clearance=1.0,
+    front_plane_z=3.2,
+    assumption_id="A-LOD3-AV-002",
+    source_reference="Design section 6.3; inferred AV cavity clearance",
+)
+SHUTTER_GEOMETRY = frozen(
+    width=19.0,
+    height=19.0,
+    thickness=1.6,
+    travel=38.0,
+    assumption_id="A-LOD3-AV-003",
+    source_reference="DR-06 captive shutter engineering assumption",
+)
+ALS_GEOMETRY = frozen(
+    aperture_diameter=3.2,
+    path_depth=16.3,
+    assumption_id="A-LOD3-AV-004",
+    source_reference="Design section 6.3 independent ALS optical path assumption",
+)
+MICROPHONE_GEOMETRY = frozen(
+    diameter=3.2,
+    depth=1.6,
+    assumption_id="A-LOD3-AU-001",
+    source_reference="Design section 6.4 wide-angle microphone proxy assumption",
+)
+SPEAKER_GEOMETRY = frozen(
+    depth=8.0,
+    assumption_id="A-LOD3-AU-002",
+    source_reference="Design section 6.4 speaker depth engineering assumption",
+)
+
 AUDIO = MappingProxyType(
     {
         "Speaker_Left": frozen(diameter=40.0),
@@ -87,6 +129,53 @@ IO_PORTS = (
     "USB_C_Display_Data_PD90W",
     "Ethernet",
     "Line_Out_3p5mm",
+)
+IO_PORT_GEOMETRY = frozen(
+    service_zone_width=180.0,
+    body_width=15.0,
+    body_height=8.0,
+    body_depth=8.0,
+    clearance=0.8,
+    cut_extension=1.0,
+    assumption_id="A-LOD3-IO-001",
+    source_reference="Design section 6.2 rear service connector opening assumption",
+)
+CABLE_GEOMETRY = MappingProxyType(
+    {
+        "BYOD_Cable_Route": frozen(
+            outer_diameter=4.0,
+            minimum_bend_radius=12.0,
+            lane_z=54.0,
+            assumption_id="A-LOD3-CB-001",
+            source_reference="DR-13 controlled BYOD cable routing assumption",
+        ),
+        "Camera_Cable_Route": frozen(
+            outer_diameter=2.0,
+            minimum_bend_radius=6.0,
+            lane_z=52.0,
+            assumption_id="A-LOD3-CB-002",
+            source_reference="DR-13 controlled camera cable routing assumption",
+        ),
+        "Audio_Cable_Route_Left": frozen(
+            outer_diameter=2.0,
+            minimum_bend_radius=6.0,
+            lane_z=48.0,
+            assumption_id="A-LOD3-CB-003",
+            source_reference="DR-13 controlled audio cable routing assumption",
+        ),
+        "Audio_Cable_Route_Right": frozen(
+            outer_diameter=2.0,
+            minimum_bend_radius=6.0,
+            lane_z=48.0,
+            assumption_id="A-LOD3-CB-004",
+            source_reference="DR-13 controlled audio cable routing assumption",
+        ),
+    }
+)
+CABLE_ROUTE_CLEARANCE = frozen(
+    radial=1.0,
+    assumption_id="A-LOD3-CB-005",
+    source_reference="DR-13 cable obstruction clearance assumption",
 )
 
 THERMAL_PATH = MappingProxyType(

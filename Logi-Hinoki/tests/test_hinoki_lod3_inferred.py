@@ -15,6 +15,7 @@ PACKAGE_ROOT = PROJECT_ROOT / "cad" / "lod3-inferred-prototype-01"
 PARAMETERS_FILE = PACKAGE_ROOT / "hinoki_lod3_parameters.py"
 SOURCES_FILE = PACKAGE_ROOT / "hinoki_lod3_sources.py"
 BUILD_SCRIPT = PACKAGE_ROOT / "build_hinoki_lod3_master.py"
+AV_IO_FILE = PACKAGE_ROOT / "hinoki_lod3_av_io.py"
 SOURCE_INDEXER = PACKAGE_ROOT / "index_hinoki_lod3_sources.py"
 FREECAD_CMD = Path(
     os.environ.get(
@@ -549,6 +550,398 @@ print("HINOKI_LOD3_ELECTRONICS_THERMAL_PROBE_OK heat_parts={{}}".format(len(heat
 
 
 class TestAvIoGeometry(unittest.TestCase):
+    def test_camera_fov_contract_and_forward_reference(self):
+        p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_fov")
+        self.assertTrue(
+            hasattr(p, "CAMERA_OPTICS"),
+            "missing controlled CAMERA_OPTICS parameters",
+        )
+        optics = p.CAMERA_OPTICS
+        self.assertEqual(140.0, optics["hfov_deg"])
+        self.assertEqual(-1.0, optics["forward_axis_z"])
+        self.assertEqual(0.0, optics["optical_origin_z"])
+        self.assertGreater(optics["validation_distance"], 0.0)
+
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_fov_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_FOV_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+            probe = r"""
+import math
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+fov = doc.getObject("Camera_FOV_Reference")
+internal = doc.getObject("Camera_Optical_Keepout")
+assert fov is not None and fov.GeometryRole == "ExternalOpticalReference"
+assert fov.Shape.isValid() and fov.Shape.Volume > 0.0
+assert abs(fov.HorizontalFOV - 140.0) <= 1e-9
+assert abs(fov.ForwardAxisZ + 1.0) <= 1e-9
+assert abs(fov.OpticalOriginZ.Value) <= 1e-9
+assert abs(fov.ValidationDistance.Value - {distance}) <= 0.01
+measured_hfov = math.degrees(
+    2.0 * math.atan(fov.FarHalfWidth.Value / fov.ValidationDistance.Value)
+)
+assert abs(measured_hfov - 140.0) <= 0.01, measured_hfov
+assert fov.Shape.BoundBox.ZMax <= 0.01
+assert abs(fov.Shape.BoundBox.ZMin + {distance}) <= 0.01
+assert internal is not None and internal.GeometryRole == "InternalOpticalKeepout"
+assert internal.Shape.isValid() and internal.Shape.Volume > 0.0
+assert internal.Shape.BoundBox.ZMin >= -0.01
+assert internal.Shape.BoundBox.ZMax <= {internal_depth} + 0.01
+App.closeDocument(doc.Name)
+print("HINOKI_LOD3_FOV_PROBE_OK measured_hfov={{:.3f}}".format(measured_hfov))
+""".format(
+                model_path=model_path.as_posix(),
+                distance=optics["validation_distance"],
+                internal_depth=optics["lens_to_window_distance"],
+            )
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn("HINOKI_LOD3_FOV_PROBE_OK", combined_probe)
+
+    def test_av_cavity_prevents_hard_package_overlaps(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_av_overlap_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_AV_Overlap_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+            probe = r"""
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+cavity = doc.getObject("AV_Cavity")
+assert cavity is not None, "missing explicit AV_Cavity"
+assert cavity.GeometryRole == "CavityReference"
+assert cavity.Shape.isValid() and cavity.Shape.Volume > 0.0
+assert cavity.AuthorizedContactIntent
+barrel = doc.getObject("Camera_Barrel")
+assert getattr(barrel, "GeometryRole", "") == "PackageEnvelope"
+assert barrel.ParentAssembly == "08_Reference_Datums_Keepouts"
+
+hardware_names = (
+    "Camera_Module",
+    "Front_Light_Left",
+    "Front_Light_Right",
+    "Radar_Holder",
+    "Speaker_Left",
+    "Speaker_Right",
+)
+obstacle_names = (
+    "Cover_Glass",
+    "PCAP_Sensor",
+    "Optical_Bond",
+    "LCD_Cell",
+    "Backlight_Unit",
+    "Metal_Mid_Frame",
+    "Front_Frame",
+    "Rear_Enclosure",
+) + tuple("Primary_Boss_{{:02d}}".format(index) for index in range(1, 9))
+for hardware_name in hardware_names:
+    hardware = doc.getObject(hardware_name)
+    assert hardware is not None and hardware.Shape.isValid(), hardware_name
+    for obstacle_name in obstacle_names:
+        obstacle = doc.getObject(obstacle_name)
+        overlap = hardware.Shape.common(obstacle.Shape).Volume
+        assert overlap <= 0.01, (hardware_name, obstacle_name, overlap)
+
+for index, first_name in enumerate(hardware_names):
+    for second_name in hardware_names[index + 1:]:
+        overlap = doc.getObject(first_name).Shape.common(
+            doc.getObject(second_name).Shape
+        ).Volume
+        assert overlap <= 0.01, (first_name, second_name, overlap)
+App.closeDocument(doc.Name)
+print("HINOKI_LOD3_AV_OVERLAP_PROBE_OK")
+""".format(model_path=model_path.as_posix())
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn("HINOKI_LOD3_AV_OVERLAP_PROBE_OK", combined_probe)
+
+    def test_ports_cut_through_rear_service_opening(self):
+        p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_ports")
+        self.assertTrue(
+            hasattr(p, "IO_PORT_GEOMETRY"),
+            "missing controlled IO_PORT_GEOMETRY parameters",
+        )
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_ports_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_Ports_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+            probe = r"""
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+rear = doc.getObject("Rear_Enclosure")
+cover = doc.getObject("Rear_IO_Cover")
+for port_name in {port_names!r}:
+    port = doc.getObject(port_name)
+    cutter = doc.getObject(port_name + "_Clearance_Hole")
+    assert port.GeometryRole == "ConnectorBody"
+    assert cutter.GeometryRole == "ClearanceHole"
+    assert cutter.PhysicalCollision is False
+    assert cutter.Shape.BoundBox.ZMin < {rear_z}
+    assert cutter.Shape.BoundBox.ZMax > {head_depth}
+    cover_box = cover.Shape.BoundBox
+    centre = cutter.Shape.BoundBox.Center
+    assert cover_box.XMin < centre.x < cover_box.XMax, (port_name, centre.x)
+    assert cover_box.YMin < centre.y < cover_box.YMax, (port_name, centre.y)
+    assert port.Shape.BoundBox.ZMax <= {head_depth} + 0.01
+    assert port.Shape.common(rear.Shape).Volume <= 0.01, port_name
+    assert port.Shape.common(cover.Shape).Volume <= 0.01, port_name
+    assert cutter.Shape.common(rear.Shape).Volume <= 0.01, port_name
+    assert cutter.Shape.common(cover.Shape).Volume <= 0.01, port_name
+App.closeDocument(doc.Name)
+print("HINOKI_LOD3_PORT_CUT_PROBE_OK")
+""".format(
+                model_path=model_path.as_posix(),
+                port_names=tuple(p.IO_PORTS),
+                rear_z=p.HEAD["depth"] - p.HOUSING["rear_wall"],
+                head_depth=p.HEAD["depth"],
+            )
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn("HINOKI_LOD3_PORT_CUT_PROBE_OK", combined_probe)
+
+    def test_cables_are_single_solid_bend_controlled_and_clear(self):
+        p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_cables")
+        self.assertTrue(
+            hasattr(p, "CABLE_GEOMETRY"),
+            "missing controlled CABLE_GEOMETRY parameters",
+        )
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_cables_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_Cables_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+            probe = r"""
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+cable_specs = {cable_specs!r}
+cables = []
+for name, expected in cable_specs.items():
+    cable = doc.getObject(name)
+    assert cable is not None and cable.Shape.isValid(), name
+    assert len(cable.Shape.Solids) == 1, (name, len(cable.Shape.Solids))
+    assert abs(cable.OuterDiameter.Value - expected["outer_diameter"]) <= 0.01
+    assert abs(cable.MinimumBendRadius.Value - expected["minimum_bend_radius"]) <= 0.01
+    assert cable.ModelledBendRadius.Value >= cable.MinimumBendRadius.Value
+    assert cable.RouteConstruction in ("SweptBSpline", "FusedRoundedSegments")
+    cables.append(cable)
+
+obstacles = tuple(
+    doc.getObject(name)
+    for name in (
+        "Backlight_Unit",
+        "Carrier_PCB",
+        "Compute_SOM_PCB",
+        "Power_PCB",
+        "IO_PCB",
+        "WiFi_BLE_Module",
+    )
+)
+for cable in cables:
+    for obstacle in obstacles:
+        overlap = cable.Shape.common(obstacle.Shape).Volume
+        assert overlap <= 0.01, (cable.Name, obstacle.Name, overlap)
+for index, first in enumerate(cables):
+    for second in cables[index + 1:]:
+        overlap = first.Shape.common(second.Shape).Volume
+        assert overlap <= 0.01, (first.Name, second.Name, overlap)
+App.closeDocument(doc.Name)
+print("HINOKI_LOD3_CABLE_CLEARANCE_PROBE_OK")
+""".format(
+                model_path=model_path.as_posix(),
+                cable_specs={
+                    name: dict(values)
+                    for name, values in p.CABLE_GEOMETRY.items()
+                },
+            )
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn(
+                "HINOKI_LOD3_CABLE_CLEARANCE_PROBE_OK",
+                combined_probe,
+            )
+
+    def test_av_io_dimensions_use_owned_controlled_assumptions(self):
+        p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_av_owned")
+        required_blocks = (
+            "SHUTTER_GEOMETRY",
+            "ALS_GEOMETRY",
+            "MICROPHONE_GEOMETRY",
+            "SPEAKER_GEOMETRY",
+            "IO_PORT_GEOMETRY",
+        )
+        for block_name in required_blocks:
+            self.assertTrue(
+                hasattr(p, block_name),
+                "missing controlled " + block_name,
+            )
+            block = getattr(p, block_name)
+            self.assertTrue(block["assumption_id"], block_name)
+            self.assertTrue(block["source_reference"], block_name)
+        for cable_name, cable in p.CABLE_GEOMETRY.items():
+            self.assertTrue(cable["assumption_id"], cable_name)
+            self.assertTrue(cable["source_reference"], cable_name)
+
+        source = AV_IO_FILE.read_text(encoding="utf-8")
+        self.assertNotIn(
+            'p.BOARD_ENVELOPES["IO_PCB"]["thickness"]',
+            source,
+        )
+        self.assertNotIn(
+            'p.CAMERA_LIGHT_SENSOR["Front_Light_Left"]["depth"]',
+            source,
+        )
+
+    def test_shutter_symmetry_shape_and_traceability_contract(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_av_contract_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_AV_Contract_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+
+            probe = r"""
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+closed = doc.getObject("Privacy_Shutter")
+opened = doc.getObject("Privacy_Shutter_Open")
+optics = doc.getObject("Camera_Optical_Keepout")
+assert opened is not None, "missing explicit Privacy_Shutter_Open state"
+assert closed.Shape.common(optics.Shape).Volume > 0.01
+assert opened.Shape.common(optics.Shape).Volume <= 0.01
+assert abs(
+    opened.Shape.BoundBox.XMin
+    - closed.Shape.BoundBox.XMin
+    - closed.Travel.Value
+) <= 0.01
+
+for left_name, right_name in (
+    ("Front_Light_Left", "Front_Light_Right"),
+    ("Speaker_Left", "Speaker_Right"),
+    ("Passive_Radiator_Left", "Passive_Radiator_Right"),
+    ("Microphone_Left", "Microphone_Right"),
+    ("Speaker_Left_Acoustic_Keepout", "Speaker_Right_Acoustic_Keepout"),
+):
+    left = doc.getObject(left_name)
+    right = doc.getObject(right_name)
+    assert left.Shape.isValid() and left.Shape.Volume > 0.0, left_name
+    assert right.Shape.isValid() and right.Shape.Volume > 0.0, right_name
+    assert abs(
+        left.Shape.BoundBox.Center.x
+        + right.Shape.BoundBox.Center.x
+        - 742.0
+    ) <= 0.01, (left_name, right_name)
+    assert abs(
+        left.Shape.BoundBox.Center.y - right.Shape.BoundBox.Center.y
+    ) <= 0.01
+    assert abs(
+        left.Shape.BoundBox.Center.z - right.Shape.BoundBox.Center.z
+    ) <= 0.01
+
+reference_names = (
+    "Camera_Barrel",
+    "Camera_Optical_Keepout",
+    "Camera_FOV_Reference",
+    "ALS_Optical_Path",
+    "Shutter_Travel_Envelope",
+    "AV_Cavity",
+    "Speaker_Left_Acoustic_Keepout",
+    "Speaker_Right_Acoustic_Keepout",
+)
+for name in reference_names:
+    obj = doc.getObject(name)
+    assert obj is not None and obj.Shape.isValid(), name
+    assert obj.Shape.Volume > 0.0, name
+    assert obj.PhysicalCollision is False, name
+
+task_parts = [
+    obj for obj in doc.Objects
+    if getattr(obj, "IsSemanticPart", False)
+    and (
+        obj.ParentAssembly in (
+            "04_Camera_Lighting_Sensors",
+            "05_Audio_IO_Cables",
+        )
+        or hasattr(obj, "GeometryRole")
+    )
+]
+source_references = {{obj.SourceReference for obj in task_parts}}
+assert len(source_references) >= 8, source_references
+assert all(
+    "A-LOD3" in obj.SourceReference
+    or "Design section" in obj.SourceReference
+    or "LI-IMX477" in obj.SourceReference
+    for obj in task_parts
+), [(obj.Name, obj.SourceReference) for obj in task_parts]
+App.closeDocument(doc.Name)
+print("HINOKI_LOD3_AV_CONTRACT_PROBE_OK refs={{}}".format(
+    len(source_references)
+))
+""".format(model_path=model_path.as_posix())
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn("HINOKI_LOD3_AV_CONTRACT_PROBE_OK", combined_probe)
+
     def test_builder_adds_camera_lighting_sensors_audio_io_and_cables(self):
         with tempfile.TemporaryDirectory(prefix="hinoki_lod3_av_io_") as temp_dir:
             model_path = Path(temp_dir) / "Hinoki_LOD3_AV_IO_Test.FCStd"
@@ -645,13 +1038,7 @@ for obj in doc.Objects:
         if obj.ParentAssembly in (
             "04_Camera_Lighting_Sensors",
             "05_Audio_IO_Cables",
-        ) or getattr(obj, "GeometryRole", "") in (
-            "OpticalKeepout",
-            "MotionKeepout",
-            "AcousticKeepout",
-            "ClearanceHole",
-            "CableObstructionEnvelope",
-        ):
+        ) or getattr(obj, "GeometryRole", "") == "PackageEnvelope":
             box = obj.Shape.BoundBox
             assert box.XMin >= -0.01 and box.XMax <= 742.01, obj.Name
             assert box.YMin >= -0.01 and box.YMax <= 492.01, obj.Name
