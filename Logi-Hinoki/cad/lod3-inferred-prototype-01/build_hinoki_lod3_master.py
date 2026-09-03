@@ -80,8 +80,12 @@ def main():
     except Exception:
         if document_name in App.listDocuments():
             App.closeDocument(document_name)
-        if temporary.exists():
-            temporary.unlink()
+        try:
+            if temporary.exists():
+                temporary.unlink()
+        except OSError:
+            # Cleanup must not replace the original build failure signal.
+            pass
         print("HINOKI_LOD3_BUILD_FAILED")
         return 1
     finally:

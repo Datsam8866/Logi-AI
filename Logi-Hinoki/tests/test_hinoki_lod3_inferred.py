@@ -1579,6 +1579,43 @@ print("HINOKI_LOD3_BUILD_VALIDATION_GATE_PROBE_OK")
             self.assertNotIn("HINOKI_LOD3_REVIEW_OK", combined_output)
             self.assertFalse(review_path.exists())
 
+    def test_blocked_staging_directory_preserves_failure_signal_and_existing_files(self):
+        for existing_destination in (False, True):
+            with self.subTest(existing_destination=existing_destination):
+                with tempfile.TemporaryDirectory(prefix="hinoki_lod3_staging_fail_") as temp_dir:
+                    model_path = Path(temp_dir) / "model.FCStd"
+                    original_contents = b"existing destination must remain unchanged"
+                    if existing_destination:
+                        model_path.write_bytes(original_contents)
+                    staging_directory = Path(temp_dir) / "model.FCStd.tmp.FCStd"
+                    staging_directory.mkdir()
+                    marker = staging_directory / "keep.txt"
+                    marker.write_text("do not remove", encoding="utf-8")
+                    env = os.environ.copy()
+                    env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+
+                    result = run_freecad_script(BUILD_SCRIPT, env)
+                    combined_output = result.stdout + result.stderr
+
+                    self.assertNotEqual(0, result.returncode, combined_output)
+                    self.assertEqual(
+                        1, combined_output.count("HINOKI_LOD3_BUILD_FAILED")
+                    )
+                    self.assertNotIn("HINOKI_LOD3_BUILD_OK", combined_output)
+                    self.assertNotIn("Traceback", combined_output)
+                    if existing_destination:
+                        self.assertEqual(original_contents, model_path.read_bytes())
+                    else:
+                        self.assertFalse(model_path.exists())
+                    self.assertTrue(staging_directory.is_dir())
+                    self.assertEqual(
+                        "do not remove", marker.read_text(encoding="utf-8")
+                    )
+                    self.assertEqual(
+                        ["keep.txt"],
+                        sorted(p.name for p in staging_directory.iterdir()),
+                    )
+
     def test_standalone_build_failure_has_nonzero_unique_sentinel(self):
         with tempfile.TemporaryDirectory(prefix="hinoki_lod3_build_fail_") as temp_dir:
             destination_directory = Path(temp_dir) / "destination_is_a_directory"
