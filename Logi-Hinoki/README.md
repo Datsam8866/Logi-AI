@@ -6,7 +6,7 @@
 
 LOD 3 master 正在 `cad/lod3-inferred-prototype-01/` 建立。Task 7 臨時 head-only build 包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources、QC7790 到 rear hatch 的被動 thermal path，以及 Task 5 的 camera、lighting、sensor、audio、microphone 與六個 rear I/O connector proxies。
 
-Task 7 head-only validation 使用臨時 build（97 個 semantic parts、79 個 physical collision parts），temporary validation：Pass。每一組 unique physical pair 的碰撞門檻為 0.01 mm³；僅允許 3 組 camera/front-light 與對應 heat source contacts，其餘 3,078 組均已檢查通過。獨立執行 `python -B -m unittest tests.test_hinoki_lod3_inferred -v`：27/27 通過（120.698 s，exit code 0）。正式 LOD 3 FCStd 仍是先前的 62-part checkpoint，待 Task 8 atomic publication 才更新，不代表臨時驗證模型已正式交付。
+Task 7 head-only validation 使用臨時 build（97 個 semantic parts、79 個 physical collision parts），temporary validation：Pass。每一組 unique physical pair 的碰撞門檻為 0.01 mm³；僅允許 3 組 camera/front-light 與對應 heat source contacts，其餘 3,078 組均已檢查通過。獨立執行 `python -B -m unittest tests.test_hinoki_lod3_inferred -v`：28/28 通過（126.901 s，exit code 0）。正式 LOD 3 FCStd 仍是先前的 62-part checkpoint，待 Task 8 atomic publication 才更新，不代表臨時驗證模型已正式交付。
 
 Next Action：Task 8 atomic publication。Task 6 stand/base、physical cable routes / bend validation、full-product STEP、review images 與 FLOEFD derivative 均 deferred；下列既有 thermal CHT handoff 不受影響。
 
