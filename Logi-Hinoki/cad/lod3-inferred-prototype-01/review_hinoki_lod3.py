@@ -1,5 +1,6 @@
 """Validate the head-only Hinoki LOD 3 Task 5 checkpoint."""
 
+from itertools import combinations
 import json
 import os
 from pathlib import Path
@@ -192,41 +193,13 @@ def _contact_evidence(physical_parts):
                 missing_geometry.append(list(pair))
         contacts.append({"parts": list(pair), "overlap_mm3": overlap})
 
-    task_assemblies = {
-        "04_Camera_Lighting_Sensors",
-        "05_Audio_IO_Cables",
-    }
-    obstacle_assemblies = {
-        "01_Display_Stack",
-        "02_Housing_Structure",
-        "03_Electronics_Thermal",
-        "07_Fasteners_Seals_Consumables",
-    }
-    task_parts = [
-        obj
-        for obj in physical_parts
-        if obj.ParentAssembly in task_assemblies
-    ]
-    obstacles = [
-        obj
-        for obj in physical_parts
-        if obj.ParentAssembly in obstacle_assemblies
-    ]
-    pairs_to_check = [
-        (task, obstacle)
-        for task in task_parts
-        for obstacle in obstacles
-    ]
-    pairs_to_check.extend(
-        (left, right)
-        for index, left in enumerate(task_parts)
-        for right in task_parts[index + 1:]
-    )
+    checked_forbidden_pairs = 0
     forbidden = []
-    for left, right in pairs_to_check:
+    for left, right in combinations(physical_parts, 2):
         pair = tuple(sorted((left.Name, right.Name)))
         if pair in expected:
             continue
+        checked_forbidden_pairs += 1
         overlap = float(left.Shape.common(right.Shape).Volume)
         if overlap > OVERLAP_THRESHOLD_MM3:
             forbidden.append(
@@ -242,6 +215,7 @@ def _contact_evidence(physical_parts):
         "expected_pairs": [list(pair) for pair in sorted(expected)],
         "asymmetric_declarations": asymmetric,
         "missing_contact_geometry": missing_geometry,
+        "checked_forbidden_pair_count": checked_forbidden_pairs,
     }
 
 

@@ -1360,7 +1360,8 @@ raise SystemExit(1 if forbidden else 0)
             report["group_ownership"]["required_groups"],
         )
         self.assertEqual([], report["group_ownership"]["failures"])
-        self.assertGreater(report["physical_geometry"]["part_count"], 0)
+        physical_count = 79
+        self.assertEqual(physical_count, report["physical_geometry"]["part_count"])
         self.assertEqual([], report["physical_geometry"]["failures"])
 
         self.assertEqual(
@@ -1413,6 +1414,10 @@ raise SystemExit(1 if forbidden else 0)
             )
         )
         self.assertEqual([], report["forbidden_overlaps"])
+        self.assertEqual(
+            physical_count * (physical_count - 1) // 2 - 3,
+            report["authorized_contact_matrix"].get("checked_forbidden_pair_count"),
+        )
 
         self.assertEqual(
             {
@@ -1439,6 +1444,80 @@ raise SystemExit(1 if forbidden else 0)
         )
         self.assertEqual(0.1, report["head_envelope"]["tolerance_mm"])
         self.assertTrue(report["head_envelope"]["within_tolerance"])
+
+    def test_review_rejects_injected_rib_collision_and_does_not_publish(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_rib_collision_") as temp_dir:
+            temp_root = Path(temp_dir)
+            model_path = self._build_temporary_master(temp_root)
+            injected_path = temp_root / "injected_rib_collision.FCStd"
+            source = REVIEW_SCRIPT.read_text(encoding="utf-8")
+            probe = """
+import json
+import FreeCAD as App
+
+namespace = {{"__name__": "hinoki_lod3_collision_probe", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+doc = App.open(r"{model_path}")
+try:
+    doc.getObject("Structural_Rib_01").Shape = doc.getObject("Structural_Rib_02").Shape.copy()
+    doc.recompute()
+    doc.saveAs(r"{injected_path}")
+    report = namespace["validate_master"](doc)
+finally:
+    App.closeDocument(doc.Name)
+print("HINOKI_LOD3_INJECTED_REPORT " + json.dumps({{
+    "status": report["status"],
+    "overall": report["overall"],
+    "no_forbidden_overlaps": report["hard_gates"]["no_forbidden_overlaps"],
+    "forbidden_overlaps": report["forbidden_overlaps"],
+}}, sort_keys=True))
+""".format(
+                script_path=REVIEW_SCRIPT.as_posix(),
+                source=source,
+                model_path=model_path.as_posix(),
+                injected_path=injected_path.as_posix(),
+            )
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            probe_output = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, probe_output)
+            self.assertTrue(injected_path.exists(), probe_output)
+            sentinel = "HINOKI_LOD3_INJECTED_REPORT "
+            payloads = [
+                line.split(sentinel, 1)[1]
+                for line in probe_output.splitlines()
+                if sentinel in line
+            ]
+            self.assertEqual(1, len(payloads), probe_output)
+            report = json.loads(payloads[0])
+            self.assertEqual("Fail", report["status"])
+            self.assertEqual("Fail", report["overall"])
+            self.assertFalse(report["no_forbidden_overlaps"])
+            overlaps = {
+                tuple(sorted(entry["parts"])): entry["overlap_mm3"]
+                for entry in report["forbidden_overlaps"]
+            }
+            rib_pair = ("Structural_Rib_01", "Structural_Rib_02")
+            self.assertIn(rib_pair, overlaps)
+            self.assertGreater(overlaps[rib_pair], 0.01)
+
+            review_path = temp_root / "must_not_publish.json"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_PATH"] = str(injected_path)
+            env["HINOKI_LOD3_REVIEW_OUT"] = str(review_path)
+            result = run_freecad_script(REVIEW_SCRIPT, env)
+            combined_output = result.stdout + result.stderr
+            self.assertNotEqual(0, result.returncode, combined_output)
+            self.assertEqual(1, combined_output.count("HINOKI_LOD3_REVIEW_FAIL"))
+            self.assertNotIn("HINOKI_LOD3_REVIEW_OK", combined_output)
+            self.assertFalse(review_path.exists())
 
     def test_build_rejects_failed_integrated_part_count_and_contact_gates(self):
         with tempfile.TemporaryDirectory(prefix="hinoki_lod3_build_gate_") as temp_dir:
