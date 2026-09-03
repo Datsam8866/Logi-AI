@@ -206,19 +206,14 @@ The parameter module is the source of truth. Builders consume parameters; review
 
 ## 9. Outputs
 
-Create a dedicated `cad/lod3-inferred-prototype-01/` package containing:
+For the current head-only Task 5 checkpoint, the active package contains:
 
 1. `Hinoki_LOD3_Inferred_Master.FCStd`
-2. `Hinoki_LOD3_Full_Assembly.step`
-3. `Hinoki_LOD3_Head.step`
-4. `Hinoki_LOD3_Display.step`
-5. `Hinoki_LOD3_Electronics_Thermal.step`
-6. `Hinoki_LOD3_Stand_Base.step`
-7. `Hinoki_LOD3_Part_Manifest.json`
-8. `Hinoki_LOD3_Validation.json`
-9. front, rear, isometric, exploded, and airflow-cutaway PNG review images
-10. derived FLOEFD solid STEP, internal-air STEP, setup JSON, and review JSON
-11. parameter, builder, review, preview, derivation, and export scripts
+2. `Hinoki_LOD3_Head.step`
+3. `Hinoki_LOD3_Part_Manifest.json`
+4. `Hinoki_LOD3_Validation.json`
+
+Display/electronics subset STEP files, full-product STEP, stand/base STEP, review images, and FLOEFD derivatives are non-required future outputs; full-product and stand/base publication remain deferred with Task 6.
 
 ## 10. Validation and failure handling
 
@@ -228,12 +223,10 @@ Create a dedicated `cad/lod3-inferred-prototype-01/` package containing:
 - Every exported physical part has valid non-null geometry and positive volume, except explicit sheet/reference objects.
 - No unauthorised solid intersections above 0.01 mm³.
 - All parts belong to the required top-level assembly group.
-- Overall head and stand envelopes match the approved dimensions within 0.1 mm.
-- VESA pitch, stand travel, tilt, and swivel match approved values.
-- Extreme stand positions do not self-interfere.
+- Overall head envelope matches the approved dimensions within 0.1 mm. Stand envelopes, VESA motion, and extreme-posture gates are deferred with Task 6.
 - Wall, rib, boss, bend, hole, hatch, fastener, vent, and thermal-contact evidence is present.
 - Every semantic part has complete metadata and a non-empty source reference.
-- All official STEP outputs reopen successfully with preserved millimetre scale and expected semantic-body counts.
+- The approved head STEP reopens successfully with preserved millimetre scale and expected semantic-body count. Full-product and stand/base STEP outputs are not active gates.
 
 ### 10.2 FLOEFD derivative hard gates
 
@@ -289,12 +282,12 @@ Do not run or rewrite superseded Iteration 01/02 product-review artifacts as par
 
 ## 13. Completion criteria
 
-The design is complete only when:
+The current head-only checkpoint is complete when:
 
 1. all master and derived hard gates pass;
-2. all formal artifacts reopen independently;
-3. the LOD 3 part manifest contains 80–120 traceable semantic parts;
-4. stand motion and interference evidence pass;
+2. all active head-only artifacts reopen independently;
+3. the head-only LOD 3 part manifest contains traceable semantic parts;
+4. stand motion and interference evidence remain explicitly deferred with Task 6;
 5. the derived FLOEFD package preserves the approved 35 °C, 57 W, fanless natural-convection case;
 6. all review images are readable on a phone;
 7. the validation report says `Pass` while clearly retaining the inferred-prototype and non-release limitations;

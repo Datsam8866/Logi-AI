@@ -132,9 +132,9 @@ def build_camera_lighting_sensors(doc, groups):
     add_dimension(camera_obj, "Depth", camera["depth"])
     add_property(
         camera_obj,
-        "App::PropertyString",
-        "AuthorizedContactRecord",
-        "Heat_Camera and Heat_Front_Lighting: intentional thermal endpoint contact.",
+        "App::PropertyStringList",
+        "AuthorizedContactTargets",
+        ["Heat_Camera"],
     )
     parts.append(camera_obj)
 
@@ -391,6 +391,12 @@ def build_camera_lighting_sensors(doc, groups):
         )
         for dimension in ("width", "height", "depth"):
             add_dimension(obj, dimension.title(), dimensions[dimension])
+        add_property(
+            obj,
+            "App::PropertyStringList",
+            "AuthorizedContactTargets",
+            ["Heat_Front_Lighting"],
+        )
         parts.append(obj)
 
     radar_obj = semantic_part(
@@ -621,19 +627,28 @@ def build_io_ports(doc, groups):
     port_geometry = p.IO_PORT_GEOMETRY
     cover = doc.getObject("Rear_IO_Cover")
     rear = doc.getObject("Rear_Enclosure")
-    cover_centre = cover.Shape.BoundBox.Center
-    pitch = port_geometry["service_zone_width"] / len(p.IO_PORTS)
+    cover_box = cover.Shape.BoundBox
     port_width = port_geometry["body_width"]
     port_height = port_geometry["body_height"]
     port_depth = port_geometry["body_depth"]
-    zone_x = cover_centre.x - port_geometry["service_zone_width"] / 2.0
-    zone_y = cover_centre.y - port_height / 2.0
+    columns = port_geometry["cluster_columns"]
+    rows = port_geometry["cluster_rows"]
+    service_margin = port_geometry["service_margin"]
+    column_x = (
+        cover_box.XMin + service_margin,
+        cover_box.XMax - service_margin - port_width,
+    )
+    row_pitch = (
+        cover_box.YLength - 2.0 * service_margin - port_height
+    ) / (rows - 1)
     rear_z = head["depth"] - p.HOUSING["rear_wall"]
     clearance = port_geometry["clearance"]
     cut_extension = port_geometry["cut_extension"]
     cutters = []
     for index, port_name in enumerate(p.IO_PORTS, start=1):
-        port_x = zone_x + (index - 1) * pitch + (pitch - port_width) / 2.0
+        zero_index = index - 1
+        port_x = column_x[zero_index % columns]
+        port_y = cover_box.YMin + service_margin + (zero_index // columns) * row_pitch
         port = semantic_part(
             doc,
             group,
@@ -643,7 +658,7 @@ def build_io_ports(doc, groups):
                 port_width,
                 port_height,
                 port_depth,
-                vector(port_x, zone_y, rear_z - port_depth),
+                vector(port_x, port_y, rear_z - port_depth),
             ),
             metadata(
                 "HNK-IO-{:03d}".format(index),
@@ -665,7 +680,7 @@ def build_io_ports(doc, groups):
             passage_z_max - passage_z_min,
             vector(
                 port_x - clearance,
-                zone_y - clearance,
+            port_y - clearance,
                 passage_z_min,
             ),
         )
@@ -683,9 +698,6 @@ def build_io_ports(doc, groups):
     cutter_compound = Part.makeCompound(cutters)
     rear.Shape = rear.Shape.cut(cutter_compound)
     cover.Shape = cover.Shape.cut(cutter_compound)
-    for obstacle_name in ("VESA_Reinforcement", "Rear_Hatch_TIM"):
-        obstacle = doc.getObject(obstacle_name)
-        obstacle.Shape = obstacle.Shape.cut(cutter_compound)
     return parts
 
 

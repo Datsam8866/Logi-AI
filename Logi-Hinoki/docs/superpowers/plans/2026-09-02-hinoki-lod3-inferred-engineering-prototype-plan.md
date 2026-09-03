@@ -196,7 +196,7 @@ git add -- cad/lod3-inferred-prototype-01/hinoki_lod3_stand.py cad/lod3-inferred
 git commit -m "feat: build LOD 3 stand and kinematics"
 ```
 
-## Task 7: Validate the integrated 80–120-part master
+## Task 7: Validate the head-only Task 5 checkpoint
 
 **Files:**
 
@@ -204,7 +204,7 @@ git commit -m "feat: build LOD 3 stand and kinematics"
 - Modify: `cad/lod3-inferred-prototype-01/build_hinoki_lod3_master.py`
 - Modify: `tests/test_hinoki_lod3_inferred.py`
 
-- [ ] Test 80–120 unique semantic physical parts, eight-group ownership, positive valid volumes, complete metadata, authorised-contact matrix, forbidden-overlap threshold 0.01 mm³, required feature evidence, head/stand envelopes ±0.1 mm, and failure sentinel uniqueness.
+- [ ] Test head-only semantic physical parts, eight-group ownership, positive valid volumes, complete metadata, exact authorised-contact matrix, forbidden-overlap threshold 0.01 mm³, required feature evidence, head envelope ±0.1 mm, and failure sentinel uniqueness. Stand envelopes and motion gates are deferred with Task 6.
 - [ ] Run RED:
 
 ```powershell
@@ -213,8 +213,8 @@ python -B -m unittest tests.test_hinoki_lod3_inferred.TestMasterValidation -v
 
 Expected: review JSON is absent and integrated part-count/contact gates fail.
 
-- [ ] Implement `validate_master()` returning machine-readable checks and an overall `Pass` only when every hard gate passes. Record limitations verbatim and never convert assumptions into known values.
-- [ ] Run GREEN. Expected: temporary master validation reports `Pass`, 80–120 parts, and zero forbidden overlap failures.
+- [ ] Implement `validate_master()` returning machine-readable head-only checks and an overall `Pass` only when every active hard gate passes. Record limitations verbatim and never convert assumptions into known values.
+- [ ] Run GREEN. Expected: temporary head-only validation reports `Pass` and zero forbidden overlap failures; no stand envelope or motion gate is evaluated.
 - [ ] Commit:
 
 ```powershell
@@ -222,14 +222,14 @@ git add -- cad/lod3-inferred-prototype-01/review_hinoki_lod3.py cad/lod3-inferre
 git commit -m "feat: validate integrated LOD 3 master"
 ```
 
-## Task 8: Export atomic master and subsystem STEP packages
+## Task 8: Export the approved head-only STEP package
 
 **Files:**
 
 - Create: `cad/lod3-inferred-prototype-01/export_hinoki_lod3.py`
 - Modify: `tests/test_hinoki_lod3_inferred.py`
 
-- [ ] Test same-directory staging, FCStd/STEP reopen, millimetre scale, expected semantic-body membership for full/head/display/electronics-thermal/stand-base exports, rollback preserving old bytes, temp cleanup, and all FreeCAD documents closed.
+- [ ] Test same-directory staging, head STEP/manifest/validation reopen, millimetre scale, expected head semantic-body membership, rollback preserving old bytes, temp cleanup, and all FreeCAD documents closed. Full-product and stand/base STEP outputs are deferred and are not active gates.
 - [ ] Run RED:
 
 ```powershell
@@ -238,8 +238,8 @@ python -B -m unittest tests.test_hinoki_lod3_inferred.TestAtomicExport -v
 
 Expected: exporter missing and rollback assertions fail.
 
-- [ ] Implement staged export to the exact approved filenames. Reopen and validate the entire set before replacing any formal artifact.
-- [ ] Run GREEN. Expected: all temporary STEP files reopen, deliberate injected failure preserves prior bytes, and no temp files remain.
+- [ ] Implement staged export to the exact approved head-only filenames. Reopen and validate the active set before replacing any formal artifact.
+- [ ] Run GREEN. Expected: the temporary head STEP and required JSON files reopen, deliberate injected failure preserves prior bytes, and no temp files remain.
 - [ ] Commit:
 
 ```powershell

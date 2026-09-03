@@ -82,6 +82,40 @@ def build_electronics_thermal(doc, groups):
     wifi = doc.getObject("WiFi_BLE_Module")
     add_heat_source(wifi, "Heat_WiFi_BLE", p.HEAT_LOADS_W["Heat_WiFi_BLE"])
 
+    head = p.HEAD
+    camera = p.CAMERA_LIGHT_SENSOR["Camera_Module"]
+    barrel = p.CAMERA_LIGHT_SENSOR["Camera_Barrel"]
+    light_gap = (barrel["width"] - camera["width"]) / 2.0
+    light_positions = {
+        "Front_Light_Left": (
+            head["width"] / 2.0
+            - barrel["width"] / 2.0
+            - p.CAMERA_LIGHT_SENSOR["Front_Light_Left"]["width"]
+            - light_gap
+        ),
+        "Front_Light_Right": (
+            head["width"] / 2.0
+            - barrel["width"] / 2.0
+            + barrel["width"]
+            + light_gap
+        ),
+    }
+    lighting_heat_shape = Part.makeCompound(
+        [
+            Part.makeBox(
+                p.CAMERA_LIGHT_SENSOR[name]["width"],
+                p.CAMERA_LIGHT_SENSOR[name]["height"],
+                p.CAMERA_LIGHT_SENSOR[name]["depth"],
+                vector(
+                    light_positions[name],
+                    head["height"] - p.CAMERA_LIGHT_SENSOR[name]["height"],
+                    0.0,
+                ),
+            )
+            for name in ("Front_Light_Left", "Front_Light_Right")
+        ]
+    )
+
     heat_shapes = {
         "Heat_QC7790": Part.makeBox(35.0, 35.0, 2.0, vector(353.5, 228.5, 30.2)),
         "Heat_Memory": Part.makeBox(22.0, 16.0, 2.0, vector(294.0, 228.0, 30.2)),
@@ -90,7 +124,7 @@ def build_electronics_thermal(doc, groups):
         "Heat_Camera": Part.makeBox(38.0, 18.0, 4.0, vector(352.0, 443.0, 27.0)),
         "Heat_Audio": Part.makeBox(60.0, 20.0, 4.0, vector(80.0, 86.0, 27.0)),
         "Heat_Radar_ALS": Part.makeBox(59.8, 18.0, 3.0, vector(341.1, 63.0, 27.0)),
-        "Heat_Front_Lighting": Part.makeBox(250.0, 8.0, 2.0, vector(246.0, 468.0, 27.0)),
+        "Heat_Front_Lighting": lighting_heat_shape,
     }
     for index, (name, shape) in enumerate(heat_shapes.items(), start=20):
         obj = semantic_part(
@@ -108,6 +142,20 @@ def build_electronics_thermal(doc, groups):
             ),
         )
         add_heat_source(obj, name, p.HEAT_LOADS_W[name])
+        if name == "Heat_Camera":
+            add_property(
+                obj,
+                "App::PropertyStringList",
+                "AuthorizedContactTargets",
+                ["Camera_Module"],
+            )
+        elif name == "Heat_Front_Lighting":
+            add_property(
+                obj,
+                "App::PropertyStringList",
+                "AuthorizedContactTargets",
+                ["Front_Light_Left", "Front_Light_Right"],
+            )
         parts.append(obj)
 
     backlight = doc.getObject("Backlight_Unit")

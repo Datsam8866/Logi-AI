@@ -17,6 +17,8 @@ SOURCES_FILE = PACKAGE_ROOT / "hinoki_lod3_sources.py"
 BUILD_SCRIPT = PACKAGE_ROOT / "build_hinoki_lod3_master.py"
 AV_IO_FILE = PACKAGE_ROOT / "hinoki_lod3_av_io.py"
 SOURCE_INDEXER = PACKAGE_ROOT / "index_hinoki_lod3_sources.py"
+PLAN_FILE = PROJECT_ROOT / "docs" / "superpowers" / "plans" / "2026-09-02-hinoki-lod3-inferred-engineering-prototype-plan.md"
+SPEC_FILE = PROJECT_ROOT / "docs" / "superpowers" / "specs" / "2026-09-02-hinoki-lod3-inferred-engineering-prototype-design.md"
 FREECAD_CMD = Path(
     os.environ.get(
         "FREECAD_CMD",
@@ -321,6 +323,43 @@ class TestFrozenEngineeringContract(unittest.TestCase):
         self.assertEqual(10, len(p.HEAT_LOADS_W))
         self.assertAlmostEqual(57.0, sum(p.HEAT_LOADS_W.values()), places=9)
 
+    def test_active_output_contract_is_head_only(self):
+        p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_output_contract")
+        self.assertEqual(
+            {
+                "master_fcstd",
+                "head_step",
+                "manifest_json",
+                "validation_json",
+            },
+            set(p.OUTPUT_FILES),
+        )
+        self.assertNotIn("full_step", p.OUTPUT_FILES)
+        self.assertNotIn("stand_base_step", p.OUTPUT_FILES)
+        self.assertTrue(
+            all(
+                "full" not in filename.lower()
+                and "stand" not in filename.lower()
+                for filename in p.OUTPUT_FILES.values()
+            )
+        )
+
+        plan = PLAN_FILE.read_text(encoding="utf-8")
+        task7 = plan.split("## Task 7", 1)[1].split("## Task 8", 1)[0].lower()
+        task8 = plan.split("## Task 8", 1)[1].split("## Task 9", 1)[0].lower()
+        self.assertIn("head-only", task7)
+        self.assertNotIn("head/stand envelope", task7)
+        self.assertNotIn("stand motion and interference evidence pass", task7)
+        self.assertIn("head-only", task8)
+        self.assertNotIn("full_assembly.step", task8)
+        self.assertNotIn("stand_base.step", task8)
+
+        spec = SPEC_FILE.read_text(encoding="utf-8")
+        outputs = spec.split("## 9. Outputs", 1)[1].split("## 10.", 1)[0]
+        self.assertIn("Hinoki_LOD3_Head.step", outputs)
+        self.assertNotIn("Hinoki_LOD3_Full_Assembly.step", outputs)
+        self.assertNotIn("Hinoki_LOD3_Stand_Base.step", outputs)
+
     def test_manifest_schema_denies_manufacturing_authority(self):
         p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters")
         record = p.part_metadata(
@@ -506,6 +545,19 @@ heat_parts = [
 assert len(heat_parts) == 10, [(obj.Name, obj.HeatLoadW) for obj in heat_parts]
 assert abs(sum(obj.HeatLoadW for obj in heat_parts) - 57.0) <= 1e-9
 assert {{obj.HeatSourceID for obj in heat_parts}} == {heat_names!r}
+
+lighting_heat = doc.getObject("Heat_Front_Lighting")
+assert abs(lighting_heat.HeatLoadW - 4.0) <= 1e-9
+assert tuple(lighting_heat.AuthorizedContactTargets) == (
+    "Front_Light_Left",
+    "Front_Light_Right",
+)
+for light_name in lighting_heat.AuthorizedContactTargets:
+    light = doc.getObject(light_name)
+    assert lighting_heat.Shape.common(light.Shape).Volume > 0.01, light_name
+camera = doc.getObject("Camera_Module")
+assert tuple(camera.AuthorizedContactTargets) == ("Heat_Camera",)
+assert camera.Shape.common(lighting_heat.Shape).Volume <= 0.01
 
 for obj in doc.Objects:
     if getattr(obj, "IsSemanticPart", False):
@@ -738,6 +790,54 @@ print("HINOKI_LOD3_PORT_CUT_PROBE_OK")
             self.assertEqual(0, probe_result.returncode, combined_probe)
             self.assertIn("HINOKI_LOD3_PORT_CUT_PROBE_OK", combined_probe)
 
+    def test_ports_preserve_vesa_and_tim_geometry(self):
+        package_path = PACKAGE_ROOT.as_posix()
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_ports_preserve_") as temp_dir:
+            probe = r"""
+import sys
+import FreeCAD as App
+
+sys.path.insert(0, r"{package_path}")
+from hinoki_lod3_av_io import build_av_io
+from hinoki_lod3_common import make_groups
+from hinoki_lod3_display_housing import build_display_housing
+from hinoki_lod3_electronics_thermal import build_electronics_thermal
+import hinoki_lod3_parameters as p
+
+doc = App.newDocument("Hinoki_LOD3_Port_Preservation")
+groups = make_groups(doc, p.REQUIRED_TOP_GROUPS)
+build_display_housing(doc, groups)
+build_electronics_thermal(doc, groups)
+vesa_before = doc.getObject("VESA_Reinforcement").Shape.copy()
+tim_before = doc.getObject("Rear_Hatch_TIM").Shape.copy()
+build_av_io(doc, groups)
+for name, before in (("VESA_Reinforcement", vesa_before), ("Rear_Hatch_TIM", tim_before)):
+    after = doc.getObject(name).Shape
+    assert abs(after.Volume - before.Volume) <= 0.01, (name, before.Volume, after.Volume)
+    assert before.cut(after).Volume <= 0.01, (name, "removed", before.cut(after).Volume)
+    assert after.cut(before).Volume <= 0.01, (name, "added", after.cut(before).Volume)
+for port_name in p.IO_PORTS:
+    port = doc.getObject(port_name)
+    assert abs(port.Shape.Volume - p.IO_PORT_GEOMETRY["body_width"] * p.IO_PORT_GEOMETRY["body_height"] * p.IO_PORT_GEOMETRY["body_depth"]) <= 0.01, port_name
+    assert port.Shape.common(doc.getObject("VESA_Reinforcement").Shape).Volume <= 0.01, port_name
+    assert port.Shape.common(doc.getObject("Rear_Hatch_TIM").Shape).Volume <= 0.01, port_name
+App.closeDocument(doc.Name)
+assert not App.listDocuments()
+print("HINOKI_LOD3_PORT_SUPPORT_GEOMETRY_PROBE_OK")
+""".format(package_path=package_path)
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn("HINOKI_LOD3_PORT_SUPPORT_GEOMETRY_PROBE_OK", combined_probe)
+
     def test_av_io_dimensions_use_owned_controlled_assumptions(self):
         p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_av_owned")
         required_blocks = (
@@ -816,31 +916,72 @@ import FreeCAD as App
 
 doc = App.open(r"{model_path}")
 task_assemblies = ("04_Camera_Lighting_Sensors", "05_Audio_IO_Cables")
-obstacle_assemblies = ("01_Display_Stack", "02_Housing_Structure", "03_Electronics_Thermal")
+obstacle_assemblies = (
+    "01_Display_Stack",
+    "02_Housing_Structure",
+    "03_Electronics_Thermal",
+    "07_Fasteners_Seals_Consumables",
+)
+reference_roles = (
+    "PackageEnvelope",
+    "MotionStateReference",
+    "MotionKeepout",
+    "InternalOpticalKeepout",
+    "ExternalOpticalReference",
+    "CavityReference",
+    "OpticalKeepout",
+    "AcousticKeepout",
+    "ClearanceHole",
+)
 physical = lambda obj: (
     getattr(obj, "IsSemanticPart", False)
-    and getattr(obj, "ThermalDisposition", "") != "Suppress"
+    and getattr(obj, "ParentAssembly", "") != "08_Reference_Datums_Keepouts"
+    and getattr(obj, "GeometryRole", "") not in reference_roles
     and getattr(obj, "Shape", None) is not None
     and not obj.Shape.isNull()
 )
 task_parts = [obj for obj in doc.Objects if physical(obj) and obj.ParentAssembly in task_assemblies]
 obstacles = [obj for obj in doc.Objects if physical(obj) and obj.ParentAssembly in obstacle_assemblies]
-authorized = {{("Camera_Module", "Heat_Camera"), ("Camera_Module", "Heat_Front_Lighting")}}
+def exact_contact(first, second):
+    return (
+        second.Name in tuple(getattr(first, "AuthorizedContactTargets", ()))
+        and first.Name in tuple(getattr(second, "AuthorizedContactTargets", ()))
+    )
+
 authorized_collisions = []
 max_unauthorized_intersection = 0.0
+max_unauthorized_pair = None
 for task in task_parts:
     for obstacle in obstacles:
         overlap = task.Shape.common(obstacle.Shape).Volume
         pair = (task.Name, obstacle.Name)
-        if pair in authorized:
-            if overlap > 0.01:
-                assert task.AuthorizedContactRecord
-                assert obstacle.Name in task.AuthorizedContactRecord
-                authorized_collisions.append((pair, overlap))
+        if exact_contact(task, obstacle):
+            assert overlap > 0.01, (pair, overlap)
+            authorized_collisions.append((pair, overlap))
         else:
-            max_unauthorized_intersection = max(max_unauthorized_intersection, overlap)
-assert max_unauthorized_intersection <= 0.01, max_unauthorized_intersection
-assert len(authorized_collisions) == 2, authorized_collisions
+            if overlap > max_unauthorized_intersection:
+                max_unauthorized_intersection = overlap
+                max_unauthorized_pair = pair
+for index, first in enumerate(task_parts):
+    for second in task_parts[index + 1:]:
+        overlap = first.Shape.common(second.Shape).Volume
+        pair = (first.Name, second.Name)
+        if exact_contact(first, second):
+            assert overlap > 0.01, (pair, overlap)
+            authorized_collisions.append((pair, overlap))
+        else:
+            if overlap > max_unauthorized_intersection:
+                max_unauthorized_intersection = overlap
+                max_unauthorized_pair = pair
+assert max_unauthorized_intersection <= 0.01, (
+    max_unauthorized_pair,
+    max_unauthorized_intersection,
+)
+assert set(authorized_collisions) == {{
+    (("Camera_Module", "Heat_Camera"), 526.6800000000001),
+    (("Front_Light_Left", "Heat_Front_Lighting"), 7680.0),
+    (("Front_Light_Right", "Heat_Front_Lighting"), 7680.0),
+}}, authorized_collisions
 App.closeDocument(doc.Name)
 print("HINOKI_LOD3_TASK5_COLLISION_PROBE_OK authorized={{}} max_unauthorized={{:.6f}}".format(
     len(authorized_collisions), max_unauthorized_intersection

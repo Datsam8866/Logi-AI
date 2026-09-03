@@ -131,10 +131,12 @@ IO_PORTS = (
     "Line_Out_3p5mm",
 )
 IO_PORT_GEOMETRY = frozen(
-    service_zone_width=180.0,
     body_width=15.0,
     body_height=8.0,
     body_depth=8.0,
+    cluster_columns=2,
+    cluster_rows=3,
+    service_margin=8.0,
     clearance=0.8,
     cut_extension=1.0,
     assumption_id="A-LOD3-IO-001",
@@ -253,11 +255,7 @@ MATERIAL_INTENTS = MappingProxyType(
 
 OUTPUT_FILES = frozen(
     master_fcstd="Hinoki_LOD3_Inferred_Master.FCStd",
-    full_step="Hinoki_LOD3_Full_Assembly.step",
     head_step="Hinoki_LOD3_Head.step",
-    display_step="Hinoki_LOD3_Display.step",
-    electronics_thermal_step="Hinoki_LOD3_Electronics_Thermal.step",
-    stand_base_step="Hinoki_LOD3_Stand_Base.step",
     manifest_json="Hinoki_LOD3_Part_Manifest.json",
     validation_json="Hinoki_LOD3_Validation.json",
 )
