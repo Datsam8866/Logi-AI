@@ -19,6 +19,7 @@ from hinoki_lod3_av_io import build_av_io
 from hinoki_lod3_common import make_groups
 from hinoki_lod3_display_housing import build_display_housing
 from hinoki_lod3_electronics_thermal import build_electronics_thermal
+from review_hinoki_lod3 import validate_master
 
 
 def output_path():
@@ -56,13 +57,17 @@ def main():
     temporary = destination.with_name(destination.name + ".tmp.FCStd")
     try:
         doc = build_document()
-        part_count = len(
-            [
-                obj
-                for obj in doc.Objects
-                if getattr(obj, "IsSemanticPart", False)
-            ]
-        )
+        review = validate_master(doc)
+        if review["status"] != "Pass":
+            failed_gates = sorted(
+                name
+                for name, passed in review["hard_gates"].items()
+                if not passed
+            )
+            raise RuntimeError(
+                "LOD 3 master validation failed: " + ", ".join(failed_gates)
+            )
+        part_count = review["semantic_parts"]["count"]
         save_atomically(doc, destination)
         doc = None
         print(

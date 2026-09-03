@@ -15,6 +15,7 @@ PACKAGE_ROOT = PROJECT_ROOT / "cad" / "lod3-inferred-prototype-01"
 PARAMETERS_FILE = PACKAGE_ROOT / "hinoki_lod3_parameters.py"
 SOURCES_FILE = PACKAGE_ROOT / "hinoki_lod3_sources.py"
 BUILD_SCRIPT = PACKAGE_ROOT / "build_hinoki_lod3_master.py"
+REVIEW_SCRIPT = PACKAGE_ROOT / "review_hinoki_lod3.py"
 AV_IO_FILE = PACKAGE_ROOT / "hinoki_lod3_av_io.py"
 SOURCE_INDEXER = PACKAGE_ROOT / "index_hinoki_lod3_sources.py"
 PLAN_FILE = PROJECT_ROOT / "docs" / "superpowers" / "plans" / "2026-09-02-hinoki-lod3-inferred-engineering-prototype-plan.md"
@@ -1221,6 +1222,220 @@ print("HINOKI_LOD3_AV_IO_PROBE_OK ports={{}}".format(len(port_names)))
             combined_probe = probe_result.stdout + probe_result.stderr
             self.assertEqual(0, probe_result.returncode, combined_probe)
             self.assertIn("HINOKI_LOD3_AV_IO_PROBE_OK", combined_probe)
+
+
+class TestMasterValidation(unittest.TestCase):
+    def _build_temporary_master(self, temp_root):
+        model_path = temp_root / "Hinoki_LOD3_Master_Validation.FCStd"
+        env = os.environ.copy()
+        env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+        result = run_freecad_script(BUILD_SCRIPT, env)
+        combined_output = result.stdout + result.stderr
+        self.assertEqual(0, result.returncode, combined_output)
+        self.assertIn("HINOKI_LOD3_BUILD_OK", combined_output)
+        self.assertTrue(model_path.exists(), combined_output)
+        return model_path
+
+    def test_head_only_review_reports_all_active_hard_gates(self):
+        self.assertTrue(REVIEW_SCRIPT.exists(), "LOD 3 review script must exist")
+        parameters = load_module(PARAMETERS_FILE, "hinoki_lod3_validation_parameters")
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_review_") as temp_dir:
+            temp_root = Path(temp_dir)
+            model_path = self._build_temporary_master(temp_root)
+            review_path = temp_root / "Hinoki_LOD3_Validation.json"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_PATH"] = str(model_path)
+            env["HINOKI_LOD3_REVIEW_OUT"] = str(review_path)
+
+            result = run_freecad_script(REVIEW_SCRIPT, env)
+            combined_output = result.stdout + result.stderr
+
+            self.assertEqual(0, result.returncode, combined_output)
+            self.assertEqual(1, combined_output.count("HINOKI_LOD3_REVIEW_OK"))
+            self.assertNotIn("HINOKI_LOD3_REVIEW_FAIL", combined_output)
+            self.assertTrue(review_path.exists())
+            report = json.loads(review_path.read_text(encoding="utf-8"))
+
+        self.assertEqual("Pass", report["status"])
+        self.assertEqual("Pass", report.get("overall"))
+        self.assertEqual("HeadOnlyTask5Checkpoint", report["scope"])
+        self.assertEqual(parameters.PROTOTYPE_LIMITATION, report["limitations"])
+        self.assertEqual(0.01, report["overlap_threshold_mm3"])
+        self.assertEqual(
+            {
+                "semantic_part_count",
+                "eight_group_ownership",
+                "valid_positive_physical_geometry",
+                "complete_metadata",
+                "exact_authorized_contact_matrix",
+                "no_forbidden_overlaps",
+                "required_feature_evidence",
+                "head_envelope",
+            },
+            set(report["hard_gates"]),
+        )
+        self.assertTrue(all(report["hard_gates"].values()))
+        self.assertEqual(
+            ["stand_envelope", "stand_motion", "stand_interference"],
+            report["deferred_gates"],
+        )
+        serialized = json.dumps(report, sort_keys=True).lower()
+        self.assertNotIn("vesa_motion", serialized)
+        self.assertNotIn("extreme_posture", serialized)
+
+        part_count = report["semantic_parts"]["count"]
+        self.assertGreaterEqual(part_count, 80)
+        self.assertLessEqual(part_count, 120)
+        self.assertTrue(report["semantic_parts"]["names_unique"])
+        self.assertEqual(
+            list(parameters.REQUIRED_TOP_GROUPS),
+            report["group_ownership"]["required_groups"],
+        )
+        self.assertEqual([], report["group_ownership"]["failures"])
+        self.assertGreater(report["physical_geometry"]["part_count"], 0)
+        self.assertEqual([], report["physical_geometry"]["failures"])
+
+        self.assertEqual(
+            list(parameters.METADATA_KEYS), report["metadata"]["required_keys"]
+        )
+        self.assertEqual([], report["metadata"]["incomplete_parts"])
+        self.assertEqual(
+            [], report["metadata"]["manufacturing_authority_failures"]
+        )
+        self.assertGreater(
+            report["metadata"]["source_class_counts"]["EngineeringAssumption"],
+            0,
+        )
+        self.assertTrue(
+            all(
+                record["ManufacturingAuthority"] is False
+                for record in report["metadata"]["parts"]
+            )
+        )
+        metadata_by_name = {
+            record["PartName"]: record for record in report["metadata"]["parts"]
+        }
+        self.assertEqual(
+            "EngineeringAssumption",
+            metadata_by_name["Privacy_Shutter"]["SourceClass"],
+        )
+        self.assertEqual(
+            "CompetitorOfficial",
+            metadata_by_name["Camera_Module"]["SourceClass"],
+        )
+        self.assertEqual(
+            "Derived", metadata_by_name["Cover_Glass"]["SourceClass"]
+        )
+
+        self.assertEqual(
+            {
+                ("Camera_Module", "Heat_Camera"),
+                ("Front_Light_Left", "Heat_Front_Lighting"),
+                ("Front_Light_Right", "Heat_Front_Lighting"),
+            },
+            {
+                tuple(contact["parts"])
+                for contact in report["authorized_contacts"]
+            },
+        )
+        self.assertTrue(
+            all(
+                contact["overlap_mm3"] > report["overlap_threshold_mm3"]
+                for contact in report["authorized_contacts"]
+            )
+        )
+        self.assertEqual([], report["forbidden_overlaps"])
+
+        self.assertEqual(
+            {
+                "wall",
+                "rib",
+                "boss",
+                "bend",
+                "hole",
+                "hatch",
+                "fastener",
+                "vent",
+                "thermal_contact",
+            },
+            set(report["feature_evidence"]),
+        )
+        self.assertTrue(
+            all(
+                report["feature_evidence"][feature]
+                for feature in report["feature_evidence"]
+            )
+        )
+        self.assertEqual(
+            [742.0, 492.0, 62.0], report["head_envelope"]["expected_mm"]
+        )
+        self.assertEqual(0.1, report["head_envelope"]["tolerance_mm"])
+        self.assertTrue(report["head_envelope"]["within_tolerance"])
+
+    def test_build_rejects_failed_integrated_part_count_and_contact_gates(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_build_gate_") as temp_dir:
+            model_path = Path(temp_dir) / "must_not_publish.FCStd"
+            source = BUILD_SCRIPT.read_text(encoding="utf-8")
+            probe = """
+namespace = {{"__name__": "hinoki_lod3_build_gate_probe", "__file__": r"{script_path}"}}
+exec(compile({source!r}, r"{script_path}", "exec"), namespace)
+assert "validate_master" in namespace, "build must integrate validate_master"
+namespace["validate_master"] = lambda doc: {{
+    "status": "Fail",
+    "hard_gates": {{
+        "semantic_part_count": False,
+        "exact_authorized_contact_matrix": False,
+    }},
+}}
+namespace["save_atomically"] = lambda doc, destination: (_ for _ in ()).throw(
+    AssertionError("validation was bypassed")
+)
+try:
+    namespace["main"]()
+except RuntimeError as error:
+    assert "semantic_part_count" in str(error), error
+    assert "exact_authorized_contact_matrix" in str(error), error
+else:
+    raise AssertionError("failed master validation must stop publication")
+print("HINOKI_LOD3_BUILD_VALIDATION_GATE_PROBE_OK")
+""".format(script_path=BUILD_SCRIPT.as_posix(), source=source)
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                env=env,
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_output = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, combined_output)
+            self.assertIn(
+                "HINOKI_LOD3_BUILD_VALIDATION_GATE_PROBE_OK",
+                combined_output,
+            )
+            self.assertEqual(1, combined_output.count("HINOKI_LOD3_BUILD_FAILED"))
+            self.assertNotIn("HINOKI_LOD3_BUILD_OK", combined_output)
+            self.assertFalse(model_path.exists())
+
+    def test_review_failure_sentinel_is_unique_and_does_not_publish(self):
+        self.assertTrue(REVIEW_SCRIPT.exists(), "LOD 3 review script must exist")
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_review_fail_") as temp_dir:
+            temp_root = Path(temp_dir)
+            review_path = temp_root / "review.json"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_PATH"] = str(temp_root / "missing.FCStd")
+            env["HINOKI_LOD3_REVIEW_OUT"] = str(review_path)
+            result = run_freecad_script(REVIEW_SCRIPT, env)
+            combined_output = result.stdout + result.stderr
+
+            self.assertNotEqual(0, result.returncode, combined_output)
+            self.assertEqual(1, combined_output.count("HINOKI_LOD3_REVIEW_FAIL"))
+            self.assertNotIn("HINOKI_LOD3_REVIEW_OK", combined_output)
+            self.assertFalse(review_path.exists())
 
 
 if __name__ == "__main__":
