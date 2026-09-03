@@ -2,13 +2,19 @@
 
 這是 Hinoki 32-inch 視訊協作系統的概念級 FLOEFD conjugate heat-transfer (CHT) handoff，不是量產設計、製造幾何或溫度性能承諾。
 
+## 工作筆記
+
+固定規則見本目錄 `AGENTS.md`；詳細進度與交接記錄見 [Logi-Hinoki工作筆記](<G:/其他電腦/我的電腦/Obsidian Vault/Logitech/Logi-Hinoki工作筆記.md>)，不沿用 MEBudget 筆記。
+
+2026-09-04 收工：Task 7 已完成；Task 8 尚未開始，等待使用者下一輪開工，不自動續跑。
+
 ## LOD 3 inferred engineering prototype
 
 LOD 3 master 正在 `cad/lod3-inferred-prototype-01/` 建立。Task 7 臨時 head-only build 包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources、QC7790 到 rear hatch 的被動 thermal path，以及 Task 5 的 camera、lighting、sensor、audio、microphone 與六個 rear I/O connector proxies。
 
-Task 7 head-only validation 使用臨時 build（97 個 semantic parts、79 個 physical collision parts），temporary validation：Pass。每一組 unique physical pair 的碰撞門檻為 0.01 mm³；僅允許 3 組 camera/front-light 與對應 heat source contacts，其餘 3,078 組均已檢查通過。獨立執行 `python -B -m unittest tests.test_hinoki_lod3_inferred -v`：28/28 通過（126.901 s，exit code 0）。正式 LOD 3 FCStd 仍是先前的 62-part checkpoint，待 Task 8 atomic publication 才更新，不代表臨時驗證模型已正式交付。
+Task 7 head-only validation 使用臨時 build（97 個 semantic parts、79 個 physical collision parts），temporary validation：Pass。每一組 unique physical pair 的碰撞門檻為 0.01 mm³；僅允許 3 組 camera/front-light 與對應 heat source contacts，其餘 3,078 組均已檢查通過。獨立執行 `python -B -m unittest tests.test_hinoki_lod3_inferred -v`：28/28 通過（126.901 s，exit code 0）。正式 LOD 3 FCStd 仍是先前的 62-part checkpoint，尚未更新；Task 8 建立並驗證 head-only STEP 匯出能力，原始計畫的整套正式交付列於 Task 11。
 
-Next Action：Task 8 atomic publication。Task 6 stand/base、physical cable routes / bend validation、full-product STEP、review images 與 FLOEFD derivative 均 deferred；下列既有 thermal CHT handoff 不受影響。
+Next Action：Task 8 head-only STEP 匯出與臨時產物驗證，預期 `Hinoki_LOD3_Head.step`。正式替換另確認；若省略 Task 9／10，先同步調整 Task 11 的發布依賴。Task 6 stand/base、physical cable routes / bend validation、full-product STEP、review images 與 FLOEFD derivative 均 deferred；下列既有 thermal CHT handoff 不受影響。
 
 這一版明確是 LOD 3 inferred engineering prototype; not manufacturing release，不可用於 tooling、GD&T、supplier release、certification 或 production temperature claim。
 
