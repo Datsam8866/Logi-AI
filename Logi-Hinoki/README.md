@@ -4,7 +4,7 @@
 
 ## LOD 3 inferred engineering prototype
 
-LOD 3 master 正在 cad/lod3-inferred-prototype-01/ 建立。目前 checkpoint 已包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources，以及 QC7790 到 rear hatch 的被動 thermal path，共 62 個 semantic parts。Hinoki_LOD3_Inferred_Master.FCStd 目前是建模中 checkpoint，尚未達到最終 80–120 parts、AV/I/O、stand/base 與 FLOEFD derivative 的交付 gate。
+LOD 3 master 正在 cad/lod3-inferred-prototype-01/ 建立。目前 checkpoint 已包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources、QC7790 到 rear hatch 的被動 thermal path，以及 Task 5 的 camera、lighting、sensor、audio、microphone 與六個 rear I/O connector proxies。這是 head-only LOD 3 inferred prototype；本次 user-approved scope 不含 cable route solids 或 bend validation，Task 6 stand/base deferred。
 
 這一版明確是 LOD 3 inferred engineering prototype; not manufacturing release，不可用於 tooling、GD&T、supplier release、certification 或 production temperature claim。
 
@@ -56,6 +56,8 @@ Surface radiation / emissivity、external computational domain、pressure bounda
 
 ## 範圍與限制
 
+- Current Task 5 head-only STP scope excludes physical cable routes and cable-bend validation. Connector cutouts/service clearances remain explicit and are validated through the rear service zone.
+- Task 6 stand/base is deferred; this checkpoint must not be described as a full product assembly or full-product STP.
 - 模型是受控概念 proxy，非製造 CAD、散熱器細節或完整 electronics stack。
 - STEP export 會經 FreeCAD 重新匯入驗證：16 個語意 solids、1 個 air body 與 mm-scale bounding boxes。
 - JSON review 記錄的是最低幾何 hard gates，不是 CFD convergence、熱像量測或可靠度驗證。

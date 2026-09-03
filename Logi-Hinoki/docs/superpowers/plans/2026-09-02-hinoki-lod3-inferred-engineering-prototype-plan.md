@@ -139,7 +139,9 @@ git add -- cad/lod3-inferred-prototype-01/hinoki_lod3_electronics_thermal.py cad
 git commit -m "feat: add LOD 3 electronics and thermal path"
 ```
 
-## Task 5: Add camera, lights, sensors, audio, I/O, and cables
+## Task 5: Add camera, lights, sensors, audio, and I/O (head-only)
+
+The current approved checkpoint closes Task 5 only. Physical cable-route solids and bend validation are excluded; connector cutouts/service clearances remain validated. Task 6 stand/base is deferred.
 
 **Files:**
 
@@ -147,7 +149,7 @@ git commit -m "feat: add LOD 3 electronics and thermal path"
 - Modify: `cad/lod3-inferred-prototype-01/build_hinoki_lod3_master.py`
 - Modify: `tests/test_hinoki_lod3_inferred.py`
 
-- [ ] Test the 38 × 38 × 25.78 camera module, 104 × 46 × 32 barrel, captive shutter travel, two 120 × 8 × 8 light bars, 59.8 × 18 × 16.3 radar holder, ALS path, two 40 mm speakers, two 50 × 25 radiators, two microphones, the six approved port types, and routed cable obstruction envelopes.
+- [x] Test the 38 × 38 × 25.78 camera module, 104 × 46 × 32 barrel, captive shutter travel, two 120 × 8 × 8 light bars, 59.8 × 18 × 16.3 radar holder, ALS path, two 40 mm speakers, two 50 × 25 radiators, two microphones, and the six approved port types.
 - [ ] Run RED:
 
 ```powershell
@@ -156,16 +158,18 @@ python -B -m unittest tests.test_hinoki_lod3_inferred.TestAvIoGeometry -v
 
 Expected: named AV/I/O parts are absent.
 
-- [ ] Implement the subsystem with optical and acoustic keep-outs. Represent ports and clearance holes explicitly; represent cables as swept or segmented solids with recorded minimum bend intent.
-- [ ] Run GREEN. Expected: AV/I/O tests pass and all geometry stays within the head envelope.
-- [ ] Commit:
+- [x] Implement the subsystem with optical and acoustic keep-outs. Represent ports and clearance holes explicitly. Physical cable routes and bend validation are outside this approved checkpoint scope.
+- [x] Run GREEN. AV/I/O tests pass and all geometry stays within the head envelope.
+- [x] Current checkpoint commit:
 
 ```powershell
 git add -- cad/lod3-inferred-prototype-01/hinoki_lod3_av_io.py cad/lod3-inferred-prototype-01/build_hinoki_lod3_master.py tests/test_hinoki_lod3_inferred.py
-git commit -m "feat: add LOD 3 camera audio and IO"
+git commit -m "fix: close LOD 3 AV IO head scope"
 ```
 
-## Task 6: Build the stand, base, and kinematic extrema
+## Task 6: Build the stand, base, and kinematic extrema (deferred)
+
+Task 6 is deferred by user decision in the current handoff. No stand/base solids, kinematic validation, or full-product assembly/STP claim is made for this checkpoint.
 
 **Files:**
 

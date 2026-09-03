@@ -49,6 +49,8 @@ Primary competitor references:
 
 ### 4.1 LOD 3 master assembly
 
+Current approved scope is a head-only Task 5 checkpoint. It includes the camera, lighting, sensors, audio, microphones, and six rear I/O connector proxies. It deliberately excludes physical cable-route solids and cable-bend validation; connector cutouts and rear service clearances remain explicit. Task 6 stand/base is deferred, so this checkpoint is not a full product assembly or full-product STP.
+
 The LOD 3 master contains 80–120 named semantic parts in these top-level groups:
 
 1. `01_Display_Stack`
@@ -60,7 +62,7 @@ The LOD 3 master contains 80–120 named semantic parts in these top-level group
 7. `07_Fasteners_Seals_Consumables`
 8. `08_Reference_Datums_Keepouts`
 
-The master preserves wall, rib, boss, bend, hole, hatch, fastener, connector, shielding, cable-routing, thermal-contact, and support features that materially affect packaging or review.
+The master preserves wall, rib, boss, bend, hole, hatch, fastener, connector, shielding, thermal-contact, and support features that materially affect packaging or review. Cable-routing solids are outside the approved Task 5 checkpoint scope.
 
 ### 4.2 FLOEFD derived model
 
@@ -70,7 +72,7 @@ Generate the FLOEFD model from the validated master by a controlled suppression 
 - vent holes and open-area ratio;
 - display stack and metal frames;
 - major PCB and package envelopes;
-- shields, speakers, cable bundles, and other airflow obstructions;
+- shields, speakers, and other airflow obstructions;
 - heat spreaders, heat pipes, TIM footprints, and conductive contacts;
 - service hatches that form secondary heat paths;
 - one connected internal-air region;
@@ -142,7 +144,7 @@ Create separate carrier, compute/SOM, power, I/O, Wi-Fi/BLE, camera, sensor, lig
 - I/O PCB: 180 × 30 × 1.6 mm;
 - Wi-Fi/BLE module: 30 × 20 × 3 mm.
 
-I/O provision includes one HDMI input, two USB-A, one USB-C with display/data and ≥90 W PD, Ethernet, and 3.5 mm line output. Create a serviceable rear I/O zone and managed BYOD cable path.
+I/O provision includes one HDMI input, two USB-A, one USB-C with display/data and ≥90 W PD, Ethernet, and 3.5 mm line output. Create a serviceable rear I/O zone with explicit connector cutouts and service clearances. Cable-route solids are deferred.
 
 ### 6.3 Camera, lighting, and sensors
 

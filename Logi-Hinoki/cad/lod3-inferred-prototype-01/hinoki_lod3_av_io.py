@@ -1,4 +1,4 @@
-"""Camera, lighting, sensor, audio, I/O, and cable geometry."""
+"""Camera, lighting, sensor, audio, and I/O geometry."""
 
 import math
 import Part
@@ -44,9 +44,6 @@ def source_reference_for(name):
             p.IO_PORT_GEOMETRY["assumption_id"],
             port_name,
         )
-    cable_name = name.removesuffix("_Obstruction_Envelope")
-    if cable_name in p.CABLE_GEOMETRY:
-        return assumption_source(p.CABLE_GEOMETRY[cable_name])
     return SOURCE
 
 
@@ -73,32 +70,6 @@ def metadata(
 def add_role(obj, role):
     add_property(obj, "App::PropertyString", "GeometryRole", role)
     return obj
-
-
-def make_swept_path(points, radius):
-    edges = [
-        Part.makeLine(vector(*start), vector(*end))
-        for start, end in zip(points, points[1:])
-    ]
-    path = Part.Wire(edges)
-    edge = edges[0]
-    tangent = edge.tangentAt(edge.FirstParameter)
-    profile = Part.Wire(
-        [Part.makeCircle(radius, vector(*points[0]), tangent)]
-    )
-    return path.makePipeShell([profile], True, False, 1), edge
-
-
-def minimum_curve_radius(edge):
-    first = edge.FirstParameter
-    span = edge.LastParameter - first
-    radii = []
-    for index in range(101):
-        parameter = first + span * index / 100.0
-        curvature = abs(edge.curvatureAt(parameter))
-        if curvature > 1.0e-9:
-            radii.append(1.0 / curvature)
-    return min(radii) if radii else 1.0e9
 
 
 def add_keepout(doc, group, part_id, name, shape, role):
@@ -159,6 +130,12 @@ def build_camera_lighting_sensors(doc, groups):
     add_dimension(camera_obj, "Width", camera["width"])
     add_dimension(camera_obj, "Height", camera["height"])
     add_dimension(camera_obj, "Depth", camera["depth"])
+    add_property(
+        camera_obj,
+        "App::PropertyString",
+        "AuthorizedContactRecord",
+        "Heat_Camera and Heat_Front_Lighting: intentional thermal endpoint contact.",
+    )
     parts.append(camera_obj)
 
     barrel_obj = add_keepout(
@@ -465,6 +442,7 @@ def build_audio(doc, groups):
     group = groups["05_Audio_IO_Cables"]
     keepouts = groups["08_Reference_Datums_Keepouts"]
     parts = []
+    microphone_apertures = []
     head = p.HEAD
     barrel = p.CAMERA_LIGHT_SENSOR["Camera_Barrel"]
     speaker_depth = p.SPEAKER_GEOMETRY["depth"]
@@ -566,19 +544,20 @@ def build_audio(doc, groups):
 
         microphone_name = "Microphone_" + side
         microphone_count = p.AUDIO[microphone_name]["count"]
-        microphone = p.MICROPHONE_GEOMETRY
-        microphone_radius = microphone["diameter"] / 2.0
+        microphone_geometry = p.MICROPHONE_GEOMETRY
+        microphone_radius = microphone_geometry["diameter"] / 2.0
+        microphone_y = speaker_y - microphone_geometry["diameter"]
         microphone = semantic_part(
             doc,
             group,
             microphone_name,
             microphone_name.replace("_", " "),
             Part.makeCylinder(
-                microphone["depth"],
                 microphone_radius,
+                microphone_geometry["depth"],
                 vector(
                     speaker_x + speaker_diameter / 2.0,
-                    head["height"] - microphone_radius,
+                    microphone_y,
                     0.0,
                 ),
                 vector(0.0, 0.0, 1.0),
@@ -596,9 +575,41 @@ def build_audio(doc, groups):
             "ElementCount",
             microphone_count,
         )
-        add_dimension(microphone, "Diameter", p.MICROPHONE_GEOMETRY["diameter"])
-        add_dimension(microphone, "Depth", p.MICROPHONE_GEOMETRY["depth"])
+        add_dimension(microphone, "Diameter", microphone_geometry["diameter"])
+        add_dimension(microphone, "Depth", microphone_geometry["depth"])
         parts.append(microphone)
+        microphone_apertures.append(
+            Part.makeCylinder(
+                microphone_radius + p.AV_CAVITY["clearance"],
+                microphone_geometry["depth"] + 2.0 * p.AV_CAVITY["clearance"],
+                vector(
+                    speaker_x + speaker_diameter / 2.0,
+                    microphone_y,
+                    -p.AV_CAVITY["clearance"],
+                ),
+                vector(0.0, 0.0, 1.0),
+            )
+        )
+    microphone_aperture_shape = Part.makeCompound(microphone_apertures)
+    for obstacle_name in (
+        "Cover_Glass",
+        "PCAP_Sensor",
+        "Optical_Bond",
+        "LCD_Cell",
+        "Backlight_Unit",
+        "Metal_Mid_Frame",
+        "Front_Frame",
+    ):
+        obstacle = doc.getObject(obstacle_name)
+        obstacle.Shape = obstacle.Shape.cut(microphone_aperture_shape)
+    add_keepout(
+        doc,
+        keepouts,
+        "HNK-KO-115",
+        "Microphone_Apertures",
+        microphone_aperture_shape,
+        "CavityReference",
+    )
     return parts
 
 
@@ -646,14 +657,16 @@ def build_io_ports(doc, groups):
         parts.append(port)
 
         hole_name = port_name + "_Clearance_Hole"
+        passage_z_min = rear_z - port_depth - clearance
+        passage_z_max = head["depth"] + cut_extension
         cutter_shape = Part.makeBox(
             port_width + 2.0 * clearance,
             port_height + 2.0 * clearance,
-            p.HOUSING["rear_wall"] + 2.0 * cut_extension,
+            passage_z_max - passage_z_min,
             vector(
                 port_x - clearance,
                 zone_y - clearance,
-                rear_z - cut_extension,
+                passage_z_min,
             ),
         )
         cutters.append(cutter_shape)
@@ -670,127 +683,9 @@ def build_io_ports(doc, groups):
     cutter_compound = Part.makeCompound(cutters)
     rear.Shape = rear.Shape.cut(cutter_compound)
     cover.Shape = cover.Shape.cut(cutter_compound)
-    return parts
-
-
-def build_cables(doc, groups):
-    cable_group = groups["05_Audio_IO_Cables"]
-    keepout_group = groups["08_Reference_Datums_Keepouts"]
-    parts = []
-    connector_box = doc.getObject("IO_Harness_Connector").Shape.BoundBox
-    camera_centre = doc.getObject("Camera_Module").Shape.BoundBox.Center
-    camera_box = doc.getObject("Camera_Module").Shape.BoundBox
-    port_centre = doc.getObject("USB_C_Display_Data_PD90W").Shape.BoundBox.Center
-    left_box = doc.getObject("Speaker_Left").Shape.BoundBox
-    right_box = doc.getObject("Speaker_Right").Shape.BoundBox
-    targets = {
-        "Audio_Cable_Route_Left": (
-            left_box.Center.x,
-            left_box.YMin,
-            left_box.Center.z,
-        ),
-        "Camera_Cable_Route": (
-            camera_centre.x,
-            camera_box.YMin,
-            camera_box.ZMax,
-        ),
-        "BYOD_Cable_Route": (
-            port_centre.x,
-            port_centre.y,
-            port_centre.z,
-        ),
-        "Audio_Cable_Route_Right": (
-            right_box.Center.x,
-            right_box.YMin,
-            right_box.Center.z,
-        ),
-    }
-    lane_pitch = connector_box.XLength / (len(targets) + 1.0)
-    for index, (name, target) in enumerate(targets.items(), start=1):
-        cable_spec = p.CABLE_GEOMETRY[name]
-        cable_radius = cable_spec["outer_diameter"] / 2.0
-        obstruction_radius = cable_radius + p.CABLE_ROUTE_CLEARANCE["radial"]
-        start = (
-            connector_box.XMin + lane_pitch * index,
-            connector_box.YMax,
-            connector_box.ZMax,
-        )
-        points = (
-            start,
-            (
-                start[0],
-                start[1] + cable_spec["minimum_bend_radius"],
-                cable_spec["lane_z"],
-            ),
-            (
-                target[0],
-                target[1] - cable_spec["minimum_bend_radius"],
-                cable_spec["lane_z"],
-            ),
-            target,
-        )
-        cable_shape, path_edge = make_swept_path(points, cable_radius)
-        modelled_bend_radius = minimum_curve_radius(path_edge)
-        cable = semantic_part(
-            doc,
-            cable_group,
-            name,
-            name.replace("_", " "),
-            cable_shape,
-            metadata(
-                "HNK-CB-{:03d}".format(index),
-                name,
-                "05_Audio_IO_Cables",
-                "Routed cable effective solid",
-            ),
-        )
-        add_role(cable, "RoutedCable")
-        add_dimension(cable, "OuterDiameter", cable_spec["outer_diameter"])
-        add_dimension(
-            cable,
-            "MinimumBendRadius",
-            cable_spec["minimum_bend_radius"],
-        )
-        add_dimension(cable, "ModelledBendRadius", modelled_bend_radius)
-        add_property(
-            cable,
-            "App::PropertyString",
-            "MinimumBendIntent",
-            "Controlled per-route minimum radius; obstruction envelope preserved.",
-        )
-        add_property(
-            cable,
-            "App::PropertyString",
-            "BendRadiusStatus",
-            "ControlledEngineeringAssumption",
-        )
-        add_property(
-            cable,
-            "App::PropertyString",
-            "RouteConstruction",
-            "SweptBSpline",
-        )
-        parts.append(cable)
-
-        obstruction_shape, unused_edge = make_swept_path(
-            points,
-            obstruction_radius,
-        )
-        obstruction_name = name + "_Obstruction_Envelope"
-        obstruction = add_keepout(
-            doc,
-            keepout_group,
-            "HNK-KO-3{:02d}".format(index),
-            obstruction_name,
-            obstruction_shape,
-            "CableObstructionEnvelope",
-        )
-        add_property(
-            obstruction,
-            "App::PropertyString",
-            "MinimumBendIntent",
-            "Controlled per-route minimum radius plus radial clearance.",
-        )
+    for obstacle_name in ("VESA_Reinforcement", "Rear_Hatch_TIM"):
+        obstacle = doc.getObject(obstacle_name)
+        obstacle.Shape = obstacle.Shape.cut(cutter_compound)
     return parts
 
 
@@ -799,5 +694,4 @@ def build_av_io(doc, groups):
     parts.extend(build_camera_lighting_sensors(doc, groups))
     parts.extend(build_audio(doc, groups))
     parts.extend(build_io_ports(doc, groups))
-    parts.extend(build_cables(doc, groups))
     return parts

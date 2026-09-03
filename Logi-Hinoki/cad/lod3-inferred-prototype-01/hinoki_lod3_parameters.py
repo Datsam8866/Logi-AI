@@ -140,44 +140,6 @@ IO_PORT_GEOMETRY = frozen(
     assumption_id="A-LOD3-IO-001",
     source_reference="Design section 6.2 rear service connector opening assumption",
 )
-CABLE_GEOMETRY = MappingProxyType(
-    {
-        "BYOD_Cable_Route": frozen(
-            outer_diameter=4.0,
-            minimum_bend_radius=12.0,
-            lane_z=54.0,
-            assumption_id="A-LOD3-CB-001",
-            source_reference="DR-13 controlled BYOD cable routing assumption",
-        ),
-        "Camera_Cable_Route": frozen(
-            outer_diameter=2.0,
-            minimum_bend_radius=6.0,
-            lane_z=52.0,
-            assumption_id="A-LOD3-CB-002",
-            source_reference="DR-13 controlled camera cable routing assumption",
-        ),
-        "Audio_Cable_Route_Left": frozen(
-            outer_diameter=2.0,
-            minimum_bend_radius=6.0,
-            lane_z=48.0,
-            assumption_id="A-LOD3-CB-003",
-            source_reference="DR-13 controlled audio cable routing assumption",
-        ),
-        "Audio_Cable_Route_Right": frozen(
-            outer_diameter=2.0,
-            minimum_bend_radius=6.0,
-            lane_z=48.0,
-            assumption_id="A-LOD3-CB-004",
-            source_reference="DR-13 controlled audio cable routing assumption",
-        ),
-    }
-)
-CABLE_ROUTE_CLEARANCE = frozen(
-    radial=1.0,
-    assumption_id="A-LOD3-CB-005",
-    source_reference="DR-13 cable obstruction clearance assumption",
-)
-
 THERMAL_PATH = MappingProxyType(
     {
         "QC7790": frozen(width=35.0, height=35.0, thickness=2.0),
