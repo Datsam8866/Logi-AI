@@ -54,9 +54,11 @@ def save_atomically(doc, destination):
 def main():
     destination = output_path()
     doc = None
+    document_name = None
     temporary = destination.with_name(destination.name + ".tmp.FCStd")
     try:
         doc = build_document()
+        document_name = doc.Name
         review = validate_master(doc)
         if review["status"] != "Pass":
             failed_gates = sorted(
@@ -76,16 +78,17 @@ def main():
             )
         )
     except Exception:
-        if doc is not None and doc.Name in App.listDocuments():
-            App.closeDocument(doc.Name)
+        if document_name in App.listDocuments():
+            App.closeDocument(document_name)
         if temporary.exists():
             temporary.unlink()
         print("HINOKI_LOD3_BUILD_FAILED")
-        raise
+        return 1
     finally:
         for document_name in tuple(App.listDocuments()):
             App.closeDocument(document_name)
+    return 0
 
 
 if __name__ == "__main__":
-    main()
+    raise SystemExit(main())
