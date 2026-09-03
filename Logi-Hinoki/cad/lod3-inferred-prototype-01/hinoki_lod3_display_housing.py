@@ -10,6 +10,7 @@ from hinoki_lod3_common import (
     semantic_part,
     vector,
 )
+from hinoki_lod3_electronics_thermal import housing_keepout_shapes
 
 
 DISPLAY_SOURCE = "Approved LOD 3 design section 5.1"
@@ -71,6 +72,19 @@ def ring(outer_width, outer_height, inner_width, inner_height, thickness, z):
         ),
     )
     return outer.cut(inner)
+
+
+def vesa_reinforcement_shape():
+    shape = Part.makeBox(140.0, 140.0, 3.0, vector(301.0, 176.0, 56.2))
+    radius = (
+        p.HOUSING["primary_boss_od"] / 2.0
+        + p.COLLISION_CLEARANCE["radial"]
+    )
+    cutters = [
+        Part.makeCylinder(radius, 3.2, vector(x, y, 56.1))
+        for x, y in p.VESA_MOUNT_POINTS
+    ]
+    return shape.cut(Part.makeCompound(cutters))
 
 
 def vent_slots(y, z):
@@ -276,7 +290,7 @@ def build_display_housing(doc, groups):
         housing_group,
         "VESA_Reinforcement",
         "VESA Reinforcement",
-        Part.makeBox(140.0, 140.0, 3.0, vector(301.0, 176.0, 56.2)),
+        vesa_reinforcement_shape(),
         metadata(
             "HNK-HS-005",
             "VESA_Reinforcement",
@@ -288,18 +302,22 @@ def build_display_housing(doc, groups):
     )
     parts.append(vesa_reinforcement)
 
+    rib_keepouts = Part.makeCompound(
+        housing_keepout_shapes(p.COLLISION_CLEARANCE["linear"])
+    )
     for index, x in enumerate((80.0, 196.0, 312.0, 428.0, 544.0, 660.0), start=1):
+        rib_shape = Part.makeBox(
+            p.HOUSING["structural_rib"],
+            360.0,
+            22.0,
+            vector(x, 66.0, 32.0),
+        ).cut(rib_keepouts)
         rib = semantic_part(
             doc,
             housing_group,
             "Structural_Rib_{:02d}".format(index),
             "Structural Rib {:02d}".format(index),
-            Part.makeBox(
-                p.HOUSING["structural_rib"],
-                360.0,
-                22.0,
-                vector(x, 66.0, 32.0),
-            ),
+            rib_shape,
             metadata(
                 "HNK-HS-{:03d}".format(10 + index),
                 "Structural_Rib_{:02d}".format(index),
@@ -318,17 +336,29 @@ def build_display_housing(doc, groups):
         (702.0, 40.0),
         (40.0, 452.0),
         (702.0, 452.0),
-        (321.0, 196.0),
-        (421.0, 196.0),
-        (321.0, 296.0),
-        (421.0, 296.0),
-    )
+    ) + p.VESA_MOUNT_POINTS
     for index, (x, y) in enumerate(boss_positions, start=1):
+        boss_z = (
+            27.0
+            if index <= 4
+            else p.COLLISION_CLEARANCE["rear_boss_z"]
+        )
+        boss_height = (
+            30.0
+            if index <= 4
+            else p.COLLISION_CLEARANCE["rear_boss_height"]
+        )
         boss_shape = Part.makeCylinder(
             p.HOUSING["primary_boss_od"] / 2.0,
-            30.0,
-            vector(x, y, 27.0),
-        ).cut(Part.makeCylinder(1.6, 30.2, vector(x, y, 26.9)))
+            boss_height,
+            vector(x, y, boss_z),
+        ).cut(
+            Part.makeCylinder(
+                1.6,
+                boss_height + 0.2,
+                vector(x, y, boss_z - 0.1),
+            )
+        )
         boss = semantic_part(
             doc,
             housing_group,

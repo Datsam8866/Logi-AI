@@ -31,6 +31,19 @@ HOUSING = frozen(
     primary_boss_od=7.0,
     primary_fastener="M3",
 )
+VESA_MOUNT_POINTS = (
+    (321.0, 196.0),
+    (421.0, 196.0),
+    (321.0, 296.0),
+    (421.0, 296.0),
+)
+COLLISION_CLEARANCE = frozen(
+    linear=0.5,
+    radial=0.5,
+    shield_wall=0.8,
+    rear_boss_z=44.0,
+    rear_boss_height=15.2,
+)
 
 VENTS = MappingProxyType(
     {

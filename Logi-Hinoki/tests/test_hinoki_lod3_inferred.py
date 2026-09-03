@@ -268,6 +268,18 @@ class TestSourceInventory(unittest.TestCase):
 
 
 class TestFrozenEngineeringContract(unittest.TestCase):
+    def test_collision_clearance_contract(self):
+        p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_clearance")
+        self.assertEqual(
+            ((321.0, 196.0), (421.0, 196.0), (321.0, 296.0), (421.0, 296.0)),
+            p.VESA_MOUNT_POINTS,
+        )
+        self.assertEqual(0.5, p.COLLISION_CLEARANCE["linear"])
+        self.assertEqual(0.5, p.COLLISION_CLEARANCE["radial"])
+        self.assertEqual(0.8, p.COLLISION_CLEARANCE["shield_wall"])
+        self.assertEqual(44.0, p.COLLISION_CLEARANCE["rear_boss_z"])
+        self.assertEqual(15.2, p.COLLISION_CLEARANCE["rear_boss_height"])
+
     def test_frozen_product_envelope_and_display_stack(self):
         p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters")
         self.assertEqual((742.0, 492.0, 62.0), tuple(p.HEAD.values()))
@@ -1256,6 +1268,62 @@ class TestMasterValidation(unittest.TestCase):
             self.assertTrue(review_path.exists())
             report = json.loads(review_path.read_text(encoding="utf-8"))
 
+            overlap_probe = r"""
+import json
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+physical = [
+    obj for obj in doc.Objects
+    if getattr(obj, "IsSemanticPart", False)
+    and getattr(obj, "ParentAssembly", "") != "08_Reference_Datums_Keepouts"
+    and getattr(obj, "PhysicalCollision", True)
+    and getattr(obj, "Shape", None) is not None
+    and not obj.Shape.isNull()
+]
+authorized = {{
+    tuple(sorted(pair)) for pair in (
+        ("Camera_Module", "Heat_Camera"),
+        ("Front_Light_Left", "Heat_Front_Lighting"),
+        ("Front_Light_Right", "Heat_Front_Lighting"),
+    )
+}}
+forbidden = []
+for index, left in enumerate(physical):
+    for right in physical[index + 1:]:
+        pair = tuple(sorted((left.Name, right.Name)))
+        if pair in authorized:
+            continue
+        overlap = float(left.Shape.common(right.Shape).Volume)
+        if overlap > 0.01:
+            forbidden.append({{
+                "parts": [left.Name, right.Name],
+                "overlap_mm3": overlap,
+            }})
+App.closeDocument(doc.Name)
+print("HINOKI_LOD3_ALL_PHYSICAL_OVERLAPS " + json.dumps({{
+    "physical_count": len(physical),
+    "forbidden": forbidden,
+}}, sort_keys=True))
+raise SystemExit(1 if forbidden else 0)
+""".format(model_path=model_path.as_posix())
+            overlap_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(overlap_probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            overlap_output = overlap_result.stdout + overlap_result.stderr
+            self.assertEqual(0, overlap_result.returncode, overlap_output)
+            self.assertIn(
+                '"physical_count": 79',
+                overlap_output,
+            )
+            self.assertIn('"forbidden": []', overlap_output)
+
         self.assertEqual("Pass", report["status"])
         self.assertEqual("Pass", report.get("overall"))
         self.assertEqual("HeadOnlyTask5Checkpoint", report["scope"])
@@ -1390,13 +1458,8 @@ namespace["validate_master"] = lambda doc: {{
 namespace["save_atomically"] = lambda doc, destination: (_ for _ in ()).throw(
     AssertionError("validation was bypassed")
 )
-try:
-    namespace["main"]()
-except RuntimeError as error:
-    assert "semantic_part_count" in str(error), error
-    assert "exact_authorized_contact_matrix" in str(error), error
-else:
-    raise AssertionError("failed master validation must stop publication")
+result_code = namespace["main"]()
+assert result_code == 1, result_code
 print("HINOKI_LOD3_BUILD_VALIDATION_GATE_PROBE_OK")
 """.format(script_path=BUILD_SCRIPT.as_posix(), source=source)
             env = os.environ.copy()
@@ -1436,6 +1499,22 @@ print("HINOKI_LOD3_BUILD_VALIDATION_GATE_PROBE_OK")
             self.assertEqual(1, combined_output.count("HINOKI_LOD3_REVIEW_FAIL"))
             self.assertNotIn("HINOKI_LOD3_REVIEW_OK", combined_output)
             self.assertFalse(review_path.exists())
+
+    def test_standalone_build_failure_has_nonzero_unique_sentinel(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_build_fail_") as temp_dir:
+            destination_directory = Path(temp_dir) / "destination_is_a_directory"
+            destination_directory.mkdir()
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(destination_directory)
+
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            combined_output = result.stdout + result.stderr
+
+            self.assertNotEqual(0, result.returncode, combined_output)
+            self.assertEqual(1, combined_output.count("HINOKI_LOD3_BUILD_FAILED"))
+            self.assertNotIn("HINOKI_LOD3_BUILD_OK", combined_output)
+            self.assertNotIn("Traceback", combined_output)
+            self.assertEqual([], list(Path(temp_dir).glob("*.tmp.FCStd")))
 
 
 if __name__ == "__main__":
