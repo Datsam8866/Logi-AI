@@ -15,6 +15,7 @@ if str(PACKAGE_DIR) not in sys.path:
     sys.path.insert(0, str(PACKAGE_DIR))
 
 import hinoki_lod3_parameters as p
+from hinoki_lod3_av_io import build_av_io
 from hinoki_lod3_common import make_groups
 from hinoki_lod3_display_housing import build_display_housing
 from hinoki_lod3_electronics_thermal import build_electronics_thermal
@@ -34,6 +35,7 @@ def build_document():
     groups = make_groups(doc, p.REQUIRED_TOP_GROUPS)
     build_display_housing(doc, groups)
     build_electronics_thermal(doc, groups)
+    build_av_io(doc, groups)
     doc.recompute()
     return doc
 

@@ -548,5 +548,144 @@ print("HINOKI_LOD3_ELECTRONICS_THERMAL_PROBE_OK heat_parts={{}}".format(len(heat
             )
 
 
+class TestAvIoGeometry(unittest.TestCase):
+    def test_builder_adds_camera_lighting_sensors_audio_io_and_cables(self):
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_av_io_") as temp_dir:
+            model_path = Path(temp_dir) / "Hinoki_LOD3_AV_IO_Test.FCStd"
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_OUT"] = str(model_path)
+            result = run_freecad_script(BUILD_SCRIPT, env)
+            combined_output = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, combined_output)
+            self.assertIn("HINOKI_LOD3_BUILD_OK", combined_output)
+
+            probe = r"""
+import FreeCAD as App
+
+doc = App.open(r"{model_path}")
+expected_boxes = {{
+    "Camera_Module": (38.0, 38.0, 25.78),
+    "Camera_Barrel": (104.0, 46.0, 32.0),
+    "Front_Light_Left": (120.0, 8.0, 8.0),
+    "Front_Light_Right": (120.0, 8.0, 8.0),
+    "Radar_Holder": (59.8, 18.0, 16.3),
+}}
+for name, expected in expected_boxes.items():
+    obj = doc.getObject(name)
+    assert obj is not None, "missing named AV/I/O part: " + name
+    assert obj.Shape.isValid() and obj.Shape.Volume > 0.0, name
+    actual = (
+        obj.Shape.BoundBox.XLength,
+        obj.Shape.BoundBox.YLength,
+        obj.Shape.BoundBox.ZLength,
+    )
+    assert all(abs(a - b) <= 0.01 for a, b in zip(actual, expected)), (name, actual)
+
+shutter = doc.getObject("Privacy_Shutter")
+assert shutter is not None, "missing named AV/I/O part: Privacy_Shutter"
+assert shutter.Shape.isValid() and shutter.Shape.Volume > 0.0
+assert shutter.Captive is True and shutter.Travel.Value > 0.0
+assert doc.getObject("Shutter_Travel_Envelope") is not None
+
+als = doc.getObject("ALS_Optical_Path")
+assert als is not None, "missing named AV/I/O part: ALS_Optical_Path"
+assert als.GeometryRole == "OpticalKeepout"
+assert doc.getObject("Camera_Optical_Keepout") is not None
+
+for name in ("Speaker_Left", "Speaker_Right"):
+    obj = doc.getObject(name)
+    assert obj is not None, "missing named AV/I/O part: " + name
+    assert abs(obj.Diameter.Value - 40.0) <= 0.01
+    assert obj.Shape.isValid() and obj.Shape.Volume > 0.0
+for name in ("Passive_Radiator_Left", "Passive_Radiator_Right"):
+    obj = doc.getObject(name)
+    assert obj is not None, "missing named AV/I/O part: " + name
+    assert abs(obj.Width.Value - 50.0) <= 0.01
+    assert abs(obj.Height.Value - 25.0) <= 0.01
+for name in ("Microphone_Left", "Microphone_Right"):
+    obj = doc.getObject(name)
+    assert obj is not None, "missing named AV/I/O part: " + name
+    assert obj.ElementCount == 1
+for name in ("Speaker_Left_Acoustic_Keepout", "Speaker_Right_Acoustic_Keepout"):
+    obj = doc.getObject(name)
+    assert obj is not None and obj.GeometryRole == "AcousticKeepout", name
+
+port_names = {port_names!r}
+for port_name in port_names:
+    port = doc.getObject(port_name)
+    hole = doc.getObject(port_name + "_Clearance_Hole")
+    assert port is not None, "missing named AV/I/O part: " + port_name
+    assert port.PortType == port_name and port.GeometryRole == "ConnectorBody"
+    assert hole is not None and hole.GeometryRole == "ClearanceHole"
+    assert port.Shape.isValid() and port.Shape.Volume > 0.0
+    assert hole.Shape.isValid() and hole.Shape.Volume > 0.0
+
+cables = [
+    obj for obj in doc.Objects
+    if getattr(obj, "GeometryRole", "") == "RoutedCable"
+]
+obstructions = [
+    obj for obj in doc.Objects
+    if getattr(obj, "GeometryRole", "") == "CableObstructionEnvelope"
+]
+assert len(cables) >= 2, [obj.Name for obj in cables]
+assert len(obstructions) == len(cables)
+for cable in cables:
+    assert cable.Shape.isValid() and cable.Shape.Volume > 0.0
+    assert cable.MinimumBendIntent
+    assert cable.ParentAssembly == "05_Audio_IO_Cables"
+for obstruction in obstructions:
+    assert obstruction.Shape.isValid() and obstruction.Shape.Volume > 0.0
+    assert obstruction.ParentAssembly == "08_Reference_Datums_Keepouts"
+
+for obj in doc.Objects:
+    if getattr(obj, "IsSemanticPart", False):
+        assert obj.ManufacturingAuthority is False, obj.Name
+        assert obj.SourceReference, obj.Name
+        if obj.ParentAssembly in (
+            "04_Camera_Lighting_Sensors",
+            "05_Audio_IO_Cables",
+        ) or getattr(obj, "GeometryRole", "") in (
+            "OpticalKeepout",
+            "MotionKeepout",
+            "AcousticKeepout",
+            "ClearanceHole",
+            "CableObstructionEnvelope",
+        ):
+            box = obj.Shape.BoundBox
+            assert box.XMin >= -0.01 and box.XMax <= 742.01, obj.Name
+            assert box.YMin >= -0.01 and box.YMax <= 492.01, obj.Name
+            assert box.ZMin >= -0.01 and box.ZMax <= 62.01, obj.Name
+
+App.closeDocument(doc.Name)
+assert not App.listDocuments()
+print("HINOKI_LOD3_AV_IO_PROBE_OK cables={{}} ports={{}}".format(
+    len(cables), len(port_names)
+))
+""".format(
+                model_path=model_path.as_posix(),
+                port_names=(
+                    "HDMI_Input",
+                    "USB_A_1",
+                    "USB_A_2",
+                    "USB_C_Display_Data_PD90W",
+                    "Ethernet",
+                    "Line_Out_3p5mm",
+                ),
+            )
+            probe_result = subprocess.run(
+                [str(FREECAD_CMD), "-c"],
+                cwd=Path(tempfile.gettempdir()),
+                input="exec({!r})\n".format(probe),
+                capture_output=True,
+                text=True,
+                check=False,
+                timeout=180,
+            )
+            combined_probe = probe_result.stdout + probe_result.stderr
+            self.assertEqual(0, probe_result.returncode, combined_probe)
+            self.assertIn("HINOKI_LOD3_AV_IO_PROBE_OK", combined_probe)
+
+
 if __name__ == "__main__":
     unittest.main()
