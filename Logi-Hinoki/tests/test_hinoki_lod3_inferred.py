@@ -1,6 +1,8 @@
 """Contract and geometry tests for the Hinoki LOD 3 inferred prototype."""
 
 from importlib.util import module_from_spec, spec_from_file_location
+import hashlib
+import json
 import os
 from pathlib import Path
 import subprocess
@@ -13,6 +15,7 @@ PACKAGE_ROOT = PROJECT_ROOT / "cad" / "lod3-inferred-prototype-01"
 PARAMETERS_FILE = PACKAGE_ROOT / "hinoki_lod3_parameters.py"
 SOURCES_FILE = PACKAGE_ROOT / "hinoki_lod3_sources.py"
 BUILD_SCRIPT = PACKAGE_ROOT / "build_hinoki_lod3_master.py"
+SOURCE_INDEXER = PACKAGE_ROOT / "index_hinoki_lod3_sources.py"
 FREECAD_CMD = Path(
     os.environ.get(
         "FREECAD_CMD",
@@ -43,6 +46,96 @@ def run_freecad_script(script_path, env, timeout=180):
         check=False,
         timeout=timeout,
     )
+
+
+class TestSourceInventory(unittest.TestCase):
+    FIXTURES = {
+        "Hinoki_Master_Parameters_and_Assumption_Log.xlsx": b"hinoki-parameters",
+        "Dixie and Hinoki table.xlsx": b"hinoki-dixie-table",
+        "Dixie/3D/001_dixie65_set_asm_20250425_asm.stp": (
+            b"DIXIE_STEP_BINARY_BYTES_DO_NOT_COPY"
+        ),
+        "Dixie/BOM/logitech_Dixie65_Parts list_REV_20250506V1.xlsx": (
+            b"dixie-bom"
+        ),
+        "Dixie/2D/main-housing.pdf": b"dixie-2d",
+        "Dixie/Panel/panel-data.xlsx": b"dixie-panel",
+        "Dixie/Thermal/thermal-pad-drawing.pdf": b"dixie-thermal",
+    }
+
+    def _write_fixtures(self, source_root, excluded=()):
+        for relative_path, content in self.FIXTURES.items():
+            if relative_path in excluded:
+                continue
+            fixture_path = source_root / relative_path
+            fixture_path.parent.mkdir(parents=True, exist_ok=True)
+            fixture_path.write_bytes(content)
+
+    def test_index_records_external_reference_authority_without_source_bytes(self):
+        self.assertTrue(SOURCE_INDEXER.exists(), "source indexer must exist")
+        indexer = load_module(SOURCE_INDEXER, "index_hinoki_lod3_sources")
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_sources_") as temp_dir:
+            temp_root = Path(temp_dir)
+            source_root = temp_root / "references"
+            output_path = temp_root / "hinoki_lod3_source_index.json"
+            self._write_fixtures(source_root)
+
+            result = indexer.build_source_index(source_root, output_path)
+
+            self.assertEqual(
+                result,
+                json.loads(output_path.read_text(encoding="utf-8")),
+            )
+            records = {record["path"]: record for record in result["sources"]}
+            self.assertEqual(set(self.FIXTURES), set(records))
+            for relative_path, content in self.FIXTURES.items():
+                record = records[relative_path]
+                self.assertEqual(
+                    hashlib.sha256(content).hexdigest(),
+                    record["sha256"],
+                )
+                self.assertEqual(len(content), record["byte_size"])
+                expected_authority = (
+                    "Known"
+                    if not relative_path.startswith("Dixie/")
+                    else "DixieReference"
+                )
+                self.assertEqual(expected_authority, record["authority_class"])
+                self.assertTrue(record["external_reference"])
+                self.assertFalse(record["copied_into_repository"])
+
+            self.assertIn(
+                {
+                    "literal": "14498.4 mm",
+                    "reason": (
+                        "Conflicts with approved 742 mm Hinoki envelope; "
+                        "uniform Dixie scaling is prohibited."
+                    ),
+                },
+                result["rejected_literals"],
+            )
+            self.assertNotIn(
+                self.FIXTURES[
+                    "Dixie/3D/001_dixie65_set_asm_20250425_asm.stp"
+                ],
+                output_path.read_bytes(),
+            )
+
+    def test_index_fails_when_a_required_source_group_is_missing(self):
+        self.assertTrue(SOURCE_INDEXER.exists(), "source indexer must exist")
+        indexer = load_module(SOURCE_INDEXER, "index_hinoki_lod3_sources_missing")
+        with tempfile.TemporaryDirectory(
+            prefix="hinoki_lod3_sources_missing_"
+        ) as temp_dir:
+            temp_root = Path(temp_dir)
+            source_root = temp_root / "references"
+            output_path = temp_root / "hinoki_lod3_source_index.json"
+            missing = "Dixie/Thermal/thermal-pad-drawing.pdf"
+            self._write_fixtures(source_root, excluded=(missing,))
+
+            with self.assertRaisesRegex(FileNotFoundError, r"Dixie[/\\]Thermal"):
+                indexer.build_source_index(source_root, output_path)
+            self.assertFalse(output_path.exists())
 
 
 class TestFrozenEngineeringContract(unittest.TestCase):
