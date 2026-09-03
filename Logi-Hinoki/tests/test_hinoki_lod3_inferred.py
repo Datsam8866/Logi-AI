@@ -53,7 +53,7 @@ class TestSourceInventory(unittest.TestCase):
         "Hinoki_Master_Parameters_and_Assumption_Log.xlsx": b"hinoki-parameters",
         "Dixie and Hinoki table.xlsx": b"hinoki-dixie-table",
         "Dixie/3D/001_dixie65_set_asm_20250425_asm.stp": (
-            b"DIXIE_STEP_BINARY_BYTES_DO_NOT_COPY"
+            b"DIXIE_STEP_BINARY_BYTES_DO_NOT_COPY" + b"x" * (1024 * 1024 + 17)
         ),
         "Dixie/BOM/logitech_Dixie65_Parts list_REV_20250506V1.xlsx": (
             b"dixie-bom"
@@ -88,8 +88,27 @@ class TestSourceInventory(unittest.TestCase):
             )
             records = {record["path"]: record for record in result["sources"]}
             self.assertEqual(set(self.FIXTURES), set(records))
+            self.assertGreater(
+                len(
+                    self.FIXTURES[
+                        "Dixie/3D/001_dixie65_set_asm_20250425_asm.stp"
+                    ]
+                ),
+                1024 * 1024,
+            )
             for relative_path, content in self.FIXTURES.items():
                 record = records[relative_path]
+                self.assertEqual(
+                    {
+                        "path",
+                        "sha256",
+                        "byte_size",
+                        "authority_class",
+                        "external_reference",
+                        "copied_into_repository",
+                    },
+                    set(record),
+                )
                 self.assertEqual(
                     hashlib.sha256(content).hexdigest(),
                     record["sha256"],
@@ -119,6 +138,112 @@ class TestSourceInventory(unittest.TestCase):
                     "Dixie/3D/001_dixie65_set_asm_20250425_asm.stp"
                 ],
                 output_path.read_bytes(),
+            )
+
+    def test_publish_failure_preserves_existing_output_and_cleans_temp(self):
+        indexer = load_module(SOURCE_INDEXER, "index_hinoki_lod3_sources_atomic")
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_atomic_") as temp_dir:
+            temp_root = Path(temp_dir)
+            source_root = temp_root / "references"
+            output_path = temp_root / "hinoki_lod3_source_index.json"
+            self._write_fixtures(source_root)
+            original = b"existing-source-index"
+            output_path.write_bytes(original)
+
+            real_os = getattr(indexer, "os", None)
+
+            class FailingOS:
+                @staticmethod
+                def replace(source, target):
+                    raise OSError("injected publish failure")
+
+            indexer.os = FailingOS
+            try:
+                with self.assertRaisesRegex(OSError, "injected publish failure"):
+                    indexer.build_source_index(source_root, output_path)
+            finally:
+                if real_os is None:
+                    del indexer.os
+                else:
+                    indexer.os = real_os
+
+            self.assertEqual(original, output_path.read_bytes())
+            self.assertEqual(
+                [],
+                list(temp_root.glob(output_path.name + ".*.tmp")),
+            )
+
+    def test_each_build_returns_independent_rejected_literal_data(self):
+        indexer = load_module(SOURCE_INDEXER, "index_hinoki_lod3_sources_copy")
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_copy_") as temp_dir:
+            temp_root = Path(temp_dir)
+            source_root = temp_root / "references"
+            output_path = temp_root / "hinoki_lod3_source_index.json"
+            self._write_fixtures(source_root)
+
+            first = indexer.build_source_index(source_root, output_path)
+            first["rejected_literals"][0]["literal"] = "tampered"
+            second = indexer.build_source_index(source_root, output_path)
+
+            self.assertEqual(
+                "14498.4 mm",
+                second["rejected_literals"][0]["literal"],
+            )
+
+    def test_source_change_during_hash_fails_without_publishing(self):
+        indexer = load_module(SOURCE_INDEXER, "index_hinoki_lod3_sources_change")
+        with tempfile.TemporaryDirectory(prefix="hinoki_lod3_change_") as temp_dir:
+            temp_root = Path(temp_dir)
+            source_root = temp_root / "references"
+            output_path = temp_root / "hinoki_lod3_source_index.json"
+            self._write_fixtures(source_root)
+            original = b"existing-source-index"
+            output_path.write_bytes(original)
+            changing_path = (
+                source_root / "Hinoki_Master_Parameters_and_Assumption_Log.xlsx"
+            )
+
+            real_open = open
+
+            class ChangingReader:
+                def __init__(self, handle):
+                    self.handle = handle
+                    self.changed = False
+
+                def __enter__(self):
+                    return self
+
+                def __exit__(self, exc_type, exc_value, traceback):
+                    self.handle.close()
+
+                def read(self, size):
+                    data = self.handle.read(size)
+                    if not self.changed:
+                        stat = changing_path.stat()
+                        os.utime(
+                            changing_path,
+                            ns=(stat.st_atime_ns, stat.st_mtime_ns + 2_000_000_000),
+                        )
+                        self.changed = True
+                    return data
+
+            def changing_open(path, mode):
+                handle = real_open(path, mode)
+                if Path(path) == changing_path and mode == "rb":
+                    return ChangingReader(handle)
+                return handle
+
+            indexer.open = changing_open
+            try:
+                with self.assertRaisesRegex(RuntimeError, "changed during indexing"):
+                    indexer.build_source_index(source_root, output_path)
+            finally:
+                del indexer.open
+
+            self.assertEqual(original, output_path.read_bytes())
+            self.assertEqual(
+                [],
+                list(temp_root.glob(output_path.name + ".*.tmp")),
             )
 
     def test_index_fails_when_a_required_source_group_is_missing(self):

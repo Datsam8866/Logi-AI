@@ -2,7 +2,9 @@
 
 import hashlib
 import json
+import os
 from pathlib import Path
+import tempfile
 
 
 REQUIRED_FILES = (
@@ -38,23 +40,64 @@ REJECTED_LITERALS = (
 )
 
 
-def _sha256(path):
+def _stat_signature(stat):
+    return (
+        stat.st_dev,
+        stat.st_ino,
+        stat.st_size,
+        stat.st_mtime_ns,
+        stat.st_ctime_ns,
+    )
+
+
+def _fingerprint(path):
+    before = path.stat()
     digest = hashlib.sha256()
-    with path.open("rb") as source:
+    byte_size = 0
+    with open(path, "rb") as source:
         for chunk in iter(lambda: source.read(1024 * 1024), b""):
             digest.update(chunk)
-    return digest.hexdigest()
+            byte_size += len(chunk)
+    try:
+        after = path.stat()
+    except OSError as exc:
+        raise RuntimeError("Source changed during indexing: " + str(path)) from exc
+    if _stat_signature(before) != _stat_signature(after) or byte_size != after.st_size:
+        raise RuntimeError("Source changed during indexing: " + str(path))
+    return digest.hexdigest(), byte_size
 
 
 def _record(source_root, path, authority_class):
+    digest, byte_size = _fingerprint(path)
     return {
         "path": path.relative_to(source_root).as_posix(),
-        "sha256": _sha256(path),
-        "byte_size": path.stat().st_size,
+        "sha256": digest,
+        "byte_size": byte_size,
         "authority_class": authority_class,
         "external_reference": True,
         "copied_into_repository": False,
     }
+
+
+def _publish_inventory(inventory, output_path):
+    serialized = json.dumps(inventory, indent=2, sort_keys=True) + "\n"
+    temp_path = None
+    try:
+        with tempfile.NamedTemporaryFile(
+            mode="w",
+            encoding="utf-8",
+            dir=output_path.parent,
+            prefix=output_path.name + ".",
+            suffix=".tmp",
+            delete=False,
+        ) as staged:
+            temp_path = Path(staged.name)
+            staged.write(serialized)
+            staged.flush()
+        os.replace(temp_path, output_path)
+    finally:
+        if temp_path is not None and temp_path.exists():
+            temp_path.unlink()
 
 
 def build_source_index(source_root, output_path):
@@ -85,10 +128,7 @@ def build_source_index(source_root, output_path):
     inventory = {
         "schema_version": 1,
         "sources": sorted(sources, key=lambda record: record["path"]),
-        "rejected_literals": list(REJECTED_LITERALS),
+        "rejected_literals": [dict(record) for record in REJECTED_LITERALS],
     }
-    output_path.write_text(
-        json.dumps(inventory, indent=2, sort_keys=True) + "\n",
-        encoding="utf-8",
-    )
+    _publish_inventory(inventory, output_path)
     return inventory
