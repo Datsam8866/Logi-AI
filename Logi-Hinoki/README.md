@@ -4,7 +4,11 @@
 
 ## LOD 3 inferred engineering prototype
 
-LOD 3 master 正在 cad/lod3-inferred-prototype-01/ 建立。目前 checkpoint 已包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources、QC7790 到 rear hatch 的被動 thermal path，以及 Task 5 的 camera、lighting、sensor、audio、microphone 與六個 rear I/O connector proxies。這是 head-only LOD 3 inferred prototype；本次 user-approved scope 不含 cable route solids 或 bend validation，Task 6 stand/base deferred。
+LOD 3 master 正在 `cad/lod3-inferred-prototype-01/` 建立。Task 7 臨時 head-only build 包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources、QC7790 到 rear hatch 的被動 thermal path，以及 Task 5 的 camera、lighting、sensor、audio、microphone 與六個 rear I/O connector proxies。
+
+Task 7 head-only validation 使用臨時 build（97 個 semantic parts、79 個 physical collision parts），temporary validation：Pass。每一組 unique physical pair 的碰撞門檻為 0.01 mm³；僅允許 3 組 camera/front-light 與對應 heat source contacts，其餘 3,078 組均已檢查通過。獨立執行 `python -B -m unittest tests.test_hinoki_lod3_inferred -v`：27/27 通過（120.698 s，exit code 0）。正式 LOD 3 FCStd 仍是先前的 62-part checkpoint，待 Task 8 atomic publication 才更新，不代表臨時驗證模型已正式交付。
+
+Next Action：Task 8 atomic publication。Task 6 stand/base、physical cable routes / bend validation、full-product STEP、review images 與 FLOEFD derivative 均 deferred；下列既有 thermal CHT handoff 不受影響。
 
 這一版明確是 LOD 3 inferred engineering prototype; not manufacturing release，不可用於 tooling、GD&T、supplier release、certification 或 production temperature claim。
 
@@ -56,7 +60,7 @@ Surface radiation / emissivity、external computational domain、pressure bounda
 
 ## 範圍與限制
 
-- Current Task 5 head-only STP scope excludes physical cable routes and cable-bend validation. Connector cutouts/service clearances remain explicit and are validated through the rear service zone.
+- Current Task 7 head-only validation scope excludes physical cable routes and cable-bend validation. Connector cutouts/service clearances remain explicit and are validated through the rear service zone.
 - Task 6 stand/base is deferred; this checkpoint must not be described as a full product assembly or full-product STP.
 - 模型是受控概念 proxy，非製造 CAD、散熱器細節或完整 electronics stack。
 - STEP export 會經 FreeCAD 重新匯入驗證：16 個語意 solids、1 個 air body 與 mm-scale bounding boxes。
