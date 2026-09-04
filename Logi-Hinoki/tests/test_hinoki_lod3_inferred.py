@@ -6,6 +6,7 @@ import json
 import os
 from pathlib import Path
 import subprocess
+import sys
 import tempfile
 import unittest
 
@@ -1938,6 +1939,173 @@ class TestAtomicExport(unittest.TestCase):
             self.assertEqual(1, output.count("HINOKI_LOD3_EXPORT_FAIL"), output)
             self.assertNotIn("HINOKI_LOD3_EXPORT_OK", output)
             self.assertEqual([], list(Path(case_dir).iterdir()))
+
+
+class TestReviewImages(unittest.TestCase):
+    """Task 9: phone-review PNG generator (preview_hinoki_lod3.py).
+
+    Exercises the deterministic preview pipeline: five PNGs at
+    1600 x 1200 with white background, "shaded-with-edges" draw style
+    (filled colour interior + darker outline stroke), readable file size
+    (not truncated / not oversized), and atomic replacement of any
+    pre-existing destination file.
+    """
+
+    EXPECTED_PREVIEWS = (
+        "Hinoki_LOD3_Preview_Front.png",
+        "Hinoki_LOD3_Preview_Rear.png",
+        "Hinoki_LOD3_Preview_Isometric.png",
+        "Hinoki_LOD3_Preview_Exploded.png",
+        "Hinoki_LOD3_Preview_AirflowCutaway.png",
+    )
+    MIN_WIDTH = 1600
+    MIN_HEIGHT = 1200
+    MIN_SIZE_BYTES = 8 * 1024
+    MAX_SIZE_BYTES = 5 * 1024 * 1024
+
+    @classmethod
+    def setUpClass(cls):
+        cls.preview_script = PACKAGE_ROOT / "preview_hinoki_lod3.py"
+        cls.workspace = tempfile.TemporaryDirectory(prefix="hinoki_lod3_preview_")
+        cls.addClassCleanup(cls.workspace.cleanup)
+        cls.root = Path(cls.workspace.name)
+        cls.model_path = cls.root / "source.FCStd"
+        cls.manifest_path = cls.root / "Hinoki_LOD3_Part_Manifest.json"
+        cls.validation_path = cls.root / "Hinoki_LOD3_Validation.json"
+
+        env = os.environ.copy()
+        env["HINOKI_LOD3_MODEL_OUT"] = str(cls.model_path)
+        build_result = run_freecad_script(BUILD_SCRIPT, env)
+        if build_result.returncode or "HINOKI_LOD3_BUILD_OK" not in build_result.stdout:
+            raise AssertionError(build_result.stdout + build_result.stderr)
+
+        export_script = PACKAGE_ROOT / "export_hinoki_lod3.py"
+        env_export = os.environ.copy()
+        env_export["HINOKI_LOD3_MODEL_PATH"] = str(cls.model_path)
+        env_export["HINOKI_LOD3_EXPORT_DIR"] = str(cls.root)
+        export_result = run_freecad_script(export_script, env_export)
+        if export_result.returncode or "HINOKI_LOD3_EXPORT_OK" not in export_result.stdout:
+            raise AssertionError(export_result.stdout + export_result.stderr)
+
+    def _run_preview(self, out_dir=None, extra_env=None):
+        env = os.environ.copy()
+        env["HINOKI_LOD3_MANIFEST_PATH"] = str(self.manifest_path)
+        env["HINOKI_LOD3_PREVIEW_DIR"] = str(out_dir or self.root)
+        if extra_env:
+            env.update(extra_env)
+        return subprocess.run(
+            [sys.executable, str(self.preview_script)],
+            env=env,
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=180,
+        )
+
+    def test_preview_script_exists(self):
+        self.assertTrue(self.preview_script.exists(),
+                        "Task 9 preview script must exist")
+
+    def test_previews_produced_with_success_sentinel(self):
+        with tempfile.TemporaryDirectory(dir=self.root, prefix="ok_") as tmp_dir:
+            result = self._run_preview(out_dir=Path(tmp_dir))
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            self.assertIn("HINOKI_LOD3_PREVIEW_OK", result.stdout)
+            self.assertNotIn("HINOKI_LOD3_PREVIEW_FAIL", result.stdout + result.stderr)
+            for filename in self.EXPECTED_PREVIEWS:
+                self.assertTrue((Path(tmp_dir) / filename).exists(),
+                                "missing preview: " + filename)
+
+    def test_preview_dimensions_and_size_within_bounds(self):
+        from PIL import Image
+        import sys as _sys
+        with tempfile.TemporaryDirectory(dir=self.root, prefix="dims_") as tmp_dir:
+            result = self._run_preview(out_dir=Path(tmp_dir))
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            for filename in self.EXPECTED_PREVIEWS:
+                path = Path(tmp_dir) / filename
+                size_bytes = path.stat().st_size
+                self.assertGreaterEqual(size_bytes, self.MIN_SIZE_BYTES,
+                                        (filename, "under-min", size_bytes))
+                self.assertLessEqual(size_bytes, self.MAX_SIZE_BYTES,
+                                     (filename, "over-max", size_bytes))
+                with Image.open(path) as img:
+                    self.assertGreaterEqual(img.width, self.MIN_WIDTH,
+                                            (filename, img.size))
+                    self.assertGreaterEqual(img.height, self.MIN_HEIGHT,
+                                            (filename, img.size))
+                    self.assertEqual(img.mode, "RGB", (filename, img.mode))
+
+    def test_preview_white_background_and_shaded_with_edges(self):
+        from PIL import Image
+        with tempfile.TemporaryDirectory(dir=self.root, prefix="style_") as tmp_dir:
+            result = self._run_preview(out_dir=Path(tmp_dir))
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            for filename in self.EXPECTED_PREVIEWS:
+                path = Path(tmp_dir) / filename
+                with Image.open(path) as img:
+                    top_left = img.getpixel((5, 5))
+                    top_right = img.getpixel((img.width - 6, 5))
+                    self.assertEqual((255, 255, 255), top_left,
+                                     (filename, "top-left not white"))
+                    self.assertEqual((255, 255, 255), top_right,
+                                     (filename, "top-right not white"))
+                    centre = img.getpixel((img.width // 2, img.height // 2))
+                    self.assertNotEqual((255, 255, 255), centre,
+                                        (filename, "centre pixel is white; "
+                                                   "no shaded part rendered"))
+                    # Shaded-with-edges: rasterised polygons must include
+                    # dark edge strokes AND filled interiors. Scan the
+                    # central 60% of the canvas at 12 px pitch to prove
+                    # the render includes at least one edge-dark pixel
+                    # (sum(rgb) <= 270) and at least one non-white filled
+                    # pixel (0 < sum(rgb) < 3*250).
+                    xs = range(img.width // 5, img.width * 4 // 5, 12)
+                    ys = range(img.height // 5, img.height * 4 // 5, 12)
+                    samples = [img.getpixel((x, y)) for x in xs for y in ys]
+                    darkest = min(samples, key=sum)
+                    self.assertLessEqual(sum(darkest), 300,
+                                         (filename, "no dark edge stroke detected", darkest))
+                    filled = [s for s in samples if sum(s) < 3 * 250 and sum(s) > 0]
+                    self.assertGreaterEqual(len(filled), 50,
+                                            (filename, "not enough shaded interior fill",
+                                             len(filled)))
+
+    def test_atomic_replacement_of_existing_preview(self):
+        with tempfile.TemporaryDirectory(dir=self.root, prefix="atomic_") as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            placeholder = b"OLD_PREVIEW_BYTES_MUST_BE_REPLACED_ATOMICALLY"
+            for filename in self.EXPECTED_PREVIEWS:
+                (tmp_root / filename).write_bytes(placeholder)
+            result = self._run_preview(out_dir=tmp_root)
+            self.assertEqual(0, result.returncode, result.stdout + result.stderr)
+            for filename in self.EXPECTED_PREVIEWS:
+                new_bytes = (tmp_root / filename).read_bytes()
+                self.assertNotEqual(placeholder, new_bytes,
+                                    (filename, "atomic replace did not happen"))
+                self.assertTrue(new_bytes.startswith(b"\x89PNG"),
+                                (filename, "not a PNG after replace"))
+            # No leftover .tmp files in the directory.
+            leftovers = sorted(p.name for p in tmp_root.glob("*.tmp"))
+            self.assertEqual([], leftovers,
+                             ("stray temp file after atomic replace", leftovers))
+
+    def test_missing_manifest_fails_without_partial_output(self):
+        with tempfile.TemporaryDirectory(dir=self.root, prefix="missing_") as tmp_dir:
+            tmp_root = Path(tmp_dir)
+            missing_manifest = tmp_root / "does_not_exist.json"
+            result = self._run_preview(
+                out_dir=tmp_root,
+                extra_env={"HINOKI_LOD3_MANIFEST_PATH": str(missing_manifest)},
+            )
+            self.assertNotEqual(0, result.returncode,
+                                result.stdout + result.stderr)
+            self.assertIn("HINOKI_LOD3_PREVIEW_FAIL", result.stdout + result.stderr)
+            self.assertNotIn("HINOKI_LOD3_PREVIEW_OK", result.stdout)
+            # Directory must contain no PNGs and no .tmp remnants.
+            self.assertEqual([], list(tmp_root.glob("*.png")))
+            self.assertEqual([], list(tmp_root.glob("*.tmp")))
+
 
 if __name__ == "__main__":
     unittest.main()

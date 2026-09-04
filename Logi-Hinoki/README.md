@@ -26,7 +26,9 @@ LOD 3 master 位於 `cad/lod3-inferred-prototype-01/`。Task 8 品質改善後 h
 
 **Iter 4 新增**：`cad/lod3-inferred-prototype-01/emit_section_evidence.py` 產生 `Hinoki_LOD3_Sections.json` + 8 張 SVG（4 sides + 4 corners），含 seam/lap 尺寸標註；METADATA_KEYS 加 ExternalSourceStatus、ExternalStandardID、ThermalConductivityWmK（進 manifest JSON）；VESA_Boss/Camera_Module/M4 fastener 有明確 ExternalStandardID（VESA MIS-D 100、LI-IMX477-MIPI-140H、ISO 4762）。
 
-Next Action：Iter 4 已達接受門檻，可作為 LOD 3 交付基線。正式 FCStd 已同步為 96-part iter4 版本；review 檔留 `C:\Users\skuan1\.codex\visualizations\2026\09\04\task8-quality-remediation-iter4\`；stand/base、full-product STEP、FLOEFD derivative 均 deferred。
+**Task 9 phone-review PNGs**：`cad/lod3-inferred-prototype-01/preview_hinoki_lod3.py` 讀取 Manifest.json + Validation.json，用 PIL 產生 5 張 1600×1200 白底 PNG（Front / Rear / Isometric / Exploded / AirflowCutaway），部件依 parent assembly 上色，shaded-with-edges 樣式，airflow 圖有 translucent rear housing + 上升藍色氣流箭頭。TestReviewImages 6 項全通過（dimensions / 白底 / edge stroke / atomic replace / 缺 manifest 失敗）。40/40 完整測試 pass。
+
+Next Action：Task 9 完成。Task 10 FLOEFD 衍生包（solids + internal-air STEP + setup JSON）與 Task 11 正式發布仍 deferred；stand/base 亦 deferred。iter5 review package 位於 `C:\Users\skuan1\.codex\visualizations\2026\09\04\task9-iter5-full\`（含 22 個檔案：FCStd + STEP + Manifest + Validation + 8 SVG + 5 PNG + logs）。
 
 ### Task 8 使用與驗證
 
