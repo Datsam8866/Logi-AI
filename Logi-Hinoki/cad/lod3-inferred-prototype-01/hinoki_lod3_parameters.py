@@ -371,6 +371,9 @@ METADATA_KEYS = (
     "ThermalDisposition",
     "HeatLoadW",
     "Revision",
+    "ExternalSourceStatus",
+    "ExternalStandardID",
+    "ThermalConductivityWmK",
 )
 
 MATERIAL_INTENTS = MappingProxyType(
@@ -404,6 +407,15 @@ OUTPUT_FILES = frozen(
 )
 
 
+_EXTERNAL_SOURCE_STATUS_DEFAULT_MAP = {
+    "Known": "None:ApprovedContractValue",
+    "Derived": "None:DerivedFromApprovedContract",
+    "DixieReference": "DixieArchitecture:LOD3Inference:NoExternalDrawingAtThisPhase",
+    "CompetitorOfficial": "External:CompetitorOfficialDatasheetOrSpec",
+    "EngineeringAssumption": "None:LOD3EngineeringAssumption",
+}
+
+
 def part_metadata(
     *,
     part_id,
@@ -416,8 +428,24 @@ def part_metadata(
     thermal_disposition,
     heat_load_w=0.0,
     revision="A",
+    external_source_status=None,
+    external_standard_id="",
+    thermal_conductivity_wmk=None,
 ):
-    """Return one complete non-release semantic-part metadata record."""
+    """Return one complete non-release semantic-part metadata record.
+
+    External sourcing hierarchy fields (Iteration 3+):
+        * ``external_source_status`` — auto-derived from ``source_class``
+          when not overridden; makes the sourcing hierarchy explicit
+          (Dixie architecture inference vs. external standard vs.
+          engineering assumption).
+        * ``external_standard_id`` — free-form external standard citation
+          for parts that carry one (VESA MIS-D 100, LI-IMX477 published
+          envelope, etc.). Empty string for parts with no external
+          standard.
+        * ``thermal_conductivity_wmk`` — W/m-K value for thermal parts,
+          None otherwise.
+    """
     if parent_assembly not in REQUIRED_TOP_GROUPS:
         raise ValueError("Unknown parent assembly: " + str(parent_assembly))
     if source_class not in SOURCE_CLASSES:
@@ -426,6 +454,12 @@ def part_metadata(
         raise ValueError("Unknown thermal disposition: " + str(thermal_disposition))
     if not source_reference:
         raise ValueError("SourceReference must be non-empty")
+    resolved_status = external_source_status or _EXTERNAL_SOURCE_STATUS_DEFAULT_MAP.get(
+        source_class, "Unknown:UncategorizedSource"
+    )
+    conductivity = (
+        None if thermal_conductivity_wmk is None else float(thermal_conductivity_wmk)
+    )
     return {
         "PartID": str(part_id),
         "PartName": str(part_name),
@@ -438,4 +472,7 @@ def part_metadata(
         "ThermalDisposition": thermal_disposition,
         "HeatLoadW": float(heat_load_w),
         "Revision": str(revision),
+        "ExternalSourceStatus": str(resolved_status),
+        "ExternalStandardID": str(external_standard_id),
+        "ThermalConductivityWmK": conductivity,
     }

@@ -160,7 +160,17 @@ def export_package(model_path, output_directory):
         manifest = {"scope": "HeadOnly", "units": "mm",
                     "limitations": p.PROTOTYPE_LIMITATION, "parts": []}
         for obj in semantic:
-            row = {key: getattr(obj, key) for key in p.METADATA_KEYS}
+            row = {}
+            for key in p.METADATA_KEYS:
+                value = getattr(obj, key, None)
+                if value is None:
+                    row[key] = None
+                elif key in ("HeatLoadW", "ThermalConductivityWmK"):
+                    row[key] = float(value)
+                elif hasattr(value, "Value"):
+                    row[key] = float(value.Value)
+                else:
+                    row[key] = value
             row.update(name=obj.Name, label=obj.Label, exported=obj.Name in expected)
             if obj.Name in expected:
                 row.update(expected[obj.Name])

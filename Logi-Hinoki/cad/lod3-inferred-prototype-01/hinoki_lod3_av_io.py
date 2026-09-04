@@ -132,6 +132,12 @@ def build_camera_lighting_sensors(doc, groups):
     add_dimension(camera_obj, "Depth", camera["depth"])
     add_property(
         camera_obj,
+        "App::PropertyString",
+        "ExternalStandardID",
+        "LI-IMX477-MIPI-140H (140 deg HFOV camera module published envelope)",
+    )
+    add_property(
+        camera_obj,
         "App::PropertyStringList",
         "AuthorizedContactTargets",
         ["Heat_Camera"],

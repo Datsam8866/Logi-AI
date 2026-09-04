@@ -369,7 +369,7 @@ def build_electronics_thermal(doc, groups):
         if name.startswith("Heat_Pipe"):
             add_dimension(obj, "Diameter", 6.0)
         if name in thermal_conductivity_wmk:
-            add_dimension(obj, "ThermalConductivityWmK", thermal_conductivity_wmk[name])
+            obj.ThermalConductivityWmK = float(thermal_conductivity_wmk[name])
         targets = thermal_authorized_contacts.get(name)
         if targets:
             add_property(

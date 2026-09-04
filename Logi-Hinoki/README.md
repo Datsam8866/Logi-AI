@@ -6,7 +6,7 @@
 
 固定規則見本目錄 `AGENTS.md`；詳細進度與交接記錄見 [Logi-Hinoki工作筆記](<G:/其他電腦/我的電腦/Obsidian Vault/Logitech/Logi-Hinoki工作筆記.md>)，不沿用 MEBudget 筆記。
 
-2026-09-04 更新：完成 Task 8 品質改善三輪迭代（Q-01 前後殼間隙、Q-02 panel 熱源細節、Q-03 rib 裝配）。獨立最終複審 93/100（未達 95 因缺 cross-section 影像）；三項使用者缺陷均以幾何與 metadata 證據解決；34/34 測試通過。
+2026-09-04 更新：Task 8 品質改善四輪迭代完成（Q-01/Q-02/Q-03 全解決）。獨立最終複審 **98/100**（超過 95 門檻，所有類別 ≥ 90%）；34/34 測試通過。Iter 4 新增 cross-section SVG+JSON pipeline（8 個 canonical section planes）、ExternalStandardID（VESA MIS-D 100、LI-IMX477 等）、ThermalConductivityWmK 進 METADATA_KEYS/manifest。
 
 ## LOD 3 inferred engineering prototype
 
@@ -22,9 +22,11 @@ LOD 3 master 位於 `cad/lod3-inferred-prototype-01/`。Task 8 品質改善後 h
 
 **Review 檔位置**：`C:\Users\skuan1\.codex\visualizations\2026\09\04\task8-quality-remediation-iter3\`（FCStd + STEP + Manifest.json + Validation.json + logs）。iter1、iter2 保留為對比。
 
-**獨立複審**：三代理平行審查（A/B/C 分工）+ 最終獨立複審（未參與實作）。iter1 綜合 73/100；iter2 綜合 80/100；iter3 綜合 **93/100**（A=17.5, B=28, C=19, D=19, E=9.5）。三大 Q-01/Q-02/Q-03 缺陷均已 CLOSED；未達 95 分的主因是 A 類別缺 rendered cross-section 影像（cap 92%），其餘為 minor：ExternalStandardID 未逐件填、ThermalConductivityWmK 未進 METADATA_KEYS 而未進 manifest JSON、assembly sequence tool-access 未完全記錄。
+**獨立複審**：三代理平行審查（A/B/C 分工）+ 每輪獨立最終複審（未參與實作）。iter1 綜合 73/100 → iter2 80/100 → iter3 93/100 → **iter4 98/100**（A=18, B=30, C=20, D=20, E=10）。三大 Q-01/Q-02/Q-03 缺陷均已 CLOSED；所有類別 ≥ 90%；無 Critical / Important；僅 A 有 -2 minor（SVG 已補上 corner clip fix）。
 
-Next Action：若要達 95+ 需補 cross-section 影像（FreeCAD Draft.makeShapeString 或 GUI 匯出 8 張 PNG）、將 ThermalConductivityWmK 加入 METADATA_KEYS、補 ExternalStandardID。使用者可決定是否進一步 iter 4 或以 iter3 作為 LOD 3 交付基線。正式 62-part FCStd 尚未替換，iter3 review 檔留在本機；stand/base、full-product STEP、FLOEFD derivative 均 deferred。
+**Iter 4 新增**：`cad/lod3-inferred-prototype-01/emit_section_evidence.py` 產生 `Hinoki_LOD3_Sections.json` + 8 張 SVG（4 sides + 4 corners），含 seam/lap 尺寸標註；METADATA_KEYS 加 ExternalSourceStatus、ExternalStandardID、ThermalConductivityWmK（進 manifest JSON）；VESA_Boss/Camera_Module/M4 fastener 有明確 ExternalStandardID（VESA MIS-D 100、LI-IMX477-MIPI-140H、ISO 4762）。
+
+Next Action：Iter 4 已達接受門檻，可作為 LOD 3 交付基線。正式 FCStd 已同步為 96-part iter4 版本；review 檔留 `C:\Users\skuan1\.codex\visualizations\2026\09\04\task8-quality-remediation-iter4\`；stand/base、full-product STEP、FLOEFD derivative 均 deferred。
 
 ### Task 8 使用與驗證
 

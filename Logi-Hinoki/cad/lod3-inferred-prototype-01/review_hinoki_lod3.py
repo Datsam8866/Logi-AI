@@ -111,8 +111,15 @@ def _metadata_record(obj):
     record = {}
     for key in p.METADATA_KEYS:
         value = getattr(obj, key, None)
-        if key == "HeatLoadW" and value is not None:
-            value = float(value)
+        if value is None:
+            record[key] = None
+            continue
+        if key in ("HeatLoadW", "ThermalConductivityWmK"):
+            record[key] = float(value)
+            continue
+        if hasattr(value, "Value"):
+            record[key] = float(value.Value)
+            continue
         record[key] = value
     return record
 
@@ -128,6 +135,7 @@ def _metadata_complete(record):
         "Confidence",
         "ThermalDisposition",
         "Revision",
+        "ExternalSourceStatus",
     )
     return (
         all(isinstance(record[key], str) and record[key].strip() for key in required_strings)

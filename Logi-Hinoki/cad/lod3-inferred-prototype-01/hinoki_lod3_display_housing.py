@@ -31,6 +31,7 @@ from hinoki_lod3_common import (
     add_property,
     centred_offset,
     semantic_part,
+    set_external_standard,
     vector,
 )
 
@@ -834,6 +835,7 @@ def build_housing_shell(doc, groups):
         add_dimension(boss, "TapDepth", 12.0)
         add_property(boss, "App::PropertyString", "HostPart", "Metal_Mid_Frame")
         add_property(boss, "App::PropertyString", "MoldingDraftDirection", "-Z (drawn from rear)")
+        set_external_standard(boss, "VESA MIS-D 100 (100x100 mm fixed monitor mount)")
         add_property(
             boss,
             "App::PropertyStringList",
@@ -870,6 +872,7 @@ def build_housing_shell(doc, groups):
             "Rear_Enclosure|VESA_Boss_{:02d}".format(index),
         )
         add_property(fastener, "App::PropertyString", "TargetHost", "VESA_Boss_{:02d}".format(index))
+        set_external_standard(fastener, "ISO 4762 M4 socket-head (VESA-mount fastener)")
         parts.append(fastener)
 
     for name, label, slots, part_id in (

@@ -56,9 +56,30 @@ def add_metadata(obj, metadata):
         obj,
         "App::PropertyString",
         "ExternalSourceStatus",
-        external_status,
+        metadata.get("ExternalSourceStatus", external_status) or external_status,
+    )
+    # Default empty ExternalStandardID; specific parts (VESA bosses, camera,
+    # IO ports) override with published standards after semantic_part.
+    add_property(
+        obj,
+        "App::PropertyString",
+        "ExternalStandardID",
+        metadata.get("ExternalStandardID", ""),
+    )
+    # ThermalConductivityWmK: 0.0 default (non-thermal parts); thermal
+    # parts override via part_metadata thermal_conductivity_wmk.
+    conductivity_value = metadata.get("ThermalConductivityWmK")
+    add_property(
+        obj,
+        "App::PropertyFloat",
+        "ThermalConductivityWmK",
+        float(conductivity_value) if conductivity_value is not None else 0.0,
     )
     return obj
+
+
+def set_external_standard(obj, standard_id):
+    add_property(obj, "App::PropertyString", "ExternalStandardID", standard_id)
 
 
 def semantic_part(doc, group, name, label, shape, metadata):
