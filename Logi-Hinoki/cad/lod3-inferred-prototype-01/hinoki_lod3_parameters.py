@@ -15,34 +15,117 @@ PROTOTYPE_LIMITATION = (
 
 HEAD = frozen(width=742.0, height=492.0, depth=62.0)
 ACTIVE_AREA = frozen(width=708.4, height=398.5)
+
+# Display stack z-plan (z is measured from front face).
+# 0.0..3.2   Cover_Glass + Front_Bezel
+# 3.2..4.0   PCAP_Sensor
+# 4.0..4.5   Optical_Bond
+# 4.5..7.0   LCD_Cell
+# 7.0..8.5   BLU_Optical_Films (reflector + diffuser + prism equivalent stack)
+# 8.5..12.5  Light_Guide_Plate
+# 12.5..15.5 Panel_Backplate (metal, holds LGP and LED PCB)
+# 15.5..19.0 Display service gap and Display_Carrier
 DISPLAY_STACK = MappingProxyType(
     {
         "Cover_Glass": frozen(width=726.0, height=446.0, thickness=3.2),
         "PCAP_Sensor": frozen(width=724.0, height=444.0, thickness=0.8),
         "Optical_Bond": frozen(width=724.0, height=444.0, thickness=0.5),
         "LCD_Cell": frozen(width=712.0, height=402.0, thickness=2.5),
-        "Backlight_Unit": frozen(width=716.0, height=406.0, thickness=12.0),
+        "BLU_Optical_Films": frozen(width=716.0, height=406.0, thickness=1.5),
+        "Light_Guide_Plate": frozen(width=716.0, height=406.0, thickness=4.0),
+        "Panel_Backplate": frozen(width=716.0, height=406.0, thickness=3.0),
+    }
+)
+
+# Edge-lit backlight: single LED PCB along the bottom edge of the LGP.
+# LED_Bar is a physical carrier for the Heat_BLU_LED heat source; sized to
+# fit within a matching cutout in the Panel_Backplate to avoid interference.
+LED_BAR = frozen(
+    width=700.0,
+    depth=12.0,
+    thickness=3.0,
+    y_offset_from_lgp_edge=1.0,
+    architecture="edge-lit-bottom",
+    assumption_id="A-LOD3-PN-001",
+    source_reference="Edge-lit engineering assumption; 32-inch panel typical",
+)
+BACKPLATE_LED_CUTOUT_CLEARANCE = 0.3
+
+# Panel drivers (individual physical solids and heat sources).
+PANEL_DRIVER = MappingProxyType(
+    {
+        "BLU_Driver_PCB": frozen(
+            width=48.0,
+            height=30.0,
+            thickness=1.6,
+            assumption_id="A-LOD3-PN-002",
+            source_reference="Split of 20 W Panel_Module budget (Q-02 P2 approach); driver only",
+        ),
+        "TCON_IC": frozen(
+            width=15.0,
+            height=15.0,
+            thickness=1.0,
+            assumption_id="A-LOD3-PN-003",
+            source_reference="Split of 20 W Panel_Module budget (Q-02 P2 approach); TCON IC package",
+        ),
+        "Panel_Gate_Source_Driver": frozen(
+            width=350.0,
+            depth=6.0,
+            thickness=1.0,
+            assumption_id="A-LOD3-PN-004",
+            source_reference="COF equivalent along LCD bottom edge",
+        ),
     }
 )
 
 HOUSING = frozen(
     rear_wall=2.8,
-    structural_rib=1.7,
+    mid_frame_wall=2.0,
+    mid_frame_front_z=3.2,
+    mid_frame_rear_z=25.0,
+    mid_frame_lap_start_z=22.0,
+    mid_frame_plate_thickness=3.0,
+    rear_cover_front_z=22.0,
+    rib_thickness=1.7,
+    rib_height=15.2,
     primary_boss_od=7.0,
+    vesa_boss_od=9.0,
     primary_fastener="M3",
+    vesa_fastener="M4",
 )
+
+# Enclosure mating geometry: designed clearances to represent real assembly
+# interfaces rather than zero-clearance abutment (which would be unbuildable).
+ENCLOSURE_MATING = frozen(
+    front_seam_radial_clearance=0.2,
+    lap_radial_clearance=0.3,
+    lap_depth=3.0,
+    bezel_thickness=3.2,
+    mid_frame_lap_depth=3.0,
+)
+
 VESA_MOUNT_POINTS = (
     (321.0, 196.0),
     (421.0, 196.0),
     (321.0, 296.0),
     (421.0, 296.0),
 )
+# Corner boss positions in mid-frame coordinates.
+CORNER_BOSS_POSITIONS = (
+    (40.0, 40.0),
+    (702.0, 40.0),
+    (40.0, 452.0),
+    (702.0, 452.0),
+)
+
 COLLISION_CLEARANCE = frozen(
     linear=0.5,
     radial=0.5,
     shield_wall=0.8,
-    rear_boss_z=44.0,
-    rear_boss_height=15.2,
+    rear_boss_z=24.5,
+    rear_boss_height=34.7,
+    vesa_boss_height=34.7,
+    boss_root_engagement=0.5,
 )
 
 VENTS = MappingProxyType(
@@ -203,9 +286,16 @@ THERMAL_CASE = frozen(
     fan_present=False,
     gravity_mm_s2=(0.0, -9810.0, 0.0),
 )
+# Heat sources: total 57 W budget preserved. The 20 W historic
+# Heat_Panel_Backlight envelope is split into four physical panel heat sources
+# under budget group Panel_Module (Panel_Module_Group). All four are labelled
+# EngineeringAssumption because no supplier split is available.
 HEAT_LOADS_W = MappingProxyType(
     {
-        "Heat_Panel_Backlight": 20.0,
+        "Heat_BLU_LED": 16.0,
+        "Heat_BLU_Driver": 2.0,
+        "Heat_TCON": 1.5,
+        "Heat_Panel_Gate_Source": 0.5,
         "Heat_QC7790": 12.0,
         "Heat_Memory": 2.0,
         "Heat_Carrier_PMIC": 5.0,
@@ -217,6 +307,31 @@ HEAT_LOADS_W = MappingProxyType(
         "Heat_Front_Lighting": 4.0,
     }
 )
+HEAT_BUDGET_GROUPS = MappingProxyType(
+    {
+        "Panel_Module": (
+            "Heat_BLU_LED",
+            "Heat_BLU_Driver",
+            "Heat_TCON",
+            "Heat_Panel_Gate_Source",
+        ),
+        "Compute": (
+            "Heat_QC7790",
+            "Heat_Memory",
+            "Heat_Carrier_PMIC",
+            "Heat_WiFi_BLE",
+        ),
+        "IO": ("Heat_IO",),
+        "AV_Sensor": (
+            "Heat_Camera",
+            "Heat_Radar_ALS",
+            "Heat_Front_Lighting",
+        ),
+        "Audio": ("Heat_Audio",),
+    }
+)
+PANEL_MODULE_BUDGET_W = 20.0
+TOTAL_BUDGET_W = 57.0
 
 REQUIRED_TOP_GROUPS = (
     "01_Display_Stack",
@@ -228,6 +343,13 @@ REQUIRED_TOP_GROUPS = (
     "07_Fasteners_Seals_Consumables",
     "08_Reference_Datums_Keepouts",
 )
+
+# Frozen semantic contract for the LOD 3 head-only inferred prototype.
+# Ribs and VESA_Reinforcement are now fused into their host semantic parts
+# (Rear_Enclosure and Metal_Mid_Frame respectively) as internal features and
+# are no longer independent semantic parts.
+EXPECTED_SEMANTIC_PART_COUNT = 96
+EXPECTED_PHYSICAL_PART_COUNT = 78
 
 SOURCE_CLASSES = (
     "Known",
@@ -259,10 +381,18 @@ MATERIAL_INTENTS = MappingProxyType(
         "Die_Cast_Joint": "ADC12 equivalent",
         "Sheet_Bracket_Shield": "SECC/SGCC; 0.8-1.2 mm",
         "Stand_Structure": "Carbon steel",
-        "Thermal_Copper": "Copper",
+        "Thermal_Copper": "Copper; k=400 W/m-K",
         "PCB": "FLOEFD equivalent FR-4 stack",
         "Steel_Hardware": "Simplified steel equivalent",
         "Internal_Air": "Air",
+        "Optical_Film": "Reflector/diffuser/prism equivalent optical stack",
+        "Light_Guide": "PMMA equivalent light guide",
+        "LED_Assembly": "Aluminum-clad LED PCB with SMD LED array equivalent",
+        "IC_Package": "Effective isotropic silicon IC package",
+        "COF_Driver": "Chip-on-film driver assembly equivalent",
+        "Panel_Backplate": "SECC 3 mm effective (integrates LED trough)",
+        "Heat_Pipe": "Copper wick heat pipe; equivalent k=8000 W/m-K",
+        "Aluminum_Heatsink": "Aluminum 6061; k=167 W/m-K",
     }
 )
 

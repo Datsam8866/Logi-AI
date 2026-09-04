@@ -9,6 +9,15 @@ def add_property(obj, property_type, name, value, group="Hinoki LOD3"):
     setattr(obj, name, value)
 
 
+EXTERNAL_SOURCE_STATUS_MAP = {
+    "Known": "None:ApprovedContractValue",
+    "Derived": "None:DerivedFromApprovedContract",
+    "DixieReference": "DixieArchitecture:LOD3Inference:NoExternalDrawingAtThisPhase",
+    "CompetitorOfficial": "External:CompetitorOfficialDatasheetOrSpec",
+    "EngineeringAssumption": "None:LOD3EngineeringAssumption",
+}
+
+
 def add_metadata(obj, metadata):
     add_property(obj, "App::PropertyBool", "IsSemanticPart", True)
     string_keys = (
@@ -35,6 +44,19 @@ def add_metadata(obj, metadata):
         "App::PropertyFloat",
         "HeatLoadW",
         float(metadata["HeatLoadW"]),
+    )
+    # ExternalSourceStatus makes sourcing hierarchy explicit for
+    # DixieReference parts (no external drawing available at LOD 3 phase)
+    # and for EngineeringAssumption parts (owned engineering assumption).
+    source_class = metadata.get("SourceClass", "EngineeringAssumption")
+    external_status = EXTERNAL_SOURCE_STATUS_MAP.get(
+        source_class, "Unknown:UncategorizedSource"
+    )
+    add_property(
+        obj,
+        "App::PropertyString",
+        "ExternalSourceStatus",
+        external_status,
     )
     return obj
 

@@ -357,12 +357,16 @@ def build_camera_lighting_sensors(doc, groups):
         "PCAP_Sensor",
         "Optical_Bond",
         "LCD_Cell",
-        "Backlight_Unit",
+        "BLU_Optical_Films",
+        "Light_Guide_Plate",
+        "Panel_Backplate",
         "Metal_Mid_Frame",
-        "Front_Frame",
+        "Front_Bezel",
         "Rear_Enclosure",
     ):
         obstacle = doc.getObject(obstacle_name)
+        if obstacle is None:
+            continue
         obstacle.Shape = obstacle.Shape.cut(cavity_shape)
 
     for index, (name, light_x) in enumerate(light_positions.items(), start=10):
@@ -602,11 +606,15 @@ def build_audio(doc, groups):
         "PCAP_Sensor",
         "Optical_Bond",
         "LCD_Cell",
-        "Backlight_Unit",
+        "BLU_Optical_Films",
+        "Light_Guide_Plate",
+        "Panel_Backplate",
         "Metal_Mid_Frame",
-        "Front_Frame",
+        "Front_Bezel",
     ):
         obstacle = doc.getObject(obstacle_name)
+        if obstacle is None:
+            continue
         obstacle.Shape = obstacle.Shape.cut(microphone_aperture_shape)
     add_keepout(
         doc,

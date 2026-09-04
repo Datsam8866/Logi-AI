@@ -6,15 +6,25 @@
 
 固定規則見本目錄 `AGENTS.md`；詳細進度與交接記錄見 [Logi-Hinoki工作筆記](<G:/其他電腦/我的電腦/Obsidian Vault/Logitech/Logi-Hinoki工作筆記.md>)，不沿用 MEBudget 筆記。
 
-2026-09-04 收工：Task 8 匯出能力完成；已記錄三項 CAD 品質缺陷與改善計畫，提供中英文 Claude 交接 prompt。使用者將交由 Claude 試作；本次尚未修改問題幾何或執行95分迴圈，九點排程維持停用。
+2026-09-04 更新：完成 Task 8 品質改善三輪迭代（Q-01 前後殼間隙、Q-02 panel 熱源細節、Q-03 rib 裝配）。獨立最終複審 93/100（未達 95 因缺 cross-section 影像）；三項使用者缺陷均以幾何與 metadata 證據解決；34/34 測試通過。
 
 ## LOD 3 inferred engineering prototype
 
-LOD 3 master 正在 `cad/lod3-inferred-prototype-01/` 建立。Task 7 臨時 head-only build 包含 742 × 492 × 62 mm 頭部、五層 display stack、front/rear housing、metal mid-frame、實體上下 rear vent slots、ribs、bosses、fasteners、五張主要 PCB、shields/connectors、10 個總計 57 W heat sources、QC7790 到 rear hatch 的被動 thermal path，以及 Task 5 的 camera、lighting、sensor、audio、microphone 與六個 rear I/O connector proxies。
+LOD 3 master 位於 `cad/lod3-inferred-prototype-01/`。Task 8 品質改善後 head-only build：742 × 492 × 62 mm、96 semantic / 78 physical parts、13 個 heat sources 合計 57 W、Q-01/Q-02/Q-03 缺陷全解決。
 
-Task 7 head-only validation 使用臨時 build（97 個 semantic parts、79 個 physical collision parts），temporary validation：Pass。每一組 unique physical pair 的碰撞門檻為 0.01 mm³；僅允許 3 組 camera/front-light 與對應 heat source contacts，其餘 3,078 組均已檢查通過。獨立執行 `python -B -m unittest tests.test_hinoki_lod3_inferred -v`：28/28 通過（126.901 s，exit code 0）。正式 LOD 3 FCStd 仍是先前的 62-part checkpoint，尚未更新；Task 8 建立並驗證 head-only STEP 匯出能力，原始計畫的整套正式交付列於 Task 11。
+**Q-01 前後殼間隙**：舊 15.8 mm 開放縫由 Metal_Mid_Frame 連續側壁（z=3.2..25）橋接；Rear_Enclosure 以 3 mm 台階搭接 mid-frame（lap 起點 z=22）。`enclosure_mating.remedied_gap_mm=0.0`；設計縫值 0.2 mm（前）與 0.3 mm（後）皆為明確 clearance。
 
-Next Action：先依 [Head品質改善計畫草案](docs/superpowers/plans/2026-09-04-hinoki-head-quality-remediation-plan.md) 解決使用者指出的前後殼間隙、panel熱源細節與rib裝配問題；Task 8測試通過不代表產品品質達標。先確認接合剖面／裝配方向與panel功率邊界，再修改CAD並進行多Agent評分回圈。正式替換範圍另確認；若省略 Task 9／10，先同步調整 Task 11 的發布依賴。Task 6 stand/base、physical cable routes / bend validation、full-product STEP、review images 與 FLOEFD derivative 均 deferred；下列既有 thermal CHT handoff 不受影響。
+**Q-02 Panel 細節**：舊單一 20 W Backlight_Unit 拆為 edge-lit stack — BLU_Optical_Films、Light_Guide_Plate、Panel_Backplate（含 LED_Bar cutout）、LED_Bar_Bottom（16 W）、TCON_IC（1.5 W）、BLU_Driver_PCB（2 W）、Panel_Gate_Source_Driver COF（0.5 W），Panel_Module = 20 W 守恆，總 57 W 不變。全部標為 EngineeringAssumption A-LOD3-PN-00[1-4]。
+
+**Q-03 Rib/Boss 裝配**：6 個原懸空 rib 融入 Rear_Enclosure 為 fused features（RibFeatureCount=6, RibHostPart=Rear_Enclosure），4 corner bosses + 4 VESA bosses 各與 Metal_Mid_Frame 有 0.5 mm root engagement 並宣告為 authorized contact，8 顆 M3/M4 fastener 完整穿過 rear cover + 進入 boss tapped hole（M3 12 mm、M4 14 mm）。
+
+**驗證**：14 個 hard gates 全通過（含新增 enclosure_mating_continuous、rib_host_attachment、fastener_engagement、unique_heat_source_mapping_and_budget、panel_module_budget_conserved）；19 個 authorized_contacts（3 AV + 8 boss root + 8 thermal path）幾何重疊全部 >0.01 mm³；2984 unauthorised pairs 全無碰撞。`python -B -m unittest tests.test_hinoki_lod3_inferred -v`：34/34 通過（≈240 s）。
+
+**Review 檔位置**：`C:\Users\skuan1\.codex\visualizations\2026\09\04\task8-quality-remediation-iter3\`（FCStd + STEP + Manifest.json + Validation.json + logs）。iter1、iter2 保留為對比。
+
+**獨立複審**：三代理平行審查（A/B/C 分工）+ 最終獨立複審（未參與實作）。iter1 綜合 73/100；iter2 綜合 80/100；iter3 綜合 **93/100**（A=17.5, B=28, C=19, D=19, E=9.5）。三大 Q-01/Q-02/Q-03 缺陷均已 CLOSED；未達 95 分的主因是 A 類別缺 rendered cross-section 影像（cap 92%），其餘為 minor：ExternalStandardID 未逐件填、ThermalConductivityWmK 未進 METADATA_KEYS 而未進 manifest JSON、assembly sequence tool-access 未完全記錄。
+
+Next Action：若要達 95+ 需補 cross-section 影像（FreeCAD Draft.makeShapeString 或 GUI 匯出 8 張 PNG）、將 ThermalConductivityWmK 加入 METADATA_KEYS、補 ExternalStandardID。使用者可決定是否進一步 iter 4 或以 iter3 作為 LOD 3 交付基線。正式 62-part FCStd 尚未替換，iter3 review 檔留在本機；stand/base、full-product STEP、FLOEFD derivative 均 deferred。
 
 ### Task 8 使用與驗證
 

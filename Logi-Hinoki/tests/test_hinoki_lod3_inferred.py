@@ -277,8 +277,14 @@ class TestFrozenEngineeringContract(unittest.TestCase):
         self.assertEqual(0.5, p.COLLISION_CLEARANCE["linear"])
         self.assertEqual(0.5, p.COLLISION_CLEARANCE["radial"])
         self.assertEqual(0.8, p.COLLISION_CLEARANCE["shield_wall"])
-        self.assertEqual(44.0, p.COLLISION_CLEARANCE["rear_boss_z"])
-        self.assertEqual(15.2, p.COLLISION_CLEARANCE["rear_boss_height"])
+        # After Task 8 quality remediation, corner and VESA bosses root on
+        # the mid-frame lap with a 0.5 mm interference-fit engagement so
+        # boss<->mid_frame contact is boolean-continuous (not just plane-
+        # touching). Boss base sits at z=24.5, top at z=59.2 (34.7 mm tall).
+        self.assertEqual(24.5, p.COLLISION_CLEARANCE["rear_boss_z"])
+        self.assertEqual(34.7, p.COLLISION_CLEARANCE["rear_boss_height"])
+        self.assertEqual(34.7, p.COLLISION_CLEARANCE["vesa_boss_height"])
+        self.assertEqual(0.5, p.COLLISION_CLEARANCE["boss_root_engagement"])
 
     def test_frozen_product_envelope_and_display_stack(self):
         p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters")
@@ -333,8 +339,16 @@ class TestFrozenEngineeringContract(unittest.TestCase):
         self.assertEqual(35.0, p.THERMAL_CASE["ambient_c"])
         self.assertEqual("NaturalConvection", p.THERMAL_CASE["cooling_mode"])
         self.assertFalse(p.THERMAL_CASE["fan_present"])
-        self.assertEqual(10, len(p.HEAT_LOADS_W))
+        self.assertEqual(13, len(p.HEAT_LOADS_W))
         self.assertAlmostEqual(57.0, sum(p.HEAT_LOADS_W.values()), places=9)
+        self.assertAlmostEqual(20.0, p.PANEL_MODULE_BUDGET_W, places=9)
+        panel_ids = p.HEAT_BUDGET_GROUPS["Panel_Module"]
+        self.assertAlmostEqual(
+            20.0,
+            sum(p.HEAT_LOADS_W[name] for name in panel_ids),
+            places=9,
+        )
+        self.assertNotIn("Heat_Panel_Backlight", p.HEAT_LOADS_W)
 
     def test_active_output_contract_is_head_only(self):
         p = load_module(PARAMETERS_FILE, "hinoki_lod3_parameters_output_contract")
@@ -438,26 +452,42 @@ expected_layers = {{
     "PCAP_Sensor": (724.0, 444.0, 0.8),
     "Optical_Bond": (724.0, 444.0, 0.5),
     "LCD_Cell": (712.0, 402.0, 2.5),
-    "Backlight_Unit": (716.0, 406.0, 12.0),
+    "BLU_Optical_Films": (716.0, 406.0, 1.5),
+    "Light_Guide_Plate": (716.0, 406.0, 4.0),
+    "Panel_Backplate": None,
 }}
 for name, dimensions in expected_layers.items():
     obj = doc.getObject(name)
     assert obj is not None and obj.Shape.isValid() and obj.Shape.Volume > 0.0
-    actual = (obj.Shape.BoundBox.XLength, obj.Shape.BoundBox.YLength, obj.Shape.BoundBox.ZLength)
-    assert all(abs(a - b) <= 0.01 for a, b in zip(actual, dimensions)), (name, actual)
+    if dimensions is not None:
+        actual = (obj.Shape.BoundBox.XLength, obj.Shape.BoundBox.YLength, obj.Shape.BoundBox.ZLength)
+        assert all(abs(a - b) <= 0.01 for a, b in zip(actual, dimensions)), (name, actual)
     assert obj.ManufacturingAuthority is False
     assert obj.SourceReference
+
+assert doc.getObject("Backlight_Unit") is None, "old monolithic BLU must be removed"
 
 rear = doc.getObject("Rear_Enclosure")
 assert rear.Shape.isValid() and rear.Shape.Volume > 0.0
 assert abs(rear.WallThickness.Value - 2.8) <= 0.001
 assert abs(rear.InletOpenArea.Value - 6000.0) <= 0.1
 assert abs(rear.OutletOpenArea.Value - 6000.0) <= 0.1
+assert rear.RibFeatureCount >= 4, rear.RibFeatureCount
+assert rear.RibHostPart == "Rear_Enclosure", rear.RibHostPart
+assert len(tuple(rear.RibFeatureIds)) == rear.RibFeatureCount
+assert doc.getObject("Structural_Rib_01") is None, "standalone rib parts must be fused into rear cover"
 
-rib = doc.getObject("Structural_Rib_01")
 boss = doc.getObject("Primary_Boss_01")
-assert abs(rib.RibThickness.Value - 1.7) <= 0.001
 assert abs(boss.BossOuterDiameter.Value - 7.0) <= 0.001
+assert boss.HostPart == "Metal_Mid_Frame"
+vesa_boss = doc.getObject("VESA_Boss_01")
+assert vesa_boss is not None and vesa_boss.HostPart == "Metal_Mid_Frame"
+mid_frame = doc.getObject("Metal_Mid_Frame")
+assert mid_frame is not None and mid_frame.Shape.isValid() and mid_frame.Shape.Volume > 0.0
+assert abs(mid_frame.PerimeterWallThickness.Value - 2.0) <= 0.001
+assert doc.getObject("Front_Bezel") is not None, "renamed front frame must exist as Front_Bezel"
+assert doc.getObject("Front_Frame") is None, "old Front_Frame name must be gone"
+assert doc.getObject("VESA_Reinforcement") is None, "VESA reinforcement must fuse into mid-frame"
 assert doc.getObject("Inlet_Vent_Field").Shape.Solids
 assert doc.getObject("Outlet_Vent_Field").Shape.Solids
 
@@ -534,11 +564,16 @@ for name, expected in expected_boards.items():
     assert len(obj.Shape.Edges) > 12, name + " must include mounting-hole evidence"
 
 expected_thermal = {{
-    "Heat_QC7790": (35.0, 35.0, 2.0),
-    "TIM_QC7790": (35.0, 35.0, 1.0),
-    "Copper_Spreader": (100.0, 80.0, 2.0),
-    "Aluminum_Interface": (220.0, 120.0, 2.5),
-    "Rear_Hatch_TIM": (80.0, 40.0, 1.5),
+    # Iter 2 (Task 8): thermal components extended so adjacent solids in
+    # the QC7790->rear cover conduction chain have a small (0.1..0.4 mm)
+    # authorised contact overlap instead of unbuilt plane touches, and
+    # Aluminum_Interface + Rear_Hatch_TIM are resized to close the historic
+    # 11 mm air-gap between the heat spreader and the rear I/O cover.
+    "Heat_QC7790": (35.0, 35.0, 2.1),
+    "TIM_QC7790": (35.0, 35.0, 1.2),
+    "Copper_Spreader": (100.0, 80.0, 2.2),
+    "Aluminum_Interface": (128.0, 120.0, 13.9),
+    "Rear_Hatch_TIM": (80.0, 40.0, 5.4),
 }}
 for name, expected in expected_thermal.items():
     obj = doc.getObject(name)
@@ -555,9 +590,14 @@ heat_parts = [
     obj for obj in doc.Objects
     if getattr(obj, "IsSemanticPart", False) and obj.HeatLoadW > 0.0
 ]
-assert len(heat_parts) == 10, [(obj.Name, obj.HeatLoadW) for obj in heat_parts]
+assert len(heat_parts) == 13, [(obj.Name, obj.HeatLoadW) for obj in heat_parts]
 assert abs(sum(obj.HeatLoadW for obj in heat_parts) - 57.0) <= 1e-9
 assert {{obj.HeatSourceID for obj in heat_parts}} == {heat_names!r}
+panel_ids = {{"Heat_BLU_LED", "Heat_BLU_Driver", "Heat_TCON", "Heat_Panel_Gate_Source"}}
+panel_watts = sum(
+    obj.HeatLoadW for obj in heat_parts if obj.HeatSourceID in panel_ids
+)
+assert abs(panel_watts - 20.0) <= 1e-9, panel_watts
 
 lighting_heat = doc.getObject("Heat_Front_Lighting")
 assert abs(lighting_heat.HeatLoadW - 4.0) <= 1e-9
@@ -584,7 +624,10 @@ print("HINOKI_LOD3_ELECTRONICS_THERMAL_PROBE_OK heat_parts={{}}".format(len(heat
                 model_path=model_path.as_posix(),
                 heat_names=set(
                     (
-                        "Heat_Panel_Backlight",
+                        "Heat_BLU_LED",
+                        "Heat_BLU_Driver",
+                        "Heat_TCON",
+                        "Heat_Panel_Gate_Source",
                         "Heat_QC7790",
                         "Heat_Memory",
                         "Heat_Carrier_PMIC",
@@ -711,11 +754,15 @@ obstacle_names = (
     "PCAP_Sensor",
     "Optical_Bond",
     "LCD_Cell",
-    "Backlight_Unit",
+    "BLU_Optical_Films",
+    "Light_Guide_Plate",
+    "Panel_Backplate",
     "Metal_Mid_Frame",
-    "Front_Frame",
+    "Front_Bezel",
     "Rear_Enclosure",
-) + tuple("Primary_Boss_{{:02d}}".format(index) for index in range(1, 9))
+) + tuple("Primary_Boss_{{:02d}}".format(index) for index in range(1, 5)) + tuple(
+    "VESA_Boss_{{:02d}}".format(index) for index in range(1, 5)
+)
 for hardware_name in hardware_names:
     hardware = doc.getObject(hardware_name)
     assert hardware is not None and hardware.Shape.isValid(), hardware_name
@@ -821,10 +868,13 @@ doc = App.newDocument("Hinoki_LOD3_Port_Preservation")
 groups = make_groups(doc, p.REQUIRED_TOP_GROUPS)
 build_display_housing(doc, groups)
 build_electronics_thermal(doc, groups)
-vesa_before = doc.getObject("VESA_Reinforcement").Shape.copy()
 tim_before = doc.getObject("Rear_Hatch_TIM").Shape.copy()
 build_av_io(doc, groups)
-for name, before in (("VESA_Reinforcement", vesa_before), ("Rear_Hatch_TIM", tim_before)):
+# Rear_Hatch_TIM is nowhere near the AV cluster or IO ports and must remain
+# byte-identical geometry after build_av_io. Metal_Mid_Frame IS legitimately
+# cut by the AV cavity (front-side keepout for camera/lighting/audio) so we
+# only assert that ports do not intersect its remaining shape.
+for name, before in (("Rear_Hatch_TIM", tim_before),):
     after = doc.getObject(name).Shape
     assert abs(after.Volume - before.Volume) <= 0.01, (name, before.Volume, after.Volume)
     assert before.cut(after).Volume <= 0.01, (name, "removed", before.cut(after).Volume)
@@ -832,7 +882,7 @@ for name, before in (("VESA_Reinforcement", vesa_before), ("Rear_Hatch_TIM", tim
 for port_name in p.IO_PORTS:
     port = doc.getObject(port_name)
     assert abs(port.Shape.Volume - p.IO_PORT_GEOMETRY["body_width"] * p.IO_PORT_GEOMETRY["body_height"] * p.IO_PORT_GEOMETRY["body_depth"]) <= 0.01, port_name
-    assert port.Shape.common(doc.getObject("VESA_Reinforcement").Shape).Volume <= 0.01, port_name
+    assert port.Shape.common(doc.getObject("Metal_Mid_Frame").Shape).Volume <= 0.01, port_name
     assert port.Shape.common(doc.getObject("Rear_Hatch_TIM").Shape).Volume <= 0.01, port_name
 App.closeDocument(doc.Name)
 assert not App.listDocuments()
@@ -1286,6 +1336,22 @@ authorized = {{
         ("Camera_Module", "Heat_Camera"),
         ("Front_Light_Left", "Heat_Front_Lighting"),
         ("Front_Light_Right", "Heat_Front_Lighting"),
+        ("Metal_Mid_Frame", "Primary_Boss_01"),
+        ("Metal_Mid_Frame", "Primary_Boss_02"),
+        ("Metal_Mid_Frame", "Primary_Boss_03"),
+        ("Metal_Mid_Frame", "Primary_Boss_04"),
+        ("Metal_Mid_Frame", "VESA_Boss_01"),
+        ("Metal_Mid_Frame", "VESA_Boss_02"),
+        ("Metal_Mid_Frame", "VESA_Boss_03"),
+        ("Metal_Mid_Frame", "VESA_Boss_04"),
+        ("Heat_QC7790", "TIM_QC7790"),
+        ("Copper_Spreader", "TIM_QC7790"),
+        ("Copper_Spreader", "Heat_Pipe_Left"),
+        ("Copper_Spreader", "Heat_Pipe_Right"),
+        ("Aluminum_Interface", "Heat_Pipe_Left"),
+        ("Aluminum_Interface", "Heat_Pipe_Right"),
+        ("Aluminum_Interface", "Rear_Hatch_TIM"),
+        ("Rear_Hatch_TIM", "Rear_IO_Cover"),
     )
 }}
 forbidden = []
@@ -1319,19 +1385,20 @@ raise SystemExit(1 if forbidden else 0)
             overlap_output = overlap_result.stdout + overlap_result.stderr
             self.assertEqual(0, overlap_result.returncode, overlap_output)
             self.assertIn(
-                '"physical_count": 79',
+                '"physical_count": 78',
                 overlap_output,
             )
             self.assertIn('"forbidden": []', overlap_output)
 
         self.assertEqual("Pass", report["status"])
         self.assertEqual("Pass", report.get("overall"))
-        self.assertEqual("HeadOnlyTask5Checkpoint", report["scope"])
+        self.assertEqual("HeadOnlyTask8QualityRemediation", report["scope"])
         self.assertEqual(parameters.PROTOTYPE_LIMITATION, report["limitations"])
         self.assertEqual(0.01, report["overlap_threshold_mm3"])
         self.assertEqual(
             {
                 "semantic_part_count",
+                "physical_part_count",
                 "eight_group_ownership",
                 "valid_positive_physical_geometry",
                 "complete_metadata",
@@ -1339,6 +1406,11 @@ raise SystemExit(1 if forbidden else 0)
                 "no_forbidden_overlaps",
                 "required_feature_evidence",
                 "head_envelope",
+                "enclosure_mating_continuous",
+                "rib_host_attachment",
+                "fastener_engagement",
+                "unique_heat_source_mapping_and_budget",
+                "panel_module_budget_conserved",
             },
             set(report["hard_gates"]),
         )
@@ -1352,17 +1424,24 @@ raise SystemExit(1 if forbidden else 0)
         self.assertNotIn("extreme_posture", serialized)
 
         part_count = report["semantic_parts"]["count"]
-        self.assertGreaterEqual(part_count, 80)
-        self.assertLessEqual(part_count, 120)
+        self.assertEqual(parameters.EXPECTED_SEMANTIC_PART_COUNT, part_count)
         self.assertTrue(report["semantic_parts"]["names_unique"])
         self.assertEqual(
             list(parameters.REQUIRED_TOP_GROUPS),
             report["group_ownership"]["required_groups"],
         )
         self.assertEqual([], report["group_ownership"]["failures"])
-        physical_count = 79
+        physical_count = parameters.EXPECTED_PHYSICAL_PART_COUNT
         self.assertEqual(physical_count, report["physical_geometry"]["part_count"])
         self.assertEqual([], report["physical_geometry"]["failures"])
+        self.assertTrue(report["enclosure_mating"]["z_coverage_continuous"])
+        self.assertLessEqual(report["enclosure_mating"]["remedied_gap_mm"], 0.1)
+        self.assertTrue(report["rib_host"]["ok"])
+        self.assertGreaterEqual(report["rib_host"]["rib_feature_count"], 4)
+        self.assertTrue(report["fastener_engagement"]["ok"])
+        self.assertTrue(report["heat_sources"]["ok"])
+        self.assertAlmostEqual(57.0, report["heat_sources"]["total_w"], places=6)
+        self.assertTrue(report["budget_groups"]["panel_module_ok"])
 
         self.assertEqual(
             list(parameters.METADATA_KEYS), report["metadata"]["required_keys"]
@@ -1396,16 +1475,38 @@ raise SystemExit(1 if forbidden else 0)
             "Derived", metadata_by_name["Cover_Glass"]["SourceClass"]
         )
 
+        actual_contact_pairs = {
+            tuple(sorted(contact["parts"]))
+            for contact in report["authorized_contacts"]
+        }
+        # Task 8 quality remediation expands the authorised-contact matrix
+        # from 3 AV/lighting bonds to 19 pairs, adding 8 structural
+        # boss->mid-frame root engagements and 8 thermal-path contacts
+        # from the QC7790 die to the rear I/O cover.
+        expected_contact_pairs = {
+            ("Camera_Module", "Heat_Camera"),
+            ("Front_Light_Left", "Heat_Front_Lighting"),
+            ("Front_Light_Right", "Heat_Front_Lighting"),
+            ("Metal_Mid_Frame", "Primary_Boss_01"),
+            ("Metal_Mid_Frame", "Primary_Boss_02"),
+            ("Metal_Mid_Frame", "Primary_Boss_03"),
+            ("Metal_Mid_Frame", "Primary_Boss_04"),
+            ("Metal_Mid_Frame", "VESA_Boss_01"),
+            ("Metal_Mid_Frame", "VESA_Boss_02"),
+            ("Metal_Mid_Frame", "VESA_Boss_03"),
+            ("Metal_Mid_Frame", "VESA_Boss_04"),
+            ("Heat_QC7790", "TIM_QC7790"),
+            ("Copper_Spreader", "TIM_QC7790"),
+            ("Copper_Spreader", "Heat_Pipe_Left"),
+            ("Copper_Spreader", "Heat_Pipe_Right"),
+            ("Aluminum_Interface", "Heat_Pipe_Left"),
+            ("Aluminum_Interface", "Heat_Pipe_Right"),
+            ("Aluminum_Interface", "Rear_Hatch_TIM"),
+            ("Rear_Hatch_TIM", "Rear_IO_Cover"),
+        }
         self.assertEqual(
-            {
-                ("Camera_Module", "Heat_Camera"),
-                ("Front_Light_Left", "Heat_Front_Lighting"),
-                ("Front_Light_Right", "Heat_Front_Lighting"),
-            },
-            {
-                tuple(contact["parts"])
-                for contact in report["authorized_contacts"]
-            },
+            {tuple(sorted(pair)) for pair in expected_contact_pairs},
+            actual_contact_pairs,
         )
         self.assertTrue(
             all(
@@ -1414,8 +1515,9 @@ raise SystemExit(1 if forbidden else 0)
             )
         )
         self.assertEqual([], report["forbidden_overlaps"])
+        authorized_pair_count = len(expected_contact_pairs)
         self.assertEqual(
-            physical_count * (physical_count - 1) // 2 - 3,
+            physical_count * (physical_count - 1) // 2 - authorized_pair_count,
             report["authorized_contact_matrix"].get("checked_forbidden_pair_count"),
         )
 
@@ -1459,7 +1561,7 @@ namespace = {{"__name__": "hinoki_lod3_collision_probe", "__file__": r"{script_p
 exec(compile({source!r}, r"{script_path}", "exec"), namespace)
 doc = App.open(r"{model_path}")
 try:
-    doc.getObject("Structural_Rib_01").Shape = doc.getObject("Structural_Rib_02").Shape.copy()
+    doc.getObject("SOM_Shield_Can").Shape = doc.getObject("Power_Shield_Can").Shape.copy()
     doc.recompute()
     doc.saveAs(r"{injected_path}")
     report = namespace["validate_master"](doc)
@@ -1504,9 +1606,9 @@ print("HINOKI_LOD3_INJECTED_REPORT " + json.dumps({{
                 tuple(sorted(entry["parts"])): entry["overlap_mm3"]
                 for entry in report["forbidden_overlaps"]
             }
-            rib_pair = ("Structural_Rib_01", "Structural_Rib_02")
-            self.assertIn(rib_pair, overlaps)
-            self.assertGreater(overlaps[rib_pair], 0.01)
+            collision_pair = ("Power_Shield_Can", "SOM_Shield_Can")
+            self.assertIn(collision_pair, overlaps)
+            self.assertGreater(overlaps[collision_pair], 0.01)
 
             review_path = temp_root / "must_not_publish.json"
             env = os.environ.copy()
@@ -1685,9 +1787,9 @@ class TestAtomicExport(unittest.TestCase):
             validation = json.loads((target / ex.p.OUTPUT_FILES["validation_json"]).read_text())
             assert validation == report and report["status"] == "Pass"
             assert report["step_export"]["units"] == "mm"
-            assert report["step_export"]["body_count"] == 79
+            assert report["step_export"]["body_count"] == 78
             assert manifest["limitations"] == ex.p.PROTOTYPE_LIMITATION
-            assert len(manifest["parts"]) == 97
+            assert len(manifest["parts"]) == 96
             source = App.openDocument(str(model))
             expected = {obj.Name: obj for obj in source.Objects if getattr(obj, "IsSemanticPart", False)
                         and obj.ParentAssembly != "08_Reference_Datums_Keepouts"
