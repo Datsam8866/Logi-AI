@@ -1633,5 +1633,209 @@ print("HINOKI_LOD3_BUILD_VALIDATION_GATE_PROBE_OK")
             self.assertEqual([], list(Path(temp_dir).glob("*.tmp.FCStd")))
 
 
+
+class TestAtomicExport(unittest.TestCase):
+    @classmethod
+    def setUpClass(cls):
+        cls.export_script = PACKAGE_ROOT / "export_hinoki_lod3.py"
+        if not cls.export_script.exists():
+            return
+        cls.workspace = tempfile.TemporaryDirectory(prefix="hinoki_lod3_export_")
+        cls.addClassCleanup(cls.workspace.cleanup)
+        cls.root = Path(cls.workspace.name)
+        cls.model_path = cls.root / "source.FCStd"
+        env = os.environ.copy()
+        env["HINOKI_LOD3_MODEL_OUT"] = str(cls.model_path)
+        result = run_freecad_script(BUILD_SCRIPT, env)
+        if result.returncode or "HINOKI_LOD3_BUILD_OK" not in result.stdout:
+            raise AssertionError(result.stdout + result.stderr)
+
+    def _probe(self, body):
+        self.assertTrue(self.export_script.exists(), "Task 8 exporter must exist")
+        import textwrap
+        with tempfile.TemporaryDirectory(dir=self.root, prefix="case_") as case_dir:
+            root = Path(case_dir)
+            script = root / "probe.py"
+            script.write_text(
+                "import sys, json, os\nfrom pathlib import Path\n"
+                "import FreeCAD as App\nimport Import, Part\n"
+                + "sys.path.insert(0, {!r})\n".format(str(PACKAGE_ROOT))
+                + "import export_hinoki_lod3 as ex\n"
+                + "root = Path({!r})\nmodel = Path({!r})\n".format(str(root), str(self.model_path))
+                + "try:\n" + textwrap.indent(textwrap.dedent(body), "    ")
+                + "\nexcept Exception:\n    import traceback\n    traceback.print_exc()\n    raise SystemExit(1)\n"
+                + "print('ATOMIC_EXPORT_PROBE_OK')\nraise SystemExit(0)\n",
+                encoding="utf-8",
+            )
+            result = run_freecad_script(script, os.environ.copy(), timeout=240)
+            output = result.stdout + result.stderr
+            self.assertEqual(0, result.returncode, output)
+            self.assertIn("ATOMIC_EXPORT_PROBE_OK", output)
+
+    def test_roundtrip_package_membership_scale_metadata_and_cleanup(self):
+        self._probe('''
+            target = root / "package"
+            source_bytes = model.read_bytes()
+            report = ex.export_package(model, target)
+            assert model.read_bytes() == source_bytes
+            assert not App.listDocuments()
+            expected_files = {ex.p.OUTPUT_FILES[key] for key in ("head_step", "manifest_json", "validation_json")}
+            assert {item.name for item in target.iterdir()} == expected_files
+            manifest = json.loads((target / ex.p.OUTPUT_FILES["manifest_json"]).read_text())
+            validation = json.loads((target / ex.p.OUTPUT_FILES["validation_json"]).read_text())
+            assert validation == report and report["status"] == "Pass"
+            assert report["step_export"]["units"] == "mm"
+            assert report["step_export"]["body_count"] == 79
+            assert manifest["limitations"] == ex.p.PROTOTYPE_LIMITATION
+            assert len(manifest["parts"]) == 97
+            source = App.openDocument(str(model))
+            expected = {obj.Name: obj for obj in source.Objects if getattr(obj, "IsSemanticPart", False)
+                        and obj.ParentAssembly != "08_Reference_Datums_Keepouts"
+                        and getattr(obj, "PhysicalCollision", True)}
+            exported = {row["name"] for row in manifest["parts"] if row["exported"]}
+            assert exported == set(expected) == set(report["step_export"]["names"])
+            for row in manifest["parts"]:
+                original = source.getObject(row["name"])
+                assert all(row[key] == getattr(original, key) for key in ex.p.METADATA_KEYS)
+                assert row["ManufacturingAuthority"] is False
+            reopened = App.newDocument("IndependentStepProbe")
+            Import.insert(str(target / ex.p.OUTPUT_FILES["head_step"]), reopened.Name)
+            # Semantic compound roots count once; importer children do not count again.
+            assembly = reopened.getObject("Hinoki_LOD3_Head_Export")
+            assert assembly is not None
+            bodies = [obj for obj in assembly.Group if obj.TypeId in ("Part::Feature", "App::Part")]
+            def body_name(obj):
+                return obj.Name if obj.TypeId == "App::Part" else obj.Label
+            assert len(bodies) == len(expected), [(obj.Name, obj.Label) for obj in reopened.Objects]
+            assert {body_name(obj) for obj in bodies} == exported
+            for obj in bodies:
+                original = expected[body_name(obj)].Shape
+                assert obj.Shape.isValid() and obj.Shape.Volume > 0
+                assert len(obj.Shape.Solids) == len(original.Solids)
+                assert abs(obj.Shape.Volume - original.Volume) <= max(0.01, original.Volume * 1e-7)
+                for field in ("XMin", "YMin", "ZMin", "XMax", "YMax", "ZMax"):
+                    assert abs(getattr(obj.Shape.BoundBox, field) - getattr(original.BoundBox, field)) <= 0.1
+            for name in tuple(App.listDocuments()):
+                App.closeDocument(name)
+            assert not App.listDocuments()
+        ''')
+
+    def test_publication_failure_restores_every_old_or_absent_destination(self):
+        self._probe('''
+            from unittest.mock import patch
+            for existing in ((), (0, 1, 2), (0, 2), (1,)):
+                for failure_index in range(3):
+                    target = root / (str(existing) + str(failure_index))
+                    target.mkdir()
+                    pairs = []
+                    original = {}
+                    for index, key in enumerate(("head_step", "manifest_json", "validation_json")):
+                        destination = target / ex.p.OUTPUT_FILES[key]
+                        if index in existing:
+                            original[destination] = ("old-" + key).encode()
+                            destination.write_bytes(original[destination])
+                        stage = target / (".staged-" + destination.name)
+                        stage.write_bytes(b"replacement")
+                        pairs.append((stage, destination))
+                    real_replace = os.replace
+                    calls = []
+                    def fail_once(source, destination):
+                        assert Path(source).parent == Path(destination).parent
+                        if len(calls) == failure_index:
+                            calls.append("failed")
+                            raise OSError("injected replacement failure")
+                        calls.append("ok")
+                        return real_replace(source, destination)
+                    with patch.object(ex.os, "replace", side_effect=fail_once):
+                        try:
+                            ex._publish_files(pairs)
+                        except OSError as error:
+                            assert "injected replacement failure" in str(error)
+                        else:
+                            raise AssertionError("publication must fail")
+                    assert {path: path.read_bytes() for path in target.iterdir()} == original
+        ''')
+
+    def test_reimport_rejects_wrong_membership_and_scale_with_no_document_leak(self):
+        self._probe('''
+            source = App.newDocument("ShapeSource")
+            item = source.addObject("Part::Feature", "ExpectedPart")
+            item.Label = item.Name
+            item.Shape = Part.makeBox(10, 20, 30)
+            expected = {item.Name: {"bbox_mm": [0, 0, 0, 10, 20, 30], "volume_mm3": 6000.0, "solid_count": 1}}
+            for scenario in ("name", "scale"):
+                item.Label = "WrongPart" if scenario == "name" else "ExpectedPart"
+                item.Shape = Part.makeBox(10, 20, 30) if scenario == "name" else Part.makeBox(100, 200, 300)
+                path = root / (scenario + ".step")
+                Import.export([item], str(path))
+                before = set(App.listDocuments())
+                try:
+                    ex._validate_step(path, expected)
+                except RuntimeError:
+                    pass
+                else:
+                    raise AssertionError("invalid STEP accepted: " + scenario)
+                assert set(App.listDocuments()) == before
+            App.closeDocument(source.Name)
+        ''')
+
+    def test_failed_step_validation_preserves_package_and_cleans_all_staging(self):
+        self._probe('''
+            from unittest.mock import patch
+            target = root / "package"
+            target.mkdir()
+            original = {}
+            for key in ("head_step", "manifest_json", "validation_json"):
+                path = target / ex.p.OUTPUT_FILES[key]
+                original[path] = ("old-" + key).encode()
+                path.write_bytes(original[path])
+            def fail_validation(path, expected):
+                assert path.parent == target and path not in original
+                assert path.suffix == ".step" and path.exists()
+                raise RuntimeError("injected reimport failure")
+            with patch.object(ex, "_validate_step", side_effect=fail_validation):
+                try:
+                    ex.export_package(model, target)
+                except RuntimeError as error:
+                    assert "injected reimport failure" in str(error)
+                else:
+                    raise AssertionError("export must fail")
+            assert {path: path.read_bytes() for path in target.iterdir()} == original
+            assert not App.listDocuments()
+        ''')
+
+    def test_corrupt_staged_json_is_not_published(self):
+        self._probe('''
+            from unittest.mock import patch
+            target = root / "package"
+            original_write = Path.write_text
+            def corrupt_manifest(path, data, *args, **kwargs):
+                if "Part_Manifest" in path.name:
+                    data = json.dumps({"parts": [], "limitations": "incorrect"})
+                return original_write(path, data, *args, **kwargs)
+            with patch.object(Path, "write_text", new=corrupt_manifest):
+                try:
+                    ex.export_package(model, target)
+                except RuntimeError as error:
+                    assert "JSON" in str(error)
+                else:
+                    raise AssertionError("corrupted manifest accepted")
+            assert list(target.iterdir()) == []
+            assert not App.listDocuments()
+        ''')
+
+    def test_cli_missing_model_has_one_failure_sentinel_and_no_outputs(self):
+        self.assertTrue(self.export_script.exists(), "Task 8 exporter must exist")
+        with tempfile.TemporaryDirectory(dir=self.root) as case_dir:
+            env = os.environ.copy()
+            env["HINOKI_LOD3_MODEL_PATH"] = str(Path(case_dir) / "missing.FCStd")
+            env["HINOKI_LOD3_EXPORT_DIR"] = case_dir
+            result = run_freecad_script(self.export_script, env)
+            output = result.stdout + result.stderr
+            self.assertNotEqual(0, result.returncode, output)
+            self.assertEqual(1, output.count("HINOKI_LOD3_EXPORT_FAIL"), output)
+            self.assertNotIn("HINOKI_LOD3_EXPORT_OK", output)
+            self.assertEqual([], list(Path(case_dir).iterdir()))
+
 if __name__ == "__main__":
     unittest.main()
