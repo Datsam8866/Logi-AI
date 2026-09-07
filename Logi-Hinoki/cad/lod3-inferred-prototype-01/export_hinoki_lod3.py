@@ -145,8 +145,9 @@ def export_package(model_path, output_directory):
         if report["status"] != "Pass":
             raise RuntimeError("LOD 3 master validation failed")
         semantic = [obj for obj in source.Objects if getattr(obj, "IsSemanticPart", False)]
-        if any(obj.ParentAssembly == STAND_ASSEMBLY for obj in semantic):
-            raise RuntimeError("stand/base parts are outside the approved head-only scope")
+        # Iter 7 (Task 6): stand/base parts are now approved for export
+        # as part of the full-assembly STEP. Head-only export is still
+        # available by filtering semantic to exclude STAND_ASSEMBLY.
         part_ids = [obj.PartID for obj in semantic]
         if len(part_ids) != len(set(part_ids)):
             raise RuntimeError("duplicate semantic PartID")
