@@ -77,9 +77,11 @@ EXPECTED_AUTHORIZED_CONTACTS = (
     ("Aluminum_Interface", "Aluminum_Riser"),
     ("Aluminum_Riser", "Rear_Hatch_TIM"),
     ("Rear_Hatch_TIM", "Rear_IO_Cover"),
-    # Task 6 stand structural connections
+    # Task 6 stand structural connections (iter 8: yoke wraps column
+    # with 1 mm radial clearance; structural continuity via bolts, not
+    # volumetric overlap. Only base-cover / steel-plate interference-fit
+    # remains as a declared contact.)
     ("Base_Cover", "Base_Steel_Plate"),
-    ("Lift_Carriage", "Yoke_Arm"),
 )
 DEFERRED_GATES = ()
 
