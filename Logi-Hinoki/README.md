@@ -30,6 +30,8 @@ LOD 3 master 位於 `cad/lod3-inferred-prototype-01/`。Task 8 品質改善後 h
 
 **Iter 6 (Ateam 迴圈)**：使用者親自在 FreeCAD GUI 檢視後啟動 Ateam Round 1 三代理平行審查（Agent A 用真實 Dixie STEP/BOM/PPT 對照架構、Agent B 讀 Dixie 2D PDF 圖抽材料 spec、Agent C 獨立 ME 看 preview PNG/SVG）。Round 1 找到 4 個 Critical：Y 座標疑似顛倒、Al_Interface 13.9mm 過厚、Rear_Hatch_TIM 5.4mm 過厚、Panel 20W 拆分無 Dixie 依據。使用者確認 AV bar cluster 上緣是意圖（#1 撤銷），iter 6 修 #2~4：Al_Interface 5mm、TIM 1.7mm 貼 Rear_IO_Cover、新增 Aluminum_Riser 40×30×15.1mm 橋接（穿過 SOM_Shield_Can 42×32 clearance hole）、Panel 4 個 source_reference 加「Not Dixie-derived」disclaimer。契約 96→97 semantic / 78→79 physical / 19→20 authorized_contacts；40/40 tests pass。獨立 Ateam Round 2 驗收：**99/100**（A=19, B=30, C=20, D=20, E=10），4 個 Critical 全 PASS。
 
+**Iter 8 (Task 6 stand 介面 Ateam 重做)**：使用者在 FreeCAD 開 iter7 看後回覆「table mount 的設計和螢幕主體結合的介面超怪，請參照市面上類似產品」。Ateam Round 1 三代理找 6 大痛點（Yoke↔Column 5mm 空氣間隙、Yoke Y 偏心 69mm、VESA plate 便利貼、Yoke 死方塊無關節、Column D60 太細、Base 太瘦）；Agent A 用 WebSearch 對照 Apple Studio Display / Cisco Desk Pro / Neat Board / Rally Bar 等市場產品推薦 column-integrated 選項。iter 8 全數採納：Yoke_Bracket 160×140×82 U-wrap 包住 column、Y 對齊 VESA cluster 中心 246、新增 Tilt_Trunnion 兩截 stub 沿 X 軸做可見樞軸、Column D60→D80 且 Z 130→106 更靠螢幕、Base 深度 225→280、新增 Cable_Channel。契約 110→112 semantic / 89→91 physical。獨立 Ateam Round 2 驗收：**99/100**（A=19, B=30, C=20, D=20, E=10），6 大痛點全 PASS，達 release 門檻。
+
 Next Action：Task 9 + Iter 6 完成。Task 10 FLOEFD 衍生包 + Task 11 正式發布 + Task 6 stand/base 仍 deferred。iter6 review package：`C:\Users\skuan1\.codex\visualizations\2026\2026\09\07\task9-iter6-ateam\`（22 個檔案，含 Aluminum_Riser 熱橋新部件）。
 
 ### Task 8 使用與驗證

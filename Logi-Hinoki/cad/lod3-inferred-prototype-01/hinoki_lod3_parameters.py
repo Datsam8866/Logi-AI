@@ -279,7 +279,7 @@ STAND = frozen(
     vesa_fastener="M4",
     overall_height_min=521.0,
     overall_height_max=621.0,
-    depth_envelope=225.0,
+    depth_envelope=280.0,
     height_travel=100.0,
     tilt_min=-10.0,
     tilt_max=10.0,
@@ -289,9 +289,9 @@ STAND = frozen(
 )
 BASE = frozen(
     width=520.0,
-    depth=225.0,
+    depth=280.0,
     structural_plate_width=500.0,
-    structural_plate_depth=205.0,
+    structural_plate_depth=260.0,
     structural_plate_thickness=6.0,
     vesa_plate_width=140.0,
     vesa_plate_height=140.0,
@@ -374,8 +374,12 @@ REQUIRED_TOP_GROUPS = (
 # parts under group 06 + 3 motion-envelope references under group 08
 # (reference-only, PhysicalCollision=False). Head-only baseline was 97
 # semantic / 79 physical.
-EXPECTED_SEMANTIC_PART_COUNT = 110
-EXPECTED_PHYSICAL_PART_COUNT = 89
+# Iter 8 (2026-09-07) redesigns the stand-to-screen interface per Ateam
+# Round 1 findings: adds Tilt_Trunnion + Cable_Channel + reshapes Yoke_Arm
+# into Yoke_Bracket (U-wrap around column, aligned to VESA cluster centre).
+# Stand physical parts grow from 10 to 12, semantic 110 -> 112.
+EXPECTED_SEMANTIC_PART_COUNT = 112
+EXPECTED_PHYSICAL_PART_COUNT = 91
 
 SOURCE_CLASSES = (
     "Known",

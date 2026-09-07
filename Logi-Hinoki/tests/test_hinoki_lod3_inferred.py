@@ -1358,7 +1358,6 @@ authorized = {{
         ("Aluminum_Riser", "Rear_Hatch_TIM"),
         ("Rear_Hatch_TIM", "Rear_IO_Cover"),
         ("Base_Cover", "Base_Steel_Plate"),
-        ("Lift_Carriage", "Yoke_Arm"),
     )
 }}
 forbidden = []
@@ -1517,7 +1516,6 @@ raise SystemExit(1 if forbidden else 0)
             ("Aluminum_Riser", "Rear_Hatch_TIM"),
             ("Rear_Hatch_TIM", "Rear_IO_Cover"),
             ("Base_Cover", "Base_Steel_Plate"),
-            ("Lift_Carriage", "Yoke_Arm"),
         }
         self.assertEqual(
             {tuple(sorted(pair)) for pair in expected_contact_pairs},
@@ -1802,9 +1800,9 @@ class TestAtomicExport(unittest.TestCase):
             validation = json.loads((target / ex.p.OUTPUT_FILES["validation_json"]).read_text())
             assert validation == report and report["status"] == "Pass"
             assert report["step_export"]["units"] == "mm"
-            assert report["step_export"]["body_count"] == 89
+            assert report["step_export"]["body_count"] == 91
             assert manifest["limitations"] == ex.p.PROTOTYPE_LIMITATION
-            assert len(manifest["parts"]) == 110
+            assert len(manifest["parts"]) == 112
             source = App.openDocument(str(model))
             expected = {obj.Name: obj for obj in source.Objects if getattr(obj, "IsSemanticPart", False)
                         and obj.ParentAssembly != "08_Reference_Datums_Keepouts"
@@ -1973,7 +1971,8 @@ class TestStandKinematics(unittest.TestCase):
         "Base_Cover", "Base_Steel_Plate", "Base_Feet",
         "Column_Tube", "Column_Base_Bezel",
         "Lift_Carriage", "Dual_Guide_Rails", "Assist_Gas_Spring",
-        "Yoke_Arm", "VESA_Mount_Plate",
+        "Yoke_Bracket", "VESA_Mount_Plate",
+        "Tilt_Trunnion", "Cable_Channel",
     )
     EXPECTED_MOTION_REFERENCES = (
         "Height_Travel_Envelope",
