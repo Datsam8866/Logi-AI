@@ -370,8 +370,12 @@ REQUIRED_TOP_GROUPS = (
 # (thinned from 13.9 mm to 5 mm to match realistic heatsink stackup) to a
 # repositioned Rear_Hatch_TIM (1.7 mm at rear cover inner face). Semantic
 # count +1 (Al_Riser), physical +1.
-EXPECTED_SEMANTIC_PART_COUNT = 97
-EXPECTED_PHYSICAL_PART_COUNT = 79
+# Iter 7 (2026-09-07) adds the deferred Task 6 stand: 10 physical stand
+# parts under group 06 + 3 motion-envelope references under group 08
+# (reference-only, PhysicalCollision=False). Head-only baseline was 97
+# semantic / 79 physical.
+EXPECTED_SEMANTIC_PART_COUNT = 110
+EXPECTED_PHYSICAL_PART_COUNT = 89
 
 SOURCE_CLASSES = (
     "Known",

@@ -77,11 +77,17 @@ EXPECTED_AUTHORIZED_CONTACTS = (
     ("Aluminum_Interface", "Aluminum_Riser"),
     ("Aluminum_Riser", "Rear_Hatch_TIM"),
     ("Rear_Hatch_TIM", "Rear_IO_Cover"),
+    # Task 6 stand structural connections
+    ("Base_Cover", "Base_Steel_Plate"),
+    ("Lift_Carriage", "Yoke_Arm"),
 )
-DEFERRED_GATES = (
-    "stand_envelope",
-    "stand_motion",
-    "stand_interference",
+DEFERRED_GATES = ()
+
+STAND_KINEMATIC_KEYS = (
+    "overall_height_min", "overall_height_max",
+    "height_travel", "tilt_min", "tilt_max",
+    "swivel_min", "swivel_max", "depth_envelope",
+    "static_margin_min",
 )
 
 FASTENER_TARGET_HOSTS = {
@@ -360,16 +366,34 @@ def _feature_evidence(doc):
     }
 
 
+STAND_ASSEMBLY = "06_Stand_Base_Kinematics"
+
+
+def _head_only_parts(physical_parts):
+    return [
+        obj for obj in physical_parts
+        if getattr(obj, "ParentAssembly", "") != STAND_ASSEMBLY
+    ]
+
+
+def _stand_only_parts(physical_parts):
+    return [
+        obj for obj in physical_parts
+        if getattr(obj, "ParentAssembly", "") == STAND_ASSEMBLY
+    ]
+
+
 def _head_envelope(physical_parts):
     expected = [p.HEAD["width"], p.HEAD["height"], p.HEAD["depth"]]
-    if not physical_parts:
+    head_parts = _head_only_parts(physical_parts)
+    if not head_parts:
         return {
             "actual_mm": [0.0, 0.0, 0.0],
             "expected_mm": expected,
             "tolerance_mm": 0.1,
             "within_tolerance": False,
         }
-    bounds = [_shape_bbox(obj.Shape) for obj in physical_parts]
+    bounds = [_shape_bbox(obj.Shape) for obj in head_parts]
     aggregate = [
         min(item[0] for item in bounds),
         min(item[1] for item in bounds),
@@ -392,6 +416,37 @@ def _head_envelope(physical_parts):
             abs(actual_value - expected_value) <= 0.1
             for actual_value, expected_value in zip(actual, expected)
         ),
+    }
+
+
+def _stand_envelope(physical_parts):
+    """Full-assembly envelope including stand. Contract: overall depth
+    <= STAND.depth_envelope (225 mm) + head depth headroom."""
+    stand_parts = _stand_only_parts(physical_parts)
+    if not stand_parts:
+        return {
+            "present": False,
+            "actual_depth_mm": 0.0,
+            "max_depth_mm": p.STAND["depth_envelope"] + 1.0,
+            "within_tolerance": True,
+        }
+    bounds = [_shape_bbox(obj.Shape) for obj in stand_parts]
+    z_min = min(item[2] for item in bounds)
+    z_max = max(item[5] for item in bounds)
+    actual_depth = z_max - z_min
+    return {
+        "present": True,
+        "actual_depth_mm": actual_depth,
+        "max_depth_mm": p.STAND["depth_envelope"] + 1.0,
+        "within_tolerance": actual_depth <= p.STAND["depth_envelope"] + 1.0,
+        "stand_bbox_mm": [
+            min(item[0] for item in bounds),
+            min(item[1] for item in bounds),
+            z_min,
+            max(item[3] for item in bounds),
+            max(item[4] for item in bounds),
+            z_max,
+        ],
     }
 
 
@@ -619,6 +674,8 @@ def validate_master(doc):
     fastener_engagement = _fastener_engagement_evidence(doc)
     heat_sources = _heat_source_evidence(doc)
     budget_groups = _budget_group_evidence(doc, heat_sources)
+    stand_envelope = _stand_envelope(physical_parts)
+    stand_kinematics = _stand_kinematics_contract()
 
     semantic_count_expected = p.EXPECTED_SEMANTIC_PART_COUNT
     physical_count_expected = p.EXPECTED_PHYSICAL_PART_COUNT
@@ -640,6 +697,8 @@ def validate_master(doc):
         "fastener_engagement": fastener_engagement["ok"],
         "unique_heat_source_mapping_and_budget": heat_sources["ok"],
         "panel_module_budget_conserved": budget_groups["panel_module_ok"],
+        "stand_envelope": stand_envelope["within_tolerance"],
+        "stand_kinematics_contract": stand_kinematics["ok"],
     }
     overall = "Pass" if all(hard_gates.values()) else "Fail"
     return {
@@ -680,7 +739,27 @@ def validate_master(doc):
         "fastener_engagement": fastener_engagement,
         "heat_sources": heat_sources,
         "budget_groups": budget_groups,
+        "stand_envelope": stand_envelope,
+        "stand_kinematics": stand_kinematics,
     }
+
+
+def _stand_kinematics_contract():
+    """Frozen STAND parameter values are the kinematic contract."""
+    entries = {key: float(p.STAND[key]) for key in STAND_KINEMATIC_KEYS}
+    ok = (
+        entries["overall_height_min"] < entries["overall_height_max"]
+        and entries["height_travel"] > 0.0
+        and entries["tilt_max"] > entries["tilt_min"]
+        and entries["swivel_max"] > entries["swivel_min"]
+        and entries["depth_envelope"] > 0.0
+        and entries["static_margin_min"] > 0.0
+        and abs(
+            (entries["overall_height_max"] - entries["overall_height_min"])
+            - entries["height_travel"]
+        ) <= 0.5
+    )
+    return {"parameters": entries, "ok": ok}
 
 
 def validate_model(model_path):
