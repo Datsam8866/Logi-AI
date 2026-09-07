@@ -1,0 +1,55 @@
+{
+  "cad_file": "C:\\Users\\skuan1\\.config\\superpowers\\worktrees\\Logi-AI\\hinoki-iteration02-review\\Logi-Hinoki\\cad\\iteration-02\\Hinoki_Concept_CAD_Iteration02_Review.FCStd",
+  "review_scope": "Preliminary market-envelope fit; not release geometry",
+  "head_envelope_mm": [
+    760.0,
+    80.0,
+    540.0
+  ],
+  "containment_failures": [],
+  "display_proxy": {
+    "part_number": "LM-3237-26B-4K",
+    "classification": "Verified review proxy",
+    "envelope_mm": [
+      750.4,
+      56.5,
+      452.7
+    ],
+    "side_margin_each_mm": 4.8,
+    "top_reserve_mm": 87.3,
+    "depth_reserve_mm": 23.5,
+    "architecture_note": "Integrated commercial display review proxy; not a bare panel/touch stack."
+  },
+  "camera": {
+    "part_number": "LI-IMX477-MIPI-140H",
+    "classification": "Verified component envelope",
+    "envelope_mm": [
+      38.0,
+      25.78,
+      38.0
+    ],
+    "horizontal_fov_deg": 140.0,
+    "fov_result": "Pass",
+    "integration_note": "No ISP included \u2014 integration open"
+  },
+  "stand_benchmark": {
+    "part_number": "45-475-224",
+    "classification": "Verified mechanism benchmark",
+    "capacity_range_kg": [
+      9.1,
+      19.1
+    ],
+    "published_lift_mm": 292.0,
+    "pre_av_compute_headroom_kg": 5.1,
+    "geometry_note": "Simplified benchmark envelope; official arm geometry not reproduced"
+  },
+  "vesa_pattern_mm": 200.0,
+  "source_status_result": "Pass",
+  "open_risks": [
+    "Integrated display proxy must be decomposed into bare panel/touch/electronics packages.",
+    "Privacy shutter travel and optical obscuration remain assumed.",
+    "Custom stand geometry, centre of gravity, cable motion and tip stability remain open."
+  ],
+  "cad_review_status": "PassWithOpenRisks",
+  "step_export_status": "ConceptReviewOnly"
+}
