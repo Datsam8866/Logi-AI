@@ -74,7 +74,8 @@ EXPECTED_AUTHORIZED_CONTACTS = (
     ("Copper_Spreader", "Heat_Pipe_Right"),
     ("Aluminum_Interface", "Heat_Pipe_Left"),
     ("Aluminum_Interface", "Heat_Pipe_Right"),
-    ("Aluminum_Interface", "Rear_Hatch_TIM"),
+    ("Aluminum_Interface", "Aluminum_Riser"),
+    ("Aluminum_Riser", "Rear_Hatch_TIM"),
     ("Rear_Hatch_TIM", "Rear_IO_Cover"),
 )
 DEFERRED_GATES = (

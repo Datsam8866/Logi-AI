@@ -565,16 +565,19 @@ for name, expected in expected_boards.items():
     assert len(obj.Shape.Edges) > 12, name + " must include mounting-hole evidence"
 
 expected_thermal = {{
-    # Iter 2 (Task 8): thermal components extended so adjacent solids in
-    # the QC7790->rear cover conduction chain have a small (0.1..0.4 mm)
-    # authorised contact overlap instead of unbuilt plane touches, and
-    # Aluminum_Interface + Rear_Hatch_TIM are resized to close the historic
-    # 11 mm air-gap between the heat spreader and the rear I/O cover.
+    # Iter 6 (Task 8 continued): Aluminum_Interface thinned from
+    # 13.9 mm to 5 mm (ME-realistic heatsink stackup), and a new
+    # Aluminum_Riser column (40x30x15.1 mm) bridges the interface top
+    # to a repositioned 1.7 mm Rear_Hatch_TIM at the rear cover inner
+    # face. Iter 2's 13.9 mm and 5.4 mm figures were review workarounds
+    # for the historic 11 mm air gap; iter 6 replaces them with a
+    # discrete riser part that is realistic per Ateam Round 1 ME review.
     "Heat_QC7790": (35.0, 35.0, 2.1),
     "TIM_QC7790": (35.0, 35.0, 1.2),
     "Copper_Spreader": (100.0, 80.0, 2.2),
-    "Aluminum_Interface": (128.0, 120.0, 13.9),
-    "Rear_Hatch_TIM": (80.0, 40.0, 5.4),
+    "Aluminum_Interface": (129.0, 132.0, 5.0),
+    "Aluminum_Riser": (40.0, 30.0, 15.1),
+    "Rear_Hatch_TIM": (80.0, 40.0, 1.7),
 }}
 for name, expected in expected_thermal.items():
     obj = doc.getObject(name)
@@ -1351,7 +1354,8 @@ authorized = {{
         ("Copper_Spreader", "Heat_Pipe_Right"),
         ("Aluminum_Interface", "Heat_Pipe_Left"),
         ("Aluminum_Interface", "Heat_Pipe_Right"),
-        ("Aluminum_Interface", "Rear_Hatch_TIM"),
+        ("Aluminum_Interface", "Aluminum_Riser"),
+        ("Aluminum_Riser", "Rear_Hatch_TIM"),
         ("Rear_Hatch_TIM", "Rear_IO_Cover"),
     )
 }}
@@ -1386,7 +1390,7 @@ raise SystemExit(1 if forbidden else 0)
             overlap_output = overlap_result.stdout + overlap_result.stderr
             self.assertEqual(0, overlap_result.returncode, overlap_output)
             self.assertIn(
-                '"physical_count": 78',
+                '"physical_count": 79',
                 overlap_output,
             )
             self.assertIn('"forbidden": []', overlap_output)
@@ -1502,7 +1506,8 @@ raise SystemExit(1 if forbidden else 0)
             ("Copper_Spreader", "Heat_Pipe_Right"),
             ("Aluminum_Interface", "Heat_Pipe_Left"),
             ("Aluminum_Interface", "Heat_Pipe_Right"),
-            ("Aluminum_Interface", "Rear_Hatch_TIM"),
+            ("Aluminum_Interface", "Aluminum_Riser"),
+            ("Aluminum_Riser", "Rear_Hatch_TIM"),
             ("Rear_Hatch_TIM", "Rear_IO_Cover"),
         }
         self.assertEqual(
@@ -1788,9 +1793,9 @@ class TestAtomicExport(unittest.TestCase):
             validation = json.loads((target / ex.p.OUTPUT_FILES["validation_json"]).read_text())
             assert validation == report and report["status"] == "Pass"
             assert report["step_export"]["units"] == "mm"
-            assert report["step_export"]["body_count"] == 78
+            assert report["step_export"]["body_count"] == 79
             assert manifest["limitations"] == ex.p.PROTOTYPE_LIMITATION
-            assert len(manifest["parts"]) == 96
+            assert len(manifest["parts"]) == 97
             source = App.openDocument(str(model))
             expected = {obj.Name: obj for obj in source.Objects if getattr(obj, "IsSemanticPart", False)
                         and obj.ParentAssembly != "08_Reference_Datums_Keepouts"

@@ -40,13 +40,19 @@ HEAT_BOX_SPECS = {
 }
 THERMAL_BOX_SPECS = {
     "Copper_Spreader": ((100.0, 80.0, 2.2), (321.0, 206.0, 33.2)),
-    # Aluminum_Interface reshaped to reach up to Rear_Hatch_TIM (was
-    # 2.5 mm thick pancake at z=41.2..43.7 with a 11 mm air gap to TIM;
-    # now a 13.9 mm heatsink block at z=41.2..55.1 with a shield-can
-    # clearance hole cut for the SOM shield can).
-    "Aluminum_Interface": ((128.0, 120.0, 13.9), (307.0, 186.0, 41.2)),
+    # Iter 6: Aluminum_Interface thinned from 13.9 mm to 5 mm (ME
+    # realistic heatsink stackup; 13.9 mm was Iter 2 workaround for the
+    # 11 mm air gap to TIM). Footprint sized to avoid Rib_H_T/H_B (Y
+    # bounds) and Rib_V_L/V_R (X bounds) fused into Rear_Enclosure.
+    "Aluminum_Interface": ((129.0, 132.0, 5.0), (306.0, 180.0, 41.2)),
+    # Aluminum_Riser bridges Al_Interface (top-face local z=43.5 inside
+    # its SOM shield-can cutout region) to the TIM position (z=58.4).
+    # 40x30 cross-section passes through the shield can top wall via a
+    # 42x32 clearance hole.
+    "Aluminum_Riser": ((40.0, 30.0, 15.1), (351.0, 231.0, 43.4)),
 }
-ALUMINUM_INTERFACE_SHIELD_CUTOUT = ((84.0, 64.0, 4.4), (329.0, 214.0, 43.5))
+ALUMINUM_INTERFACE_SHIELD_CUTOUT = ((84.0, 64.0, 2.9), (329.0, 214.0, 43.5))
+ALUMINUM_RISER_SHIELD_HOLE = ((42.0, 32.0, 1.0), (350.0, 230.0, 46.8))
 HEAT_PIPE_SPECS = {
     "Heat_Pipe_Left": (3.0, 160.0, (291.0, 224.0, 38.3)),
     "Heat_Pipe_Right": (3.0, 160.0, (291.0, 268.0, 38.3)),
@@ -295,6 +301,9 @@ def build_electronics_thermal(doc, groups):
     shield_cutter = Part.makeBox(*shield_dims, vector(*shield_pos))
     aluminum_shape = aluminum_solid.cut(shield_cutter)
 
+    riser_dims, riser_pos = THERMAL_BOX_SPECS["Aluminum_Riser"]
+    aluminum_riser_shape = Part.makeBox(*riser_dims, vector(*riser_pos))
+
     thermal_shapes = {
         # TIM_QC7790 thickened to 1.2 mm so it overlaps Heat_QC7790 (0.1 mm)
         # and Copper_Spreader (0.2 mm) for declared contact evidence.
@@ -316,12 +325,15 @@ def build_electronics_thermal(doc, groups):
             vector(1.0, 0.0, 0.0),
         ),
         "Aluminum_Interface": aluminum_shape,
-        # Rear_Hatch_TIM thickened to 5.4 mm (z=54.7..60.1) so it bridges
-        # Aluminum_Interface (top z=55.1, overlap 0.4 mm) to Rear_IO_Cover
-        # (inner face z=60.0, overlap 0.1 mm). The main rear back wall has a
-        # service cutout at this location; heat exits via the removable I/O
-        # cover, which sits flush with the head envelope at z=62.
-        "Rear_Hatch_TIM": Part.makeBox(80.0, 40.0, 5.4, vector(331.0, 226.0, 54.7)),
+        # Iter 6: Aluminum_Riser bridges Al_Interface top (z=46.2) to
+        # Rear_Hatch_TIM (z=58.4) via a 12.4 mm aluminum column that
+        # passes through a clearance hole cut in SOM_Shield_Can top wall.
+        "Aluminum_Riser": aluminum_riser_shape,
+        # Iter 6: Rear_Hatch_TIM restored to realistic 1.7 mm thickness
+        # (Iter 2's 5.4 mm was an unphysical workaround). New position
+        # z=58.4..60.1 sits between Aluminum_Riser top and Rear_IO_Cover
+        # inner face.
+        "Rear_Hatch_TIM": Part.makeBox(80.0, 40.0, 1.7, vector(331.0, 226.0, 58.4)),
     }
     materials = {
         "TIM_QC7790": "Isotropic TIM; k=3 W/m-K",
@@ -329,6 +341,7 @@ def build_electronics_thermal(doc, groups):
         "Heat_Pipe_Left": p.MATERIAL_INTENTS["Heat_Pipe"],
         "Heat_Pipe_Right": p.MATERIAL_INTENTS["Heat_Pipe"],
         "Aluminum_Interface": p.MATERIAL_INTENTS["Aluminum_Heatsink"],
+        "Aluminum_Riser": p.MATERIAL_INTENTS["Aluminum_Heatsink"],
         "Rear_Hatch_TIM": "Isotropic TIM; k=8 W/m-K",
     }
     thermal_authorized_contacts = {
@@ -339,9 +352,13 @@ def build_electronics_thermal(doc, groups):
         "Aluminum_Interface": [
             "Heat_Pipe_Left",
             "Heat_Pipe_Right",
+            "Aluminum_Riser",
+        ],
+        "Aluminum_Riser": [
+            "Aluminum_Interface",
             "Rear_Hatch_TIM",
         ],
-        "Rear_Hatch_TIM": ["Aluminum_Interface", "Rear_IO_Cover"],
+        "Rear_Hatch_TIM": ["Aluminum_Riser", "Rear_IO_Cover"],
     }
     thermal_conductivity_wmk = {
         "TIM_QC7790": 3.0,
@@ -349,6 +366,7 @@ def build_electronics_thermal(doc, groups):
         "Heat_Pipe_Left": 8000.0,
         "Heat_Pipe_Right": 8000.0,
         "Aluminum_Interface": 167.0,
+        "Aluminum_Riser": 167.0,
         "Rear_Hatch_TIM": 8.0,
     }
     for index, (name, shape) in enumerate(thermal_shapes.items(), start=40):
@@ -411,12 +429,19 @@ def build_electronics_thermal(doc, groups):
             connector_clearance = expanded_connector_shape(
                 "IO_Harness_Connector"
             )
+        shield_shape = open_shield_shape(dimensions, position, connector_clearance)
+        if name == "SOM_Shield_Can":
+            # Iter 6: cut Aluminum_Riser clearance hole in the shield top
+            # wall so the thermal column can pass through to Rear_Hatch_TIM.
+            hole_dims, hole_pos = ALUMINUM_RISER_SHIELD_HOLE
+            hole_cutter = Part.makeBox(*hole_dims, vector(*hole_pos))
+            shield_shape = shield_shape.cut(hole_cutter)
         obj = semantic_part(
             doc,
             group,
             name,
             name.replace("_", " "),
-            open_shield_shape(dimensions, position, connector_clearance),
+            shield_shape,
             metadata(
                 "HNK-ET-{:03d}".format(index),
                 name,

@@ -47,7 +47,13 @@ LED_BAR = frozen(
     y_offset_from_lgp_edge=1.0,
     architecture="edge-lit-bottom",
     assumption_id="A-LOD3-PN-001",
-    source_reference="Edge-lit engineering assumption; 32-inch panel typical",
+    source_reference=(
+        "Edge-lit engineering assumption; 32-inch panel typical. "
+        "Not Dixie-derived: Dixie 65-inch is direct-lit with distinct "
+        "BLU architecture; Dixie power table (240130 pptx) covers "
+        "carrier board (~40 W silicon + 10 W SOM) only, no panel-side "
+        "breakdown. Ratified via Q-02 P2 approach (2026-09-04)."
+    ),
 )
 BACKPLATE_LED_CUTOUT_CLEARANCE = 0.3
 
@@ -59,21 +65,33 @@ PANEL_DRIVER = MappingProxyType(
             height=30.0,
             thickness=1.6,
             assumption_id="A-LOD3-PN-002",
-            source_reference="Split of 20 W Panel_Module budget (Q-02 P2 approach); driver only",
+            source_reference=(
+                "Split of 20 W Panel_Module budget (Q-02 P2 approach); "
+                "driver only. Not Dixie-derived (Dixie power table has "
+                "no panel-side breakdown); industry-typical edge-lit "
+                "backlight driver dissipation."
+            ),
         ),
         "TCON_IC": frozen(
             width=15.0,
             height=15.0,
             thickness=1.0,
             assumption_id="A-LOD3-PN-003",
-            source_reference="Split of 20 W Panel_Module budget (Q-02 P2 approach); TCON IC package",
+            source_reference=(
+                "Split of 20 W Panel_Module budget (Q-02 P2 approach); "
+                "TCON IC package. Not Dixie-derived; industry-typical "
+                "T-CON dissipation for 32-inch FHD panel."
+            ),
         ),
         "Panel_Gate_Source_Driver": frozen(
             width=350.0,
             depth=6.0,
             thickness=1.0,
             assumption_id="A-LOD3-PN-004",
-            source_reference="COF equivalent along LCD bottom edge",
+            source_reference=(
+                "COF equivalent along LCD bottom edge. Not Dixie-derived; "
+                "Q-02 P2 approach for panel gate/source residual budget."
+            ),
         ),
     }
 )
@@ -348,8 +366,12 @@ REQUIRED_TOP_GROUPS = (
 # Ribs and VESA_Reinforcement are now fused into their host semantic parts
 # (Rear_Enclosure and Metal_Mid_Frame respectively) as internal features and
 # are no longer independent semantic parts.
-EXPECTED_SEMANTIC_PART_COUNT = 96
-EXPECTED_PHYSICAL_PART_COUNT = 78
+# Iter 6 (2026-09-07) adds Aluminum_Riser to bridge Aluminum_Interface
+# (thinned from 13.9 mm to 5 mm to match realistic heatsink stackup) to a
+# repositioned Rear_Hatch_TIM (1.7 mm at rear cover inner face). Semantic
+# count +1 (Al_Riser), physical +1.
+EXPECTED_SEMANTIC_PART_COUNT = 97
+EXPECTED_PHYSICAL_PART_COUNT = 79
 
 SOURCE_CLASSES = (
     "Known",

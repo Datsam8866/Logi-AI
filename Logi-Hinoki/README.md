@@ -28,7 +28,9 @@ LOD 3 master 位於 `cad/lod3-inferred-prototype-01/`。Task 8 品質改善後 h
 
 **Task 9 phone-review PNGs**：`cad/lod3-inferred-prototype-01/preview_hinoki_lod3.py` 讀取 Manifest.json + Validation.json，用 PIL 產生 5 張 1600×1200 白底 PNG（Front / Rear / Isometric / Exploded / AirflowCutaway），部件依 parent assembly 上色，shaded-with-edges 樣式，airflow 圖有 translucent rear housing + 上升藍色氣流箭頭。TestReviewImages 6 項全通過（dimensions / 白底 / edge stroke / atomic replace / 缺 manifest 失敗）。40/40 完整測試 pass。
 
-Next Action：Task 9 完成。Task 10 FLOEFD 衍生包（solids + internal-air STEP + setup JSON）與 Task 11 正式發布仍 deferred；stand/base 亦 deferred。iter5 review package 位於 `C:\Users\skuan1\.codex\visualizations\2026\09\04\task9-iter5-full\`（含 22 個檔案：FCStd + STEP + Manifest + Validation + 8 SVG + 5 PNG + logs）。
+**Iter 6 (Ateam 迴圈)**：使用者親自在 FreeCAD GUI 檢視後啟動 Ateam Round 1 三代理平行審查（Agent A 用真實 Dixie STEP/BOM/PPT 對照架構、Agent B 讀 Dixie 2D PDF 圖抽材料 spec、Agent C 獨立 ME 看 preview PNG/SVG）。Round 1 找到 4 個 Critical：Y 座標疑似顛倒、Al_Interface 13.9mm 過厚、Rear_Hatch_TIM 5.4mm 過厚、Panel 20W 拆分無 Dixie 依據。使用者確認 AV bar cluster 上緣是意圖（#1 撤銷），iter 6 修 #2~4：Al_Interface 5mm、TIM 1.7mm 貼 Rear_IO_Cover、新增 Aluminum_Riser 40×30×15.1mm 橋接（穿過 SOM_Shield_Can 42×32 clearance hole）、Panel 4 個 source_reference 加「Not Dixie-derived」disclaimer。契約 96→97 semantic / 78→79 physical / 19→20 authorized_contacts；40/40 tests pass。獨立 Ateam Round 2 驗收：**99/100**（A=19, B=30, C=20, D=20, E=10），4 個 Critical 全 PASS。
+
+Next Action：Task 9 + Iter 6 完成。Task 10 FLOEFD 衍生包 + Task 11 正式發布 + Task 6 stand/base 仍 deferred。iter6 review package：`C:\Users\skuan1\.codex\visualizations\2026\2026\09\07\task9-iter6-ateam\`（22 個檔案，含 Aluminum_Riser 熱橋新部件）。
 
 ### Task 8 使用與驗證
 
