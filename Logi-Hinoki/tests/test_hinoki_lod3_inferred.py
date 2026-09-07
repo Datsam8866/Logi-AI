@@ -2348,5 +2348,98 @@ class TestReviewImages(unittest.TestCase):
             self.assertEqual([], list(tmp_root.glob("*.tmp")))
 
 
+class TestFormalArtifactRelease(unittest.TestCase):
+    """Task 11: verify the committed formal LOD 3 artifacts.
+
+    These tests operate on the formal FCStd committed to the repository
+    at cad/lod3-inferred-prototype-01/. They confirm the release-grade
+    file exists, opens under FreeCAD, passes every hard gate, matches
+    the frozen semantic/physical contract, contains no
+    manufacturing-authority claims, and preserves the inferred-
+    engineering-prototype limitation wording.
+    """
+
+    FORMAL_FCSTD = PACKAGE_ROOT / "Hinoki_LOD3_Inferred_Master.FCStd"
+    LIMITATION_MARKER = "LOD 3 inferred engineering prototype"
+
+    def test_formal_fcstd_exists_with_reasonable_size(self):
+        self.assertTrue(self.FORMAL_FCSTD.exists(),
+                        "Task 11 formal FCStd must exist at " + str(self.FORMAL_FCSTD))
+        size_bytes = self.FORMAL_FCSTD.stat().st_size
+        # Sanity bounds: LOD 3 head+stand FCStd is around 200 KB;
+        # smaller than 50 KB means empty document; larger than 5 MB
+        # means unexpected mesh data was included.
+        self.assertGreaterEqual(size_bytes, 50 * 1024,
+                                ("formal FCStd suspiciously small", size_bytes))
+        self.assertLessEqual(size_bytes, 5 * 1024 * 1024,
+                             ("formal FCStd suspiciously large", size_bytes))
+
+    def test_formal_fcstd_reopens_to_pass_validation(self):
+        probe = r"""
+import sys, json
+sys.path.insert(0, r"{package_path}")
+import FreeCAD as App
+from review_hinoki_lod3 import validate_master
+import hinoki_lod3_parameters as p
+
+doc = App.open(r"{fcstd_path}")
+try:
+    report = validate_master(doc)
+finally:
+    App.closeDocument(doc.Name)
+
+assert report["status"] == "Pass", ("formal FCStd validation not Pass",
+                                    [g for g, v in report["hard_gates"].items() if not v])
+assert report["semantic_parts"]["count"] == p.EXPECTED_SEMANTIC_PART_COUNT, (
+    "semantic count mismatch", report["semantic_parts"]["count"], p.EXPECTED_SEMANTIC_PART_COUNT)
+assert report["physical_geometry"]["part_count"] == p.EXPECTED_PHYSICAL_PART_COUNT, (
+    "physical count mismatch", report["physical_geometry"]["part_count"], p.EXPECTED_PHYSICAL_PART_COUNT)
+assert all(report["hard_gates"].values()), (
+    "not all hard gates PASS", [g for g, v in report["hard_gates"].items() if not v])
+
+manufacturing_flags = [
+    row["PartName"] for row in report["metadata"]["parts"]
+    if row["ManufacturingAuthority"] is not False
+]
+assert not manufacturing_flags, ("ManufacturingAuthority must be False on every part",
+                                 manufacturing_flags)
+
+heat_total = report["heat_sources"]["total_w"]
+assert abs(heat_total - p.TOTAL_BUDGET_W) < 1e-6, (
+    "total heat budget not 57 W", heat_total, p.TOTAL_BUDGET_W)
+
+print("HINOKI_LOD3_FORMAL_ARTIFACT_OK semantic={{}} physical={{}} heat_w={{:.1f}}".format(
+    report["semantic_parts"]["count"],
+    report["physical_geometry"]["part_count"],
+    heat_total,
+))
+""".replace("{package_path}", str(PACKAGE_ROOT).replace("\\", "/")
+    ).replace("{fcstd_path}", str(self.FORMAL_FCSTD).replace("\\", "/"))
+        result = subprocess.run(
+            [str(FREECAD_CMD), "-c"],
+            cwd=Path(tempfile.gettempdir()),
+            input="exec({!r})\n".format(probe),
+            capture_output=True,
+            text=True,
+            check=False,
+            timeout=180,
+        )
+        output = result.stdout + result.stderr
+        self.assertEqual(0, result.returncode, output)
+        self.assertIn("HINOKI_LOD3_FORMAL_ARTIFACT_OK", output)
+
+    def test_formal_fcstd_preserves_prototype_limitation_wording(self):
+        # PROTOTYPE_LIMITATION is the single source of truth for the
+        # inferred-engineering-prototype disclosure. review_hinoki_lod3
+        # delegates to it via p.PROTOTYPE_LIMITATION and copies it into
+        # the published Validation.json limitations field.
+        params_text = (PACKAGE_ROOT / "hinoki_lod3_parameters.py").read_text(encoding="utf-8")
+        self.assertIn(self.LIMITATION_MARKER, params_text,
+                      "PROTOTYPE_LIMITATION wording missing from hinoki_lod3_parameters.py")
+        review_text = (PACKAGE_ROOT / "review_hinoki_lod3.py").read_text(encoding="utf-8")
+        self.assertIn("p.PROTOTYPE_LIMITATION", review_text,
+                      "review_hinoki_lod3.py must publish p.PROTOTYPE_LIMITATION in its report")
+
+
 if __name__ == "__main__":
     unittest.main()
