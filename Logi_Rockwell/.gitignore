@@ -1,0 +1,17 @@
+# Local credentials
+.env
+.env.*
+!.env.example
+*.key
+credentials.*
+
+# Temporary files
+~$*
+*.tmp
+*.bak
+*.FCBak
+__pycache__/
+*.py[cod]
+.venv/
+Thumbs.db
+.DS_Store
