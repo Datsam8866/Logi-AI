@@ -1,0 +1,13 @@
+{
+  "lookback_days": 30,
+  "per_source_limit": 2,
+  "overlap_hours": 24,
+  "timeout_seconds": 40,
+  "providers": {
+    "jira": {"cloud_id": "your-cloud-id", "site_url": "https://your-site.atlassian.net", "project_keys": ["YOUR_PROJECT"]},
+    "gmail": {"query": "Coleco -in:spam -in:trash"},
+    "drive": {"title_keyword": "Coleco", "mime_types": ["application/vnd.google-apps.document", "application/vnd.google-apps.spreadsheet", "application/vnd.google-apps.presentation"]},
+    "chat": {"conversation_id": "spaces/YOUR_TEAM_SPACE"},
+    "slack": {"channel_ids": ["YOUR_PUBLIC_CHANNEL"], "public_only": true}
+  }
+}
