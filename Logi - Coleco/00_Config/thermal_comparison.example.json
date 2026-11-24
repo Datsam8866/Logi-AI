@@ -1,0 +1,56 @@
+{
+  "schema_version": 1,
+  "varying_conditions": [],
+  "points": [
+    {
+      "label": "Point A",
+      "basis": "measured",
+      "conditions": {
+        "stage": null,
+        "hardware_revision": null,
+        "firmware": null,
+        "sample_id": null,
+        "workload": null,
+        "mounting": null,
+        "sensor_location": null,
+        "thermal_state": null,
+        "noise_method": null,
+        "ambient_temperature_c": null,
+        "som_power_w": null,
+        "fan_speed_rpm": null
+      },
+      "metrics": {
+        "cpu_dts_c": null,
+        "noise_dba": null,
+        "surface_temperature_c": null,
+        "airflow_cfm": null
+      },
+      "citations": {}
+    },
+    {
+      "label": "Point B",
+      "basis": "measured",
+      "conditions": {
+        "stage": null,
+        "hardware_revision": null,
+        "firmware": null,
+        "sample_id": null,
+        "workload": null,
+        "mounting": null,
+        "sensor_location": null,
+        "thermal_state": null,
+        "noise_method": null,
+        "ambient_temperature_c": null,
+        "som_power_w": null,
+        "fan_speed_rpm": null
+      },
+      "metrics": {
+        "cpu_dts_c": null,
+        "noise_dba": null,
+        "surface_temperature_c": null,
+        "airflow_cfm": null
+      },
+      "citations": {}
+    }
+  ]
+}

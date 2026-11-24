@@ -31,6 +31,15 @@ def parser():
     sync = commands.add_parser('sync', help='Resume bounded five-source collection through existing LogiQ MCP connections.')
     sync.add_argument('--config', type=Path, default=ROOT / '00_Config' / 'source_scopes.local.json')
     sync.add_argument('--source', action='append', choices=['jira', 'gmail', 'drive', 'chat', 'slack'])
+    ask = commands.add_parser('ask', aliases=['/ask'], help='Build a bounded source-cited extractive answer from indexed evidence.')
+    ask.set_defaults(command='ask')
+    ask.add_argument('question')
+    ask.add_argument('--query', action='append', help='Explicit retrieval query; repeat at most eight times.')
+    ask.add_argument('--limit', type=int, default=6)
+    ask.add_argument('--max-chars', type=int, default=1500)
+    compare = commands.add_parser('compare', aliases=['/compare'], help='Compare two cited thermal points after checking conditions.')
+    compare.set_defaults(command='compare')
+    compare.add_argument('input', type=Path, help='Local JSON using thermal_comparison.example.json fields.')
     return p
 
 
@@ -57,6 +66,14 @@ def main(argv=None):
                     result = status(c)
                 elif args.command == 'search':
                     result = search(c, args.query, args.limit)
+                elif args.command == 'ask':
+                    from qa import ask
+                    c.execute('BEGIN')
+                    result = ask(c, args.question, args.limit, args.max_chars, args.query)
+                elif args.command == 'compare':
+                    from thermal_compare import compare, load_comparison
+                    c.execute('BEGIN')
+                    result = compare(c, load_comparison(args.input))
                 else:
                     result = read(c, args.kind, args.id, args.max_chars, args.offset)
     except IngestError as exc:
